@@ -15,7 +15,7 @@ export default clerkMiddleware(async (auth, req) => {
 });
 
 /**
- * Do not run Clerk on `/api/*`. Including API routes caused Edge middleware failures on Vercel
+ * Do not run Clerk on `/api/*`. Including API routes caused Edge proxy failures on Vercel
  * (MIDDLEWARE_INVOCATION_FAILED) — e.g. webhooks and JSON APIs don't need session handling here;
  * each route uses `auth()` when required.
  */
