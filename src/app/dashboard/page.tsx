@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { BrandLogo } from "@/components/BrandLogo";
 import { UserButton } from "@clerk/nextjs";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 const platforms = ["Instagram", "TikTok", "LinkedIn", "Twitter/X"] as const;
 const tones = ["funny", "professional", "hype", "inspirational"] as const;
@@ -170,9 +172,18 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 px-6 py-8 text-white">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 backdrop-blur">
-          <div>
-            <p className="text-xs uppercase tracking-widest text-purple-300">CaptionAI</p>
-            <h1 className="text-3xl font-semibold">AI Caption Studio</h1>
+          <div className="flex min-w-0 items-center gap-3">
+            <Link
+              href="/"
+              className="shrink-0 rounded-lg outline-none ring-offset-2 ring-offset-zinc-900 focus-visible:ring-2 focus-visible:ring-purple-500"
+              aria-label="CaptionAI home"
+            >
+              <BrandLogo className="h-9 w-9" />
+            </Link>
+            <div className="min-w-0">
+              <p className="text-xs uppercase tracking-widest text-purple-300">CaptionAI</p>
+              <h1 className="text-3xl font-semibold">AI Caption Studio</h1>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             {plan === "free" ? (
@@ -199,7 +210,13 @@ export default function DashboardPage() {
                 </button>
               </div>
             ) : null}
-            <UserButton />
+            <Link
+              href="/settings"
+              className="rounded-lg border border-zinc-600 px-3 py-2 text-sm font-medium text-zinc-200 transition hover:bg-zinc-800"
+            >
+              Account &amp; security
+            </Link>
+            <UserButton userProfileUrl="/settings" userProfileMode="navigation" />
           </div>
         </div>
 

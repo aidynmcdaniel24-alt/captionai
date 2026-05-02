@@ -13,9 +13,21 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const rawSiteUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000";
+const siteUrl = rawSiteUrl.endsWith("/") ? rawSiteUrl.slice(0, -1) : rawSiteUrl;
+
 export const metadata: Metadata = {
-  title: "CaptionAI",
-  description: "AI-powered social media caption generator",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "CaptionAI",
+    template: "%s | CaptionAI",
+  },
+  description:
+    "Generate AI-powered social media captions for Instagram, TikTok, LinkedIn, and Twitter.",
+  applicationName: "CaptionAI",
+  verification: {
+    google: "_mZFRSlXhZILEG4l5dqO8nTkVyG-B-mxBTiLUX5nTIY",
+  },
 };
 
 export default function RootLayout({
