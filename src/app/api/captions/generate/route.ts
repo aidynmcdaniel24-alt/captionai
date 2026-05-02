@@ -44,9 +44,6 @@ function parseCaptionsFromModel(raw: string) {
 }
 
 export async function POST(req: Request) {
-  const debugGroqKey = process.env.GROQ_API_KEY ?? "";
-  console.log("[debug] GROQ_API_KEY loaded:", debugGroqKey ? `${debugGroqKey.slice(0, 8)}...${debugGroqKey.slice(-6)}` : "EMPTY");
-
   const { userId } = await auth();
 
   if (!userId) {
@@ -191,6 +188,18 @@ export async function POST(req: Request) {
     }
 
     captions = parsed;
+
+    const { error: historyError } = await supabaseServer.from("caption_history").insert({
+      user_id: userId,
+      topic,
+      platform,
+      tone,
+      captions,
+    });
+
+    if (historyError) {
+      console.error("[caption_history]", historyError.message);
+    }
   } catch (error) {
     const details =
       error instanceof Error ? error.message : "Unknown Groq API error.";

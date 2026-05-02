@@ -1,5 +1,37 @@
-import Link from "next/link";
+import { SettingsQuickActions } from "@/components/SettingsQuickActions";
 import { UserProfile } from "@clerk/nextjs";
+import Link from "next/link";
+
+/**
+ * Clerk v7+ uses colorForeground / colorMutedForeground (not deprecated colorText / colorTextSecondary).
+ * Light panel on dark page keeps WCAG-friendly contrast; neutral tokens drive borders and hover states.
+ */
+const userProfileAppearance = {
+  variables: {
+    colorPrimary: "#7c3aed",
+    colorPrimaryForeground: "#ffffff",
+    colorForeground: "#18181b",
+    colorMutedForeground: "#52525b",
+    colorMuted: "#e4e4e7",
+    colorBackground: "#fafafa",
+    colorInput: "#ffffff",
+    colorInputForeground: "#18181b",
+    colorBorder: "#d4d4d8",
+    colorRing: "#9333ea",
+    colorNeutral: "#a1a1aa",
+    colorDanger: "#dc2626",
+    colorModalBackdrop: "rgba(9, 9, 11, 0.65)",
+    borderRadius: "0.75rem",
+    fontFamily: "inherit",
+  },
+  elements: {
+    rootBox: "w-full max-w-full",
+    card: "border border-zinc-300 bg-zinc-50 shadow-2xl shadow-black/30",
+    navbar: "border-zinc-200 bg-white",
+    navbarButton:
+      "text-zinc-700 hover:bg-zinc-100 data-[active=true]:bg-purple-50 data-[active=true]:text-purple-800",
+  },
+} as const;
 
 /**
  * Clerk User Profile: email/phone, password, connected accounts, and optional MFA (2FA).
@@ -17,6 +49,8 @@ export default function SettingsPage() {
           ← Back to dashboard
         </Link>
 
+        <SettingsQuickActions />
+
         <div className="mb-6 rounded-2xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-zinc-400">
           <span className="font-medium text-zinc-200">Account &amp; security</span>
           <span className="mx-2 text-zinc-600">·</span>
@@ -27,23 +61,7 @@ export default function SettingsPage() {
           <UserProfile
             routing="path"
             path="/settings"
-            appearance={{
-              variables: {
-                colorPrimary: "#9333ea",
-                colorBackground: "#18181b",
-                colorInputBackground: "#09090b",
-                colorInputText: "#fafafa",
-                colorText: "#fafafa",
-                colorTextSecondary: "#a1a1aa",
-                borderRadius: "0.75rem",
-              },
-              elements: {
-                rootBox: "w-full max-w-full",
-                card: "border border-zinc-800 bg-zinc-900 shadow-2xl shadow-black/40",
-                navbar: "border-zinc-800 bg-zinc-950/80",
-                navbarButton: "text-zinc-300",
-              },
-            }}
+            appearance={userProfileAppearance}
           />
         </div>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { BrandLogo } from "@/components/BrandLogo";
+import { CaptionHistorySection } from "@/components/CaptionHistorySection";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -36,7 +37,7 @@ export default function DashboardPage() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [plan, setPlan] = useState<"free" | "pro" | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [portalLoading, setPortalLoading] = useState(false);
+  const [historyKey, setHistoryKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -95,29 +96,6 @@ export default function DashboardPage() {
     }
   }
 
-  async function openBillingPortal() {
-    setPortalLoading(true);
-    setError("");
-    try {
-      const res = await fetch("/api/billing/portal", { method: "POST" });
-      const data = (await res.json()) as { url?: string; error?: string };
-
-      if (!res.ok) {
-        setError(data.error || "Could not open billing portal.");
-        return;
-      }
-      if (data.url) {
-        window.location.href = data.url;
-        return;
-      }
-      setError("Billing portal did not return a URL.");
-    } catch {
-      setError("Could not open billing portal. Try again.");
-    } finally {
-      setPortalLoading(false);
-    }
-  }
-
   async function handleGenerate() {
     setError("");
     setIsLoading(true);
@@ -148,6 +126,7 @@ export default function DashboardPage() {
 
       setShowPaywall(false);
       setCaptions(data.captions ?? []);
+      setHistoryKey((k) => k + 1);
 
       if (data.usage?.limit) {
         setUsageText(`Free plan usage: ${data.usage.count}/${data.usage.limit} today`);
@@ -196,25 +175,15 @@ export default function DashboardPage() {
                 {checkoutLoading ? "Opening checkout…" : "Upgrade to Pro — $9/mo"}
               </button>
             ) : plan === "pro" ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-lg border border-emerald-800/80 bg-emerald-950/40 px-3 py-1.5 text-sm text-emerald-300">
-                  Pro
-                </span>
-                <button
-                  type="button"
-                  className="rounded-lg border border-zinc-600 bg-zinc-800/80 px-4 py-2 text-sm font-medium text-zinc-100 hover:bg-zinc-800 disabled:opacity-60"
-                  disabled={portalLoading}
-                  onClick={openBillingPortal}
-                >
-                  {portalLoading ? "Opening portal…" : "Manage subscription"}
-                </button>
-              </div>
+              <span className="rounded-lg border border-emerald-800/80 bg-emerald-950/40 px-3 py-1.5 text-sm text-emerald-300">
+                Pro
+              </span>
             ) : null}
             <Link
-              href="/settings"
+              href="/profile"
               className="rounded-lg border border-zinc-600 px-3 py-2 text-sm font-medium text-zinc-200 transition hover:bg-zinc-800"
             >
-              Account &amp; security
+              Profile
             </Link>
             <UserButton userProfileUrl="/settings" userProfileMode="navigation" />
           </div>
@@ -295,6 +264,8 @@ export default function DashboardPage() {
             </ul>
           </div>
         ) : null}
+
+        <CaptionHistorySection refreshKey={historyKey} />
       </div>
 
       {showPaywall ? (
