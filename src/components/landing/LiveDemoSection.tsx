@@ -62,8 +62,10 @@ export function LiveDemoSection() {
           transition={{ duration: 0.5 }}
           className="mx-auto max-w-2xl text-center"
         >
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Try it live—no signup</h2>
-          <p className="mt-4 text-lg text-zinc-400">
+          <h2 className="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl dark:text-white">
+            Try it live—no signup
+          </h2>
+          <p className="mt-4 text-lg text-zinc-600 dark:text-zinc-400">
             One AI caption on us. Create a free account anytime for three options per run and saved workflow.
           </p>
         </motion.div>
@@ -73,9 +75,9 @@ export function LiveDemoSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-60px" }}
           transition={{ duration: 0.55, delay: 0.05 }}
-          className="mx-auto mt-14 max-w-3xl rounded-3xl border border-purple-500/20 bg-gradient-to-b from-zinc-900/90 to-zinc-950/90 p-6 shadow-2xl shadow-purple-950/30 sm:p-8"
+          className="mx-auto mt-14 max-w-3xl rounded-3xl border border-purple-300/40 bg-gradient-to-b from-white to-zinc-50 p-6 shadow-2xl shadow-purple-500/10 dark:border-purple-500/20 dark:from-zinc-900/90 dark:to-zinc-950/90 dark:shadow-purple-950/30 sm:p-8"
         >
-          <label className="mb-2 block text-left text-sm font-medium text-zinc-300">
+          <label className="mb-2 block text-left text-sm font-medium text-zinc-700 dark:text-zinc-300">
             What are you posting about?
           </label>
           <textarea
@@ -83,16 +85,16 @@ export function LiveDemoSection() {
             onChange={(e) => setTopic(e.target.value)}
             placeholder="e.g. sunset hike with my dog in Colorado"
             rows={3}
-            className="w-full rounded-xl border border-zinc-700 bg-zinc-950/80 px-4 py-3 text-white placeholder:text-zinc-600 outline-none ring-purple-500/0 transition focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/30"
+            className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-zinc-900 placeholder:text-zinc-400 outline-none ring-purple-500/0 transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/25 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-white dark:placeholder:text-zinc-600 dark:focus:border-purple-500/50 dark:focus:ring-purple-500/30"
           />
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-2 block text-left text-sm text-zinc-400">Platform</label>
+              <label className="mb-2 block text-left text-sm text-zinc-600 dark:text-zinc-400">Platform</label>
               <select
                 value={platform}
                 onChange={(e) => setPlatform(e.target.value as Platform)}
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-white outline-none focus:border-purple-500/50"
+                className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:focus:border-purple-500/50"
               >
                 {platforms.map((p) => (
                   <option key={p} value={p}>
@@ -102,11 +104,11 @@ export function LiveDemoSection() {
               </select>
             </div>
             <div>
-              <label className="mb-2 block text-left text-sm text-zinc-400">Tone</label>
+              <label className="mb-2 block text-left text-sm text-zinc-600 dark:text-zinc-400">Tone</label>
               <select
                 value={tone}
                 onChange={(e) => setTone(e.target.value as Tone)}
-                className="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-white outline-none focus:border-purple-500/50"
+                className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:focus:border-purple-500/50"
               >
                 {tones.map((t) => (
                   <option key={t} value={t}>
@@ -127,21 +129,25 @@ export function LiveDemoSection() {
           </button>
 
           {error ? (
-            <p className="mt-4 text-center text-sm text-red-400">{error}</p>
+            <p className="mt-4 text-center text-sm text-red-600 dark:text-red-400">{error}</p>
           ) : null}
 
           {caption ? (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-8 rounded-2xl border border-zinc-700 bg-black/30 p-5 text-left"
+              className="mt-8 rounded-2xl border border-zinc-200 bg-zinc-50 p-5 text-left dark:border-zinc-700 dark:bg-black/30"
             >
-              <p className="text-xs font-medium uppercase tracking-wider text-purple-400">Your caption</p>
-              <p className="mt-3 whitespace-pre-wrap text-lg leading-relaxed text-zinc-100">{caption}</p>
+              <p className="text-xs font-medium uppercase tracking-wider text-purple-600 dark:text-purple-400">
+                Your caption
+              </p>
+              <p className="mt-3 whitespace-pre-wrap text-lg leading-relaxed text-zinc-800 dark:text-zinc-100">
+                {caption}
+              </p>
               <button
                 type="button"
                 onClick={copyCaption}
-                className="mt-4 rounded-lg border border-zinc-600 px-4 py-2 text-sm text-zinc-300 transition hover:bg-white/5"
+                className="mt-4 rounded-lg border border-zinc-300 px-4 py-2 text-sm text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-white/5"
               >
                 {copied ? "Copied!" : "Copy caption"}
               </button>

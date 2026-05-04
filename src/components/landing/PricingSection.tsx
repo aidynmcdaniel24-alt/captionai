@@ -16,8 +16,8 @@ export function PricingSection() {
           transition={{ duration: 0.5 }}
           className="mx-auto max-w-2xl text-center"
         >
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Simple pricing</h2>
-          <p className="mt-4 text-lg text-zinc-400">
+          <h2 className="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl dark:text-white">Simple pricing</h2>
+          <p className="mt-4 text-lg text-zinc-600 dark:text-zinc-400">
             Start free. Upgrade when you are posting every day and need unlimited generations.
           </p>
         </motion.div>
@@ -28,39 +28,39 @@ export function PricingSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.45 }}
-            className="flex flex-col rounded-3xl border border-white/10 bg-zinc-900/50 p-8 shadow-xl"
+            className="flex flex-col rounded-3xl border border-zinc-200 bg-white/90 p-8 shadow-xl dark:border-white/10 dark:bg-zinc-900/50"
           >
-            <p className="text-sm font-medium text-zinc-400">Free</p>
-            <p className="mt-2 text-4xl font-bold text-white">
+            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">Free</p>
+            <p className="mt-2 text-4xl font-bold text-zinc-900 dark:text-white">
               $0<span className="text-lg font-normal text-zinc-500">/mo</span>
             </p>
-            <ul className="mt-8 flex flex-1 flex-col gap-4 text-sm text-zinc-300">
+            <ul className="mt-8 flex flex-1 flex-col gap-4 text-sm text-zinc-700 dark:text-zinc-300">
               <li className="flex gap-3">
-                <span className="text-purple-400">✓</span>
+                <span className="text-purple-600 dark:text-purple-400">✓</span>
                 <span>5 AI caption generations per day</span>
               </li>
               <li className="flex gap-3">
-                <span className="text-purple-400">✓</span>
+                <span className="text-purple-600 dark:text-purple-400">✓</span>
                 <span>All platforms & tones</span>
               </li>
               <li className="flex gap-3">
-                <span className="text-purple-400">✓</span>
+                <span className="text-purple-600 dark:text-purple-400">✓</span>
                 <span>Copy-ready captions with hashtags</span>
               </li>
             </ul>
             {!isLoaded ? (
-              <div className="mt-10 h-12 animate-pulse rounded-full bg-zinc-800" aria-hidden />
+              <div className="mt-10 h-12 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" aria-hidden />
             ) : isSignedIn ? (
               <Link
                 href="/dashboard"
-                className="mt-10 inline-flex min-h-[48px] items-center justify-center rounded-full border border-zinc-600 py-3 font-semibold text-white transition hover:bg-white/5"
+                className="mt-10 inline-flex min-h-[48px] items-center justify-center rounded-full border border-zinc-300 py-3 font-semibold text-zinc-900 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-white dark:hover:bg-white/5"
               >
                 Go to dashboard
               </Link>
             ) : (
               <Link
                 href="/sign-up"
-                className="mt-10 inline-flex min-h-[48px] items-center justify-center rounded-full border border-zinc-600 py-3 font-semibold text-white transition hover:bg-white/5"
+                className="mt-10 inline-flex min-h-[48px] items-center justify-center rounded-full border border-zinc-300 py-3 font-semibold text-zinc-900 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-white dark:hover:bg-white/5"
               >
                 Start free
               </Link>
@@ -72,31 +72,33 @@ export function PricingSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.45, delay: 0.06 }}
-            className="relative flex flex-col overflow-hidden rounded-3xl border border-purple-500/40 bg-gradient-to-b from-purple-950/40 to-zinc-900/80 p-8 shadow-2xl shadow-purple-950/40"
+            className="relative flex flex-col overflow-hidden rounded-3xl border border-purple-400/40 bg-gradient-to-b from-purple-50/90 to-white p-8 shadow-2xl shadow-purple-500/15 dark:border-purple-500/40 dark:from-purple-950/40 dark:to-zinc-900/80 dark:shadow-purple-950/40"
           >
-            <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-purple-500/20 blur-3xl" />
+            <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-purple-400/25 blur-3xl dark:bg-purple-500/20" />
             <div className="relative">
-              <p className="text-sm font-medium text-purple-300">Pro</p>
-              <p className="mt-2 text-4xl font-bold text-white">
-                $9<span className="text-lg font-normal text-zinc-400">/month</span>
+              <p className="text-sm font-medium text-purple-700 dark:text-purple-300">Pro</p>
+              <p className="mt-2 text-4xl font-bold text-zinc-900 dark:text-white">
+                $9<span className="text-lg font-normal text-zinc-500 dark:text-zinc-400">/month</span>
               </p>
-              <p className="mt-2 text-sm text-zinc-400">Unlimited captions. Cancel anytime from your account.</p>
-              <ul className="mt-8 flex flex-1 flex-col gap-4 text-sm text-zinc-200">
+              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+                Unlimited captions. Cancel anytime from your account.
+              </p>
+              <ul className="mt-8 flex flex-1 flex-col gap-4 text-sm text-zinc-800 dark:text-zinc-200">
                 <li className="flex gap-3">
-                  <span className="text-purple-400">✓</span>
+                  <span className="text-purple-600 dark:text-purple-400">✓</span>
                   <span>Unlimited generations</span>
                 </li>
                 <li className="flex gap-3">
-                  <span className="text-purple-400">✓</span>
+                  <span className="text-purple-600 dark:text-purple-400">✓</span>
                   <span>Same studio workflow—no limits</span>
                 </li>
                 <li className="flex gap-3">
-                  <span className="text-purple-400">✓</span>
+                  <span className="text-purple-600 dark:text-purple-400">✓</span>
                   <span>Manage billing in-app via Stripe</span>
                 </li>
               </ul>
               {!isLoaded ? (
-                <div className="mt-10 h-12 animate-pulse rounded-full bg-purple-900/50" aria-hidden />
+                <div className="mt-10 h-12 animate-pulse rounded-full bg-purple-200/80 dark:bg-purple-900/50" aria-hidden />
               ) : isSignedIn ? (
                 <Link
                   href="/upgrade"
@@ -120,38 +122,38 @@ export function PricingSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.45, delay: 0.1 }}
-            className="flex flex-col rounded-3xl border border-emerald-500/30 bg-zinc-900/50 p-8 shadow-xl"
+            className="flex flex-col rounded-3xl border border-emerald-300/50 bg-white/90 p-8 shadow-xl dark:border-emerald-500/30 dark:bg-zinc-900/50"
           >
-            <p className="text-sm font-medium text-emerald-300">Pro annual</p>
-            <p className="mt-2 text-4xl font-bold text-white">
-              $79<span className="text-lg font-normal text-zinc-400">/year</span>
+            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Pro annual</p>
+            <p className="mt-2 text-4xl font-bold text-zinc-900 dark:text-white">
+              $79<span className="text-lg font-normal text-zinc-500 dark:text-zinc-400">/year</span>
             </p>
-            <p className="mt-2 text-sm text-zinc-400">
+            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
               Best value for daily creators. Uses Stripe annual price when configured.
             </p>
-            <ul className="mt-8 flex flex-1 flex-col gap-4 text-sm text-zinc-200">
+            <ul className="mt-8 flex flex-1 flex-col gap-4 text-sm text-zinc-800 dark:text-zinc-200">
               <li className="flex gap-3">
-                <span className="text-emerald-400">✓</span>
+                <span className="text-emerald-600 dark:text-emerald-400">✓</span>
                 <span>Unlimited generations</span>
               </li>
               <li className="flex gap-3">
-                <span className="text-emerald-400">✓</span>
+                <span className="text-emerald-600 dark:text-emerald-400">✓</span>
                 <span>One payment per year — your team can enable this in billing</span>
               </li>
             </ul>
             {!isLoaded ? (
-              <div className="mt-10 h-12 animate-pulse rounded-full bg-zinc-800" aria-hidden />
+              <div className="mt-10 h-12 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" aria-hidden />
             ) : isSignedIn ? (
               <Link
                 href="/upgrade?billing=annual"
-                className="mt-10 inline-flex min-h-[48px] w-full items-center justify-center rounded-full border border-emerald-500/50 py-3 font-semibold text-emerald-200 transition hover:bg-emerald-950/40"
+                className="mt-10 inline-flex min-h-[48px] w-full items-center justify-center rounded-full border border-emerald-500/60 py-3 font-semibold text-emerald-800 transition hover:bg-emerald-50 dark:border-emerald-500/50 dark:text-emerald-200 dark:hover:bg-emerald-950/40"
               >
                 Upgrade annual
               </Link>
             ) : (
               <Link
                 href="/sign-up"
-                className="mt-10 inline-flex min-h-[48px] items-center justify-center rounded-full border border-emerald-500/40 py-3 font-semibold text-emerald-200 transition hover:bg-emerald-950/30"
+                className="mt-10 inline-flex min-h-[48px] items-center justify-center rounded-full border border-emerald-500/50 py-3 font-semibold text-emerald-800 transition hover:bg-emerald-50 dark:border-emerald-500/40 dark:text-emerald-200 dark:hover:bg-emerald-950/30"
               >
                 Get started
               </Link>

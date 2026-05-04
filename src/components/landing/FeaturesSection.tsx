@@ -91,8 +91,10 @@ export function FeaturesSection() {
           transition={{ duration: 0.5 }}
           className="mx-auto max-w-2xl text-center"
         >
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Built for busy creators</h2>
-          <p className="mt-4 text-lg text-zinc-400">
+          <h2 className="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl dark:text-white">
+            Built for busy creators
+          </h2>
+          <p className="mt-4 text-lg text-zinc-600 dark:text-zinc-400">
             Everything you need to ship captions that fit your brand—without starting from scratch every time.
           </p>
         </motion.div>
@@ -108,13 +110,13 @@ export function FeaturesSection() {
             <motion.li
               key={f.title}
               variants={item}
-              className="group rounded-2xl border border-white/5 bg-zinc-900/40 p-6 shadow-xl shadow-black/20 backdrop-blur-sm transition hover:border-purple-500/20 hover:bg-zinc-900/70"
+              className="group rounded-2xl border border-zinc-200 bg-white/70 p-6 shadow-lg shadow-zinc-900/5 backdrop-blur-sm transition hover:border-purple-300 hover:bg-white dark:border-white/5 dark:bg-zinc-900/40 dark:shadow-black/20 dark:hover:border-purple-500/20 dark:hover:bg-zinc-900/70"
             >
-              <div className="mb-4 inline-flex rounded-xl bg-purple-500/10 p-3 text-purple-400 transition group-hover:bg-purple-500/15 group-hover:text-purple-300">
+              <div className="mb-4 inline-flex rounded-xl bg-purple-100 p-3 text-purple-600 transition group-hover:bg-purple-200 group-hover:text-purple-700 dark:bg-purple-500/10 dark:text-purple-400 dark:group-hover:bg-purple-500/15 dark:group-hover:text-purple-300">
                 {f.icon}
               </div>
-              <h3 className="text-lg font-semibold text-white">{f.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-400">{f.description}</p>
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">{f.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{f.description}</p>
             </motion.li>
           ))}
         </motion.ul>
