@@ -8,7 +8,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
     <button
       type="button"
       onClick={toggle}
-      className={`inline-flex items-center gap-2 rounded-full border border-zinc-600 bg-zinc-900/40 px-3 py-1.5 text-xs font-medium text-zinc-200 transition hover:bg-zinc-800 dark:border-zinc-600 dark:bg-zinc-900/40 ${className}`}
+      className={`inline-flex items-center gap-2 rounded-full border border-zinc-300 bg-white/90 px-3 py-1.5 text-xs font-medium text-zinc-800 shadow-sm transition hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-900/40 dark:text-zinc-200 dark:shadow-none dark:hover:bg-zinc-800 ${className}`}
       aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
     >
       <span className="hidden sm:inline">{theme === "dark" ? "Dark" : "Light"}</span>

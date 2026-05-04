@@ -1,14 +1,15 @@
 @import "tailwindcss";
 
-/* Class-based dark mode (ThemeProvider toggles `dark` on <html>) — default v4 uses OS preference only */
-@custom-variant dark (&:where(.dark, .dark *));
+/* Manual dark mode: ThemeProvider sets data-theme="dark" | "light" on <html> (see layout script). */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
-:root {
+:root,
+html[data-theme="light"] {
   --background: #fafafa;
   --foreground: #171717;
 }
 
-.dark {
+html[data-theme="dark"] {
   --background: #09090b;
   --foreground: #fafafa;
 }
