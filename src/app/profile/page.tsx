@@ -14,6 +14,7 @@ export default function ProfilePage() {
   const [referralsCount, setReferralsCount] = useState<number | null>(null);
   const [refLink, setRefLink] = useState<string | null>(null);
   const [abSummary, setAbSummary] = useState<{ experiments: number; totalPicks: number } | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [copiedRef, setCopiedRef] = useState(false);
 
@@ -21,6 +22,7 @@ export default function ProfilePage() {
     try {
       const res = await fetch("/api/profile/stats");
       if (!res.ok) {
+        setIsAdmin(false);
         return;
       }
       const data = (await res.json()) as {
@@ -30,6 +32,7 @@ export default function ProfilePage() {
         freeLimit?: number;
         referralsCount?: number;
         abSummary?: { experiments: number; totalPicks: number };
+        isAdmin?: boolean;
       };
       setPlan(data.plan === "pro" ? "pro" : "free");
       setTotalCaptions(typeof data.totalCaptions === "number" ? data.totalCaptions : 0);
@@ -45,8 +48,10 @@ export default function ProfilePage() {
       if (data.abSummary) {
         setAbSummary(data.abSummary);
       }
+      setIsAdmin(data.isAdmin === true);
     } catch {
       setTotalCaptions(0);
+      setIsAdmin(false);
     }
   }, []);
 
@@ -219,6 +224,14 @@ export default function ProfilePage() {
             >
               Two-factor authentication (2FA)
             </Link>
+            {isAdmin ? (
+              <Link
+                href="/admin"
+                className="rounded-xl border border-purple-500/50 bg-purple-50 px-4 py-3 text-center text-sm font-medium text-purple-900 hover:bg-purple-100 dark:bg-purple-950/40 dark:text-purple-200 dark:hover:bg-purple-950/60"
+              >
+                Admin panel
+              </Link>
+            ) : null}
             {plan === "pro" ? (
               <button
                 type="button"

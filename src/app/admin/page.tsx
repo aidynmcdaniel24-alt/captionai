@@ -1,15 +1,15 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { notFound } from "next/navigation";
 import { AdminPanel } from "@/components/admin/AdminPanel";
+import { isClerkAdminUser } from "@/lib/admin";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   const { userId } = await auth();
-  const adminId = process.env.CLERK_ADMIN_USER_ID?.trim();
 
-  if (!userId || !adminId || userId !== adminId) {
+  if (!userId || !isClerkAdminUser(userId)) {
     notFound();
   }
 

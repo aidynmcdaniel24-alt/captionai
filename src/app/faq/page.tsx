@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { MarketingShell } from "@/components/marketing/MarketingShell";
+import { MarketingDocLayout } from "@/components/marketing/MarketingDocLayout";
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support-contact";
 import Link from "next/link";
 
@@ -53,26 +53,51 @@ const faqs: { q: string; a: string }[] = [
 
 export default function FaqPage() {
   return (
-    <MarketingShell title="Frequently asked questions" subtitle="Quick answers about using CaptionAI.">
-      <ul className="!mt-6 space-y-8">
+    <MarketingDocLayout
+      title="Frequently asked questions"
+      subtitle="Quick answers about plans, billing, security, and how CaptionAI works."
+      eyebrow="Help"
+    >
+      <div className="space-y-3">
         {faqs.map((item) => (
-          <li key={item.q} className="border-b border-zinc-800 pb-8 last:border-0">
-            <h2 className="text-lg font-semibold text-white">{item.q}</h2>
-            <p className="mt-2 text-zinc-400">{item.a}</p>
-          </li>
+          <details
+            key={item.q}
+            className="group rounded-2xl border border-zinc-200/90 bg-white shadow-sm transition-shadow open:shadow-md dark:border-zinc-800 dark:bg-zinc-900/50 dark:open:shadow-purple-950/20"
+          >
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-left text-base font-medium text-zinc-900 marker:hidden [&::-webkit-details-marker]:hidden dark:text-zinc-100">
+              <span className="pr-2">{item.q}</span>
+              <span
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-purple-200 bg-purple-50 text-purple-700 transition-transform duration-200 group-open:rotate-180 dark:border-purple-500/30 dark:bg-purple-950/40 dark:text-purple-300"
+                aria-hidden
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </span>
+            </summary>
+            <div className="border-t border-zinc-100 px-5 pb-5 pt-0 text-[15px] leading-relaxed text-zinc-600 dark:border-zinc-800 dark:text-zinc-400">
+              <p className="pt-3">{item.a}</p>
+            </div>
+          </details>
         ))}
-      </ul>
-      <p className="!mt-10 text-sm text-zinc-500">
-        Still stuck?{" "}
-        <Link href="/support" className="text-purple-400 hover:text-purple-300">
-          Contact support
-        </Link>{" "}
-        or{" "}
-        <a href={SUPPORT_MAILTO} className="text-purple-400 hover:text-purple-300">
-          {SUPPORT_EMAIL}
-        </a>
-        .
-      </p>
-    </MarketingShell>
+      </div>
+
+      <div className="mt-12 rounded-2xl border border-purple-200/80 bg-purple-50/80 p-6 dark:border-purple-500/20 dark:bg-purple-950/25">
+        <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+          Still stuck?{" "}
+          <Link href="/support" className="font-medium text-purple-700 underline decoration-purple-300 underline-offset-2 hover:text-purple-600 dark:text-purple-400 dark:decoration-purple-600 dark:hover:text-purple-300">
+            Contact support
+          </Link>{" "}
+          or{" "}
+          <a
+            href={SUPPORT_MAILTO}
+            className="font-medium text-purple-700 underline decoration-purple-300 underline-offset-2 hover:text-purple-600 dark:text-purple-400 dark:decoration-purple-600 dark:hover:text-purple-300"
+          >
+            {SUPPORT_EMAIL}
+          </a>
+          .
+        </p>
+      </div>
+    </MarketingDocLayout>
   );
 }

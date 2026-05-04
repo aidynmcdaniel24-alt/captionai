@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { isClerkAdminUser } from "@/lib/admin";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -7,8 +8,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   const { userId } = await auth();
-  const adminId = process.env.CLERK_ADMIN_USER_ID?.trim();
-  if (!userId || !adminId || userId !== adminId) {
+  if (!userId || !isClerkAdminUser(userId)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
