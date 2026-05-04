@@ -5,6 +5,18 @@ import { supabaseServer } from "@/lib/supabase/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type HistoryRow = {
+  id: string;
+  topic: string;
+  platform: string;
+  tone: string;
+  language?: string;
+  captions: string[];
+  created_at: string;
+  favoriteIndexes?: number[];
+  ratings?: Record<string, "worst" | "medium" | "best">;
+};
+
 export async function GET() {
   const { userId } = await auth();
   if (!userId) {
@@ -13,7 +25,7 @@ export async function GET() {
 
   const { data, error } = await supabaseServer
     .from("caption_history")
-    .select("id, topic, platform, tone, captions, created_at")
+    .select("id, topic, platform, tone, language, captions, created_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(10);
@@ -25,7 +37,49 @@ export async function GET() {
     );
   }
 
-  return NextResponse.json({ items: data ?? [] });
+  const rows = (data ?? []) as Omit<HistoryRow, "favoriteIndexes" | "ratings">[];
+  const ids = rows.map((r) => r.id);
+  if (ids.length === 0) {
+    return NextResponse.json({ items: [] });
+  }
+
+  const [favRes, rateRes] = await Promise.all([
+    supabaseServer
+      .from("caption_favorites")
+      .select("history_id, caption_index")
+      .eq("user_id", userId)
+      .in("history_id", ids),
+    supabaseServer
+      .from("caption_ratings")
+      .select("history_id, caption_index, rating")
+      .eq("user_id", userId)
+      .in("history_id", ids),
+  ]);
+
+  const favByHistory = new Map<string, number[]>();
+  for (const f of favRes.data ?? []) {
+    const h = f.history_id as string;
+    const list = favByHistory.get(h) ?? [];
+    list.push(f.caption_index as number);
+    favByHistory.set(h, list);
+  }
+
+  const rateByHistory = new Map<string, Record<string, "worst" | "medium" | "best">>();
+  for (const r of rateRes.data ?? []) {
+    const h = r.history_id as string;
+    const rec = rateByHistory.get(h) ?? {};
+    rec[String(r.caption_index)] = r.rating as "worst" | "medium" | "best";
+    rateByHistory.set(h, rec);
+  }
+
+  const items: HistoryRow[] = rows.map((row) => ({
+    ...row,
+    language: row.language ?? "English",
+    favoriteIndexes: favByHistory.get(row.id) ?? [],
+    ratings: rateByHistory.get(row.id),
+  }));
+
+  return NextResponse.json({ items });
 }
 
 export async function DELETE(req: Request) {

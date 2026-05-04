@@ -5,6 +5,10 @@ import { supabaseServer } from "@/lib/supabase/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function todayUtc() {
+  return new Date().toISOString().split("T")[0]!;
+}
+
 export async function GET() {
   const { userId } = await auth();
   if (!userId) {
@@ -29,5 +33,42 @@ export async function GET() {
     totalCaptions = count;
   }
 
-  return NextResponse.json({ plan, totalCaptions });
+  const date = todayUtc();
+  const { data: usageRow } = await supabaseServer
+    .from("usage")
+    .select("count")
+    .eq("user_id", userId)
+    .eq("date", date)
+    .maybeSingle();
+
+  let referralsCount = 0;
+  const { count: refCount, error: refErr } = await supabaseServer
+    .from("referral_claims")
+    .select("*", { count: "exact", head: true })
+    .eq("referrer_user_id", userId);
+  if (!refErr && typeof refCount === "number") {
+    referralsCount = refCount;
+  }
+
+  let abSummary = { experiments: 0, totalPicks: 0 };
+  const { data: abRows, error: abErr } = await supabaseServer
+    .from("ab_experiments")
+    .select("picks_a, picks_b")
+    .eq("user_id", userId);
+
+  if (!abErr && abRows?.length) {
+    abSummary = {
+      experiments: abRows.length,
+      totalPicks: abRows.reduce((s, r) => s + (r.picks_a ?? 0) + (r.picks_b ?? 0), 0),
+    };
+  }
+
+  return NextResponse.json({
+    plan,
+    totalCaptions,
+    usageToday: usageRow?.count ?? 0,
+    freeLimit: 5,
+    referralsCount,
+    abSummary,
+  });
 }

@@ -22,7 +22,7 @@ export function PricingSection() {
           </p>
         </motion.div>
 
-        <div className="mt-14 grid gap-8 lg:grid-cols-2 lg:gap-10">
+        <div className="mt-14 grid gap-8 lg:grid-cols-3 lg:gap-8">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -113,6 +113,49 @@ export function PricingSection() {
                 </Link>
               )}
             </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.45, delay: 0.1 }}
+            className="flex flex-col rounded-3xl border border-emerald-500/30 bg-zinc-900/50 p-8 shadow-xl"
+          >
+            <p className="text-sm font-medium text-emerald-300">Pro annual</p>
+            <p className="mt-2 text-4xl font-bold text-white">
+              $79<span className="text-lg font-normal text-zinc-400">/year</span>
+            </p>
+            <p className="mt-2 text-sm text-zinc-400">
+              Best value for daily creators. Uses Stripe annual price when configured.
+            </p>
+            <ul className="mt-8 flex flex-1 flex-col gap-4 text-sm text-zinc-200">
+              <li className="flex gap-3">
+                <span className="text-emerald-400">✓</span>
+                <span>Unlimited generations</span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-emerald-400">✓</span>
+                <span>One payment per year — your team can enable this in billing</span>
+              </li>
+            </ul>
+            {!isLoaded ? (
+              <div className="mt-10 h-12 animate-pulse rounded-full bg-zinc-800" aria-hidden />
+            ) : isSignedIn ? (
+              <Link
+                href="/upgrade?billing=annual"
+                className="mt-10 inline-flex min-h-[48px] w-full items-center justify-center rounded-full border border-emerald-500/50 py-3 font-semibold text-emerald-200 transition hover:bg-emerald-950/40"
+              >
+                Upgrade annual
+              </Link>
+            ) : (
+              <Link
+                href="/sign-up"
+                className="mt-10 inline-flex min-h-[48px] items-center justify-center rounded-full border border-emerald-500/40 py-3 font-semibold text-emerald-200 transition hover:bg-emerald-950/30"
+              >
+                Get started
+              </Link>
+            )}
           </motion.div>
         </div>
       </div>

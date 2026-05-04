@@ -1,6 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { logAdminEvent } from "@/lib/admin-log";
+import { containsBlockedWord, getBlockedWordList } from "@/lib/blocked-words";
 import { getGroqClient } from "@/lib/groq-client";
+import { withGroqRetry } from "@/lib/groq-retry";
 import { supabaseServer } from "@/lib/supabase/server";
 
 type Plan = "free" | "pro";
@@ -11,10 +14,19 @@ function getTodayDateString() {
   return new Date().toISOString().split("T")[0];
 }
 
-function buildPrompt(topic: string, platform: string, tone: string) {
+function resolvePlatform(platform: string, custom: string) {
+  const p = platform.trim();
+  if (p.toLowerCase() === "custom" && custom.trim()) {
+    return custom.trim().slice(0, 80);
+  }
+  return p.slice(0, 80) || "Instagram";
+}
+
+function buildPrompt(topic: string, platform: string, tone: string, language: string) {
   return `
 You are an expert social media copywriter.
 Generate exactly 3 captions for this request.
+Write in this language: ${language}.
 
 Topic: "${topic}"
 Platform: "${platform}"
@@ -25,19 +37,37 @@ Rules:
 - Keep each caption unique and engaging.
 - Match tone exactly.
 - Add relevant hashtags at the end of each caption.
-- Return valid JSON only, with this shape:
-{"captions":["caption 1","caption 2","caption 3"]}
+- Return valid JSON only, with this exact shape:
+{"captions":["caption 1","caption 2","caption 3"],"emojiPerCaption":[["emoji1","emoji2"],["emoji1"],["emoji1","emoji2","emoji3"]]}
+emojiPerCaption must have exactly 3 arrays (one per caption), each array has 2-4 relevant emoji characters (not words).
 `;
 }
 
-function parseCaptionsFromModel(raw: string) {
+type Parsed = { captions: string[]; emojiPerCaption: string[][] };
+
+function parseModelJson(raw: string): Parsed | null {
   try {
-    const parsed = JSON.parse(raw) as { captions?: string[] };
+    const parsed = JSON.parse(raw) as {
+      captions?: string[];
+      emojiPerCaption?: string[][];
+    };
     if (!parsed.captions || parsed.captions.length !== 3) {
       return null;
     }
-
-    return parsed.captions.map((item) => item.trim()).filter(Boolean);
+    const captions = parsed.captions.map((item) => item.trim()).filter(Boolean);
+    if (captions.length !== 3) {
+      return null;
+    }
+    let emojiPerCaption: string[][] =
+      Array.isArray(parsed.emojiPerCaption) && parsed.emojiPerCaption.length === 3
+        ? parsed.emojiPerCaption.map((row) =>
+            (Array.isArray(row) ? row : []).map((e) => String(e).trim()).filter(Boolean)
+          )
+        : [[], [], []];
+    while (emojiPerCaption.length < 3) {
+      emojiPerCaption.push([]);
+    }
+    return { captions, emojiPerCaption: emojiPerCaption.slice(0, 3) };
   } catch {
     return null;
   }
@@ -52,11 +82,24 @@ export async function POST(req: Request) {
 
   const body = await req.json();
   const topic = (body.topic ?? "").toString().trim();
-  const platform = (body.platform ?? "Instagram").toString();
+  const platformRaw = (body.platform ?? "Instagram").toString();
+  const platformCustom = (body.platformCustom ?? "").toString();
   const tone = (body.tone ?? "inspirational").toString();
+  const language = (body.language ?? "English").toString().trim().slice(0, 40) || "English";
+
+  const platform = resolvePlatform(platformRaw, platformCustom);
 
   if (!topic) {
     return NextResponse.json({ error: "Topic is required." }, { status: 400 });
+  }
+
+  const blockedList = getBlockedWordList();
+  const blockedTopic = containsBlockedWord(topic, blockedList);
+  if (blockedTopic) {
+    return NextResponse.json(
+      { error: "Your topic contains a blocked word. Please revise.", word: blockedTopic },
+      { status: 400 }
+    );
   }
 
   const today = getTodayDateString();
@@ -68,6 +111,7 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (subscriptionError) {
+    await logAdminEvent("error", "subscription-read failed", { userId, details: subscriptionError.message });
     return NextResponse.json(
       {
         error:
@@ -97,6 +141,7 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (usageReadError) {
+    await logAdminEvent("error", "usage-read failed", { userId, details: usageReadError.message });
     return NextResponse.json(
       {
         error:
@@ -124,31 +169,9 @@ export async function POST(req: Request) {
     );
   }
 
-  const nextCount = currentCount + 1;
-
-  const { error: usageWriteError } = await supabaseServer.from("usage").upsert(
-    {
-      user_id: userId,
-      date: today,
-      count: nextCount,
-    },
-    {
-      onConflict: "user_id,date",
-    }
-  );
-
-  if (usageWriteError) {
-    return NextResponse.json(
-      {
-        error: "Could not update daily usage.",
-        stage: "usage-write",
-        details: usageWriteError.message,
-      },
-      { status: 500 }
-    );
-  }
   const groq = getGroqClient();
   if (!groq) {
+    await logAdminEvent("error", "groq key missing", { userId });
     return NextResponse.json(
       {
         error: "Missing GROQ_API_KEY in environment variables.",
@@ -159,51 +182,109 @@ export async function POST(req: Request) {
   }
 
   let captions: string[] = [];
+  let emojiPerCaption: string[][] = [[], [], []];
 
   try {
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      temperature: 0.9,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You write high-quality social media captions and always return strict JSON when asked.",
-        },
-        {
-          role: "user",
-          content: buildPrompt(topic, platform, tone),
-        },
-      ],
-    });
+    const completion = await withGroqRetry(() =>
+      groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        temperature: 0.9,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You write high-quality social media captions and always return strict JSON when asked.",
+          },
+          {
+            role: "user",
+            content: buildPrompt(topic, platform, tone, language),
+          },
+        ],
+      })
+    );
 
     const content = completion.choices[0]?.message?.content ?? "";
-    const parsed = parseCaptionsFromModel(content);
+    const parsed = parseModelJson(content);
 
     if (!parsed) {
+      await logAdminEvent("warn", "groq parse captions invalid JSON", { userId });
       return NextResponse.json(
         { error: "AI response format was invalid. Please try again." },
         { status: 502 }
       );
     }
 
-    captions = parsed;
+    captions = parsed.captions;
+    emojiPerCaption = parsed.emojiPerCaption;
 
-    const { error: historyError } = await supabaseServer.from("caption_history").insert({
-      user_id: userId,
-      topic,
-      platform,
-      tone,
-      captions,
-    });
+    for (const cap of captions) {
+      const b = containsBlockedWord(cap, blockedList);
+      if (b) {
+        await logAdminEvent("warn", "blocked word in model output", { userId, word: b });
+        return NextResponse.json(
+          { error: "Generated text hit a safety filter. Try a different topic or tone.", word: b },
+          { status: 400 }
+        );
+      }
+    }
+
+    const nextCount = currentCount + 1;
+    const { error: usageWriteError } = await supabaseServer.from("usage").upsert(
+      {
+        user_id: userId,
+        date: today,
+        count: nextCount,
+      },
+      {
+        onConflict: "user_id,date",
+      }
+    );
+
+    if (usageWriteError) {
+      await logAdminEvent("error", "usage-write failed", { userId, details: usageWriteError.message });
+      return NextResponse.json(
+        {
+          error: "Could not update daily usage.",
+          stage: "usage-write",
+          details: usageWriteError.message,
+        },
+        { status: 500 }
+      );
+    }
+
+    const { data: inserted, error: historyError } = await supabaseServer
+      .from("caption_history")
+      .insert({
+        user_id: userId,
+        topic,
+        platform,
+        tone,
+        captions,
+        language,
+      })
+      .select("id")
+      .single();
 
     if (historyError) {
       console.error("[caption_history]", historyError.message);
     }
-  } catch (error) {
-    const details =
-      error instanceof Error ? error.message : "Unknown Groq API error.";
 
+    const historyId = inserted?.id as string | undefined;
+
+    return NextResponse.json({
+      captions,
+      emojiPerCaption,
+      historyId,
+      plan,
+      usage: {
+        count: nextCount,
+        limit: plan === "free" ? freeLimit : null,
+        date: today,
+      },
+    });
+  } catch (error) {
+    const details = error instanceof Error ? error.message : "Unknown Groq API error.";
+    await logAdminEvent("error", "groq-generate failed", { userId, details });
     return NextResponse.json(
       {
         error: "Could not generate AI captions with Groq. Check your GROQ_API_KEY.",
@@ -213,14 +294,4 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
-
-  return NextResponse.json({
-    captions,
-    plan,
-    usage: {
-      count: nextCount,
-      limit: plan === "free" ? freeLimit : null,
-      date: today,
-    },
-  });
 }

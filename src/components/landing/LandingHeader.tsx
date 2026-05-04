@@ -1,6 +1,7 @@
 "use client";
 
 import { BrandLogo } from "@/components/BrandLogo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -42,6 +43,7 @@ export function LandingHeader() {
         </nav>
 
         <div className="hidden min-h-[40px] items-center gap-3 md:flex">
+          <ThemeToggle />
           {!isLoaded ? (
             <div className="h-9 w-28 animate-pulse rounded-full bg-zinc-800" aria-hidden />
           ) : isSignedIn ? (

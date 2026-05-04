@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
+import { containsBlockedWord, getBlockedWordList } from "@/lib/blocked-words";
 import { getGroqClient } from "@/lib/groq-client";
+import { withGroqRetry } from "@/lib/groq-retry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Rolling window rate limit for anonymous demo (best-effort per server instance). */
 const WINDOW_MS = 60 * 60 * 1000;
 const MAX_PER_WINDOW = 12;
 const hits = new Map<string, number[]>();
@@ -87,6 +88,11 @@ export async function POST(req: Request) {
     );
   }
 
+  const blocked = containsBlockedWord(topic, getBlockedWordList());
+  if (blocked) {
+    return NextResponse.json({ error: "That description contains a blocked word." }, { status: 400 });
+  }
+
   const groq = getGroqClient();
   if (!groq) {
     return NextResponse.json(
@@ -96,21 +102,23 @@ export async function POST(req: Request) {
   }
 
   try {
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      temperature: 0.85,
-      max_tokens: 400,
-      messages: [
-        {
-          role: "system",
-          content: "You write social media captions and return strict JSON when asked.",
-        },
-        {
-          role: "user",
-          content: buildDemoPrompt(topic, platform, tone),
-        },
-      ],
-    });
+    const completion = await withGroqRetry(() =>
+      groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        temperature: 0.85,
+        max_tokens: 400,
+        messages: [
+          {
+            role: "system",
+            content: "You write social media captions and return strict JSON when asked.",
+          },
+          {
+            role: "user",
+            content: buildDemoPrompt(topic, platform, tone),
+          },
+        ],
+      })
+    );
 
     const content = completion.choices[0]?.message?.content ?? "";
     const caption = parseDemoCaption(content);
@@ -120,6 +128,11 @@ export async function POST(req: Request) {
         { error: "Could not parse the AI response. Try again." },
         { status: 502 }
       );
+    }
+
+    const outBlocked = containsBlockedWord(caption, getBlockedWordList());
+    if (outBlocked) {
+      return NextResponse.json({ error: "Output was blocked by safety filters. Try different words." }, { status: 400 });
     }
 
     return NextResponse.json({ caption });

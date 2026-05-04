@@ -1,18 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 
-export default function UpgradePage() {
+function UpgradeCheckout() {
+  const searchParams = useSearchParams();
   const [error, setError] = useState("");
   const [pending, setPending] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
+    const annual =
+      searchParams.get("billing") === "annual" || searchParams.get("plan") === "annual";
 
     async function startCheckout() {
       try {
-        const res = await fetch("/api/checkout", { method: "POST" });
+        const res = await fetch("/api/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(annual ? { interval: "year" } : {}),
+        });
         const data = (await res.json()) as { url?: string; error?: string };
 
         if (!res.ok) {
@@ -35,7 +43,7 @@ export default function UpgradePage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [searchParams]);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 px-6 py-16 text-white">
@@ -62,5 +70,19 @@ export default function UpgradePage() {
         ) : null}
       </div>
     </main>
+  );
+}
+
+export default function UpgradePage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 px-6 py-16 text-white">
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-purple-500 border-t-transparent" />
+        </main>
+      }
+    >
+      <UpgradeCheckout />
+    </Suspense>
   );
 }
