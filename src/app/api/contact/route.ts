@@ -1,8 +1,13 @@
+/**
+ * Contact form → Gmail SMTP via Nodemailer (no Resend).
+ * Requires: GMAIL_SMTP_USER, GMAIL_SMTP_APP_PASSWORD
+ */
+import nodemailer from "nodemailer";
 import { NextResponse } from "next/server";
-import { Resend } from "resend";
 import { SUPPORT_EMAIL } from "@/lib/support-contact";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 type Body = {
   name?: string;
@@ -16,6 +21,26 @@ function escapeHtml(text: string) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function getGmailMailer():
+  | { transporter: nodemailer.Transporter; user: string }
+  | null {
+  const user = process.env.GMAIL_SMTP_USER?.trim();
+  const pass = process.env.GMAIL_SMTP_APP_PASSWORD?.replace(/\s/g, "").trim();
+
+  if (!user || !pass) {
+    return null;
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: { user, pass },
+  });
+
+  return { transporter, user };
 }
 
 export async function POST(req: Request) {
@@ -49,36 +74,28 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Message is too long." }, { status: 400 });
   }
 
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  const from = process.env.RESEND_FROM_EMAIL?.trim();
+  const mailer = getGmailMailer();
 
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "Email is not configured. Set RESEND_API_KEY on the server." },
-      { status: 503 }
-    );
-  }
-
-  if (!from) {
+  if (!mailer) {
     return NextResponse.json(
       {
         error:
-          "Email is not configured. Set RESEND_FROM_EMAIL (verified sender in Resend), e.g. CaptionAI <noreply@yourdomain.com>.",
+          "Gmail SMTP is not configured. Set environment variables GMAIL_SMTP_USER (e.g. captionaisupport@gmail.com) and GMAIL_SMTP_APP_PASSWORD (16-character App Password), then redeploy.",
       },
       { status: 503 }
     );
   }
 
-  const resend = new Resend(apiKey);
+  const fromAddress = `"CaptionAI" <${mailer.user}>`;
 
   const safeName = escapeHtml(name);
   const safeEmail = escapeHtml(email);
   const safeMessage = escapeHtml(message).replace(/\r\n|\n|\r/g, "<br />");
 
   try {
-    const { data, error } = await resend.emails.send({
-      from,
-      to: [SUPPORT_EMAIL],
+    const info = await mailer.transporter.sendMail({
+      from: fromAddress,
+      to: SUPPORT_EMAIL,
       replyTo: email,
       subject: `[CaptionAI] Support from ${name}`,
       text: [`Name: ${name}`, `Email: ${email}`, "", message].join("\n"),
@@ -90,30 +107,19 @@ export async function POST(req: Request) {
       `.trim(),
     });
 
-    if (error) {
-      console.error("[contact/resend]", error);
-      return NextResponse.json(
-        {
-          error:
-            "Could not send your message. Please email us directly or try again later.",
-          details: typeof error.message === "string" ? error.message : undefined,
-        },
-        { status: 502 }
-      );
-    }
-
-    console.info("[contact/sent]", {
-      resendId: data?.id,
+    console.info("[contact/gmail]", {
+      messageId: info.messageId,
       to: SUPPORT_EMAIL,
-      replyTo: email.slice(0, 40),
     });
 
-    return NextResponse.json({ ok: true, id: data?.id ?? null });
+    return NextResponse.json({ ok: true, messageId: info.messageId ?? null });
   } catch (e) {
-    console.error("[contact/resend]", e);
+    const err = e instanceof Error ? e.message : "SMTP error";
+    console.error("[contact/gmail]", err);
     return NextResponse.json(
       {
-        error: "Could not send your message. Please email us directly or try again later.",
+        error: "Could not send your message. Check Gmail app password and try again, or email us directly.",
+        details: process.env.NODE_ENV === "development" ? err : undefined,
       },
       { status: 502 }
     );

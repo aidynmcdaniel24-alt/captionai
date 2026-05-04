@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Class-based dark mode (ThemeProvider toggles `dark` on <html>) — default v4 uses OS preference only */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #fafafa;
   --foreground: #171717;
