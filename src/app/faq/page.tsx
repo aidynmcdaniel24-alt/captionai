@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support-contact";
 import Link from "next/link";
 
 export const metadata: Metadata = {
@@ -46,7 +47,7 @@ const faqs: { q: string; a: string }[] = [
   },
   {
     q: "How do I contact support?",
-    a: "Visit our Support page for the contact form and support email. You can also check this FAQ for common questions.",
+    a: `Visit our Support page for the contact form, or email us at ${SUPPORT_EMAIL}. You can also check this FAQ for common questions.`,
   },
 ];
 
@@ -65,7 +66,11 @@ export default function FaqPage() {
         Still stuck?{" "}
         <Link href="/support" className="text-purple-400 hover:text-purple-300">
           Contact support
-        </Link>
+        </Link>{" "}
+        or{" "}
+        <a href={SUPPORT_MAILTO} className="text-purple-400 hover:text-purple-300">
+          {SUPPORT_EMAIL}
+        </a>
         .
       </p>
     </MarketingShell>

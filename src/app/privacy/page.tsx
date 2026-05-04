@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support-contact";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -134,8 +135,8 @@ export default function PrivacyPage() {
         <h2 className="text-lg font-semibold text-white">12. Contact</h2>
         <p>
           Privacy questions:{" "}
-          <a href="mailto:support@captionai.com" className="text-purple-400 hover:text-purple-300">
-            support@captionai.com
+          <a href={SUPPORT_MAILTO} className="text-purple-400 hover:text-purple-300">
+            {SUPPORT_EMAIL}
           </a>
         </p>
       </section>

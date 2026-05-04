@@ -1,6 +1,7 @@
 "use client";
 
 import { MarketingShell } from "@/components/marketing/MarketingShell";
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support-contact";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -46,10 +47,10 @@ export default function SupportPage() {
         <p className="text-zinc-300">
           Email us directly at{" "}
           <a
-            href="mailto:support@captionai.com"
+            href={SUPPORT_MAILTO}
             className="font-medium text-purple-400 underline decoration-purple-500/50 underline-offset-2 hover:text-purple-300"
           >
-            support@captionai.com
+            {SUPPORT_EMAIL}
           </a>
         </p>
         <p className="text-sm text-zinc-500">

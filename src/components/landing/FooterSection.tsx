@@ -1,5 +1,6 @@
 "use client";
 
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support-contact";
 import Link from "next/link";
 
 const footerLinks = [
@@ -45,7 +46,14 @@ export function FooterSection() {
         </nav>
       </div>
       <div className="mx-auto mt-12 max-w-6xl border-t border-white/5 pt-8 text-center text-xs text-zinc-600 sm:text-left">
-        © {new Date().getFullYear()} CaptionAI. Built for learning and shipping.
+        <p>
+          <a href={SUPPORT_MAILTO} className="text-zinc-500 underline-offset-2 hover:text-zinc-300 hover:underline">
+            {SUPPORT_EMAIL}
+          </a>
+        </p>
+        <p className="mt-2">
+          © {new Date().getFullYear()} CaptionAI. Built for learning and shipping.
+        </p>
       </div>
     </footer>
   );
