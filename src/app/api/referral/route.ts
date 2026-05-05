@@ -83,13 +83,13 @@ export async function GET(req: Request) {
 
   const { data: statsRow } = await supabaseServer
     .from("affiliate_stats")
-    .select("clicks, signups, paying_customers, earnings_cents")
+    .select("total_clicks, total_signups, total_paying, earnings_cents")
     .eq("affiliate_user_id", userId)
     .maybeSingle();
 
-  const clicks = statsRow?.clicks ?? 0;
-  const signups = statsRow?.signups ?? 0;
-  const paying = statsRow?.paying_customers ?? 0;
+  const clicks = statsRow?.total_clicks ?? 0;
+  const signups = statsRow?.total_signups ?? 0;
+  const paying = statsRow?.total_paying ?? 0;
   const earningsCents = statsRow?.earnings_cents ?? 0;
 
   return NextResponse.json({
@@ -124,12 +124,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing code." }, { status: 400 });
   }
 
-  let { data: row } = await supabaseServer.from("affiliates").select("user_id").eq("code", code).maybeSingle();
+  // Match DB code case-insensitively (legacy rows may differ in casing).
+  let { data: row } = await supabaseServer.from("affiliates").select("user_id").ilike("code", code).maybeSingle();
   if (!row?.user_id) {
     const { data: legacy } = await supabaseServer
       .from("referral_codes")
       .select("user_id")
-      .eq("code", code)
+      .ilike("code", code)
       .maybeSingle();
     if (legacy?.user_id) {
       row = { user_id: legacy.user_id };
@@ -165,7 +166,9 @@ export async function POST(req: Request) {
   });
 
   if (rpcErr) {
-    console.warn("[referral] increment_affiliate_signup:", rpcErr.message);
+    console.error("[referral] increment_affiliate_signup:", rpcErr.message);
+    await supabaseServer.from("affiliate_signup_attributions").delete().eq("referred_user_id", userId);
+    return NextResponse.json({ error: rpcErr.message }, { status: 500 });
   }
 
   try {

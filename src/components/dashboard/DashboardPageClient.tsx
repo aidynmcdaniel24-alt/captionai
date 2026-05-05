@@ -1,7 +1,6 @@
 "use client";
 
 import { BrandLogo } from "@/components/BrandLogo";
-import { CaptionHistorySection } from "@/components/CaptionHistorySection";
 import { BestTimeCard } from "@/components/dashboard/BestTimeCard";
 import {
   CAPTION_RATING_ACTIVE,
@@ -67,7 +66,6 @@ export function DashboardPageClient() {
   const [showPaywall, setShowPaywall] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [historyKey, setHistoryKey] = useState(0);
   const [captionRatings, setCaptionRatings] = useState<CaptionRatingKey[]>([]);
   const [fav, setFav] = useState<Record<number, boolean>>({});
 
@@ -197,7 +195,6 @@ export function DashboardPageClient() {
       setEmojiPerCaption(data.emojiPerCaption ?? []);
       setCaptionRatings(data.captionRatings ?? []);
       setHistoryId(data.historyId ?? null);
-      setHistoryKey((k) => k + 1);
       if (data.plan === "pro" || data.plan === "free") {
         setPlan(data.plan);
       }
@@ -614,14 +611,14 @@ export function DashboardPageClient() {
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0 flex-1">
                           {isBestLockedForFree(index) ? (
-                            <div className="relative overflow-hidden rounded-xl border border-purple-500/30 bg-zinc-100/80 dark:bg-zinc-900/40">
+                            <div className="relative min-h-[12rem] overflow-hidden rounded-xl border border-purple-500/40 bg-zinc-100/80 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] dark:border-purple-500/35 dark:bg-zinc-900/40 dark:shadow-none">
                               <p className="select-none px-4 py-3 leading-7 blur-xl" aria-hidden>
                                 {caption}
                               </p>
-                              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/75 px-4 text-center dark:bg-zinc-950/80">
-                                <span className="text-zinc-700 dark:text-zinc-200" aria-hidden>
+                              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/80 px-4 py-5 text-center backdrop-blur-[2px] dark:bg-zinc-950/85">
+                                <span className="text-purple-600 dark:text-purple-400" aria-hidden>
                                   <svg
-                                    className="mx-auto h-8 w-8"
+                                    className="mx-auto h-7 w-7"
                                     fill="none"
                                     stroke="currentColor"
                                     strokeWidth={1.75}
@@ -634,12 +631,12 @@ export function DashboardPageClient() {
                                     />
                                   </svg>
                                 </span>
-                                <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                                <p className="max-w-[16rem] text-sm font-semibold leading-snug text-zinc-900 dark:text-white">
                                   Upgrade to Pro to unlock
                                 </p>
                                 <button
                                   type="button"
-                                  className="mt-1 rounded-full bg-purple-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-purple-500 disabled:opacity-50"
+                                  className="shrink-0 rounded-full bg-purple-600 px-4 py-2 text-xs font-semibold text-white shadow-sm ring-1 ring-purple-500/30 hover:bg-purple-500 disabled:opacity-50"
                                   disabled={checkoutLoading}
                                   onClick={() => startCheckout("month")}
                                 >
@@ -820,8 +817,6 @@ export function DashboardPageClient() {
             ) : null}
           </div>
         ) : null}
-
-        <CaptionHistorySection refreshKey={historyKey} />
       </div>
 
       {showPaywall ? (

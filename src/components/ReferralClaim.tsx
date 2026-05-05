@@ -1,13 +1,19 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 const KEY = "captionai_pending_ref";
 
 export function ReferralClaim() {
-  const { isLoaded, isSignedIn } = useAuth();
-  const done = useRef(false);
+  const { isLoaded, isSignedIn, userId } = useAuth();
+  const pathname = usePathname();
+  const succeeded = useRef(false);
+
+  useEffect(() => {
+    succeeded.current = false;
+  }, [userId]);
 
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
@@ -22,9 +28,10 @@ export function ReferralClaim() {
   }, []);
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn || done.current) {
+    if (!isLoaded || !isSignedIn || succeeded.current) {
       return;
     }
+
     const sp = new URLSearchParams(window.location.search);
     let code = sp.get("ref")?.trim();
     if (!code) {
@@ -37,24 +44,62 @@ export function ReferralClaim() {
     if (!code) {
       return;
     }
-    done.current = true;
+
+    const normalized = code.toLowerCase();
+    let cancelled = false;
+
     (async () => {
-      try {
-        await fetch("/api/referral", {
+      for (let attempt = 0; attempt < 8; attempt++) {
+        if (cancelled) {
+          return;
+        }
+
+        const res = await fetch("/api/referral", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code }),
+          credentials: "same-origin",
+          body: JSON.stringify({ code: normalized }),
         });
-      } catch {
-        /* ignore */
-      }
-      try {
-        sessionStorage.removeItem(KEY);
-      } catch {
-        /* ignore */
+
+        if (res.ok) {
+          succeeded.current = true;
+          try {
+            sessionStorage.removeItem(KEY);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+
+        if (res.status === 401) {
+          await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+          continue;
+        }
+
+        // Definitive client errors: drop stored ref so we do not loop forever.
+        if (res.status === 400) {
+          succeeded.current = true;
+          try {
+            sessionStorage.removeItem(KEY);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+
+        // 429 / 500 — retry a few times, then wait for another navigation (pathname dep).
+        if (attempt < 4) {
+          await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+          continue;
+        }
+        return;
       }
     })();
-  }, [isLoaded, isSignedIn]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, isSignedIn, pathname]);
 
   return null;
 }

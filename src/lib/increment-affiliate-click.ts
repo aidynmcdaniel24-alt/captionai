@@ -23,14 +23,14 @@ export async function recordAffiliateLinkClick(rawCode: string): Promise<void> {
   const codeLower = trimmed.toLowerCase();
 
   let userId: string | null = null;
-  const { data: aff } = await supabaseServer.from("affiliates").select("user_id").eq("code", codeLower).maybeSingle();
+  const { data: aff } = await supabaseServer.from("affiliates").select("user_id").ilike("code", codeLower).maybeSingle();
   if (aff?.user_id) {
     userId = aff.user_id;
   } else {
     const { data: leg } = await supabaseServer
       .from("referral_codes")
       .select("user_id, code")
-      .eq("code", codeLower)
+      .ilike("code", codeLower)
       .maybeSingle();
     if (leg?.user_id) {
       userId = leg.user_id;
@@ -51,17 +51,17 @@ export async function recordAffiliateLinkClick(rawCode: string): Promise<void> {
 
   const { data: stats } = await supabaseServer
     .from("affiliate_stats")
-    .select("clicks")
+    .select("total_clicks")
     .eq("affiliate_user_id", userId)
     .maybeSingle();
 
-  const next = (stats?.clicks ?? 0) + 1;
+  const next = (stats?.total_clicks ?? 0) + 1;
   const now = new Date().toISOString();
 
   if (stats) {
     const { error: upErr } = await supabaseServer
       .from("affiliate_stats")
-      .update({ clicks: next, updated_at: now })
+      .update({ total_clicks: next, updated_at: now })
       .eq("affiliate_user_id", userId);
     if (upErr) {
       console.error("[affiliate click] fallback update failed:", upErr.message);
@@ -71,7 +71,7 @@ export async function recordAffiliateLinkClick(rawCode: string): Promise<void> {
 
   const { error: insErr } = await supabaseServer.from("affiliate_stats").insert({
     affiliate_user_id: userId,
-    clicks: 1,
+    total_clicks: 1,
     updated_at: now,
   });
   if (insErr) {
