@@ -1,5 +1,6 @@
 -- Affiliate program tables + RPCs (run in Supabase SQL Editor after base schema).
 -- Migrates data from referral_codes / referral_claims when present.
+-- affiliate_stats uses affiliate_user_id (FK → affiliates.user_id), not user_id.
 
 create table if not exists public.affiliates (
   user_id text primary key,
@@ -8,7 +9,7 @@ create table if not exists public.affiliates (
 );
 
 create table if not exists public.affiliate_stats (
-  user_id text primary key references public.affiliates (user_id) on delete cascade,
+  affiliate_user_id text primary key references public.affiliates (user_id) on delete cascade,
   total_clicks int not null default 0,
   total_signups int not null default 0,
   total_paying int not null default 0,
@@ -51,17 +52,17 @@ begin
       insert into public.affiliates (user_id, code)
       values (v_uid, v_code)
       on conflict (user_id) do nothing;
-      insert into public.affiliate_stats (user_id)
+      insert into public.affiliate_stats (affiliate_user_id)
       values (v_uid)
-      on conflict (user_id) do nothing;
+      on conflict (affiliate_user_id) do nothing;
     end if;
   end if;
   if v_uid is null then
     return;
   end if;
-  insert into public.affiliate_stats (user_id, total_clicks)
+  insert into public.affiliate_stats (affiliate_user_id, total_clicks)
   values (v_uid, 1)
-  on conflict (user_id) do update set
+  on conflict (affiliate_user_id) do update set
     total_clicks = public.affiliate_stats.total_clicks + 1,
     updated_at = now();
 end;
@@ -97,9 +98,9 @@ begin
          commission_total_cents = p_commission_cents
    where referred_user_id = p_referred_user_id;
 
-  insert into public.affiliate_stats (user_id, total_paying, earnings_cents)
+  insert into public.affiliate_stats (affiliate_user_id, total_paying, earnings_cents)
   values (v_referrer, 1, p_commission_cents)
-  on conflict (user_id) do update set
+  on conflict (affiliate_user_id) do update set
     total_paying = public.affiliate_stats.total_paying + 1,
     earnings_cents = public.affiliate_stats.earnings_cents + excluded.earnings_cents,
     updated_at = now();
@@ -116,9 +117,9 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.affiliate_stats (user_id, total_signups)
+  insert into public.affiliate_stats (affiliate_user_id, total_signups)
   values (p_referrer_user_id, 1)
-  on conflict (user_id) do update set
+  on conflict (affiliate_user_id) do update set
     total_signups = public.affiliate_stats.total_signups + 1,
     updated_at = now();
 end;
@@ -130,9 +131,9 @@ select rc.user_id, rc.code, rc.created_at
   from public.referral_codes rc
  on conflict (user_id) do nothing;
 
-insert into public.affiliate_stats (user_id)
+insert into public.affiliate_stats (affiliate_user_id)
 select a.user_id from public.affiliates a
- on conflict (user_id) do nothing;
+ on conflict (affiliate_user_id) do nothing;
 
 insert into public.affiliate_signup_attributions (
   referrer_user_id,
@@ -157,7 +158,7 @@ update public.affiliate_stats s
            from public.affiliate_signup_attributions
           group by referrer_user_id
        ) sub
- where s.user_id = sub.referrer_user_id
+ where s.affiliate_user_id = sub.referrer_user_id
    and coalesce (s.total_signups, 0) < coalesce (sub.c, 0);
 
 alter table public.caption_history

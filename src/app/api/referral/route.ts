@@ -45,7 +45,9 @@ export async function GET(req: Request) {
     if (legacy?.code) {
       const { error: syncErr } = await supabaseServer.from("affiliates").insert({ user_id: userId, code: legacy.code });
       if (!syncErr) {
-        await supabaseServer.from("affiliate_stats").upsert({ user_id: userId }, { onConflict: "user_id" });
+        await supabaseServer
+          .from("affiliate_stats")
+          .upsert({ affiliate_user_id: userId }, { onConflict: "affiliate_user_id" });
         code = legacy.code;
       }
     }
@@ -60,8 +62,8 @@ export async function GET(req: Request) {
       const { error: insAff } = await supabaseServer.from("affiliates").insert({ user_id: userId, code: tryCode });
       if (!insAff) {
         await supabaseServer.from("affiliate_stats").upsert(
-          { user_id: userId },
-          { onConflict: "user_id" }
+          { affiliate_user_id: userId },
+          { onConflict: "affiliate_user_id" }
         );
         await legacyInsertReferralCode(userId, tryCode);
         code = tryCode;
@@ -82,7 +84,7 @@ export async function GET(req: Request) {
   const { data: statsRow } = await supabaseServer
     .from("affiliate_stats")
     .select("total_clicks, total_signups, total_paying, earnings_cents")
-    .eq("user_id", userId)
+    .eq("affiliate_user_id", userId)
     .maybeSingle();
 
   const clicks = statsRow?.total_clicks ?? 0;

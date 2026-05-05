@@ -38,7 +38,9 @@ export async function recordAffiliateLinkClick(rawCode: string): Promise<void> {
         { user_id: leg.user_id, code: leg.code ?? codeLower },
         { onConflict: "user_id" }
       );
-      await supabaseServer.from("affiliate_stats").upsert({ user_id: userId }, { onConflict: "user_id" });
+      await supabaseServer
+        .from("affiliate_stats")
+        .upsert({ affiliate_user_id: userId }, { onConflict: "affiliate_user_id" });
     }
   }
 
@@ -50,7 +52,7 @@ export async function recordAffiliateLinkClick(rawCode: string): Promise<void> {
   const { data: stats } = await supabaseServer
     .from("affiliate_stats")
     .select("total_clicks")
-    .eq("user_id", userId)
+    .eq("affiliate_user_id", userId)
     .maybeSingle();
 
   const next = (stats?.total_clicks ?? 0) + 1;
@@ -60,7 +62,7 @@ export async function recordAffiliateLinkClick(rawCode: string): Promise<void> {
     const { error: upErr } = await supabaseServer
       .from("affiliate_stats")
       .update({ total_clicks: next, updated_at: now })
-      .eq("user_id", userId);
+      .eq("affiliate_user_id", userId);
     if (upErr) {
       console.error("[affiliate click] fallback update failed:", upErr.message);
     }
@@ -68,7 +70,7 @@ export async function recordAffiliateLinkClick(rawCode: string): Promise<void> {
   }
 
   const { error: insErr } = await supabaseServer.from("affiliate_stats").insert({
-    user_id: userId,
+    affiliate_user_id: userId,
     total_clicks: 1,
     updated_at: now,
   });
