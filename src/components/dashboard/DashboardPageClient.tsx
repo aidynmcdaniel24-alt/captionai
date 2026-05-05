@@ -3,6 +3,7 @@
 import { BrandLogo } from "@/components/BrandLogo";
 import { CaptionHistorySection } from "@/components/CaptionHistorySection";
 import { BestTimeCard } from "@/components/dashboard/BestTimeCard";
+import { CAPTION_RATING_ACTIVE, CAPTION_RATING_IDLE } from "@/lib/caption-rating-styles";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
@@ -62,7 +63,7 @@ export function DashboardPageClient() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [historyKey, setHistoryKey] = useState(0);
-  const [ratings, setRatings] = useState<Record<number, "worst" | "medium" | "best">>({});
+  const [ratings, setRatings] = useState<Record<string, "worst" | "medium" | "best">>({});
   const [fav, setFav] = useState<Record<number, boolean>>({});
 
   // Hashtags tab
@@ -108,6 +109,7 @@ export function DashboardPageClient() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate plan/usage on mount
     void refreshPlan();
   }, [refreshPlan]);
 
@@ -221,15 +223,19 @@ export function DashboardPageClient() {
   }
 
   async function setRating(index: number, rating: "worst" | "medium" | "best") {
-    setRatings((r) => ({ ...r, [index]: rating }));
+    const idx = String(index);
+    setRatings((r) => ({ ...r, [idx]: rating }));
     if (!historyId) {
       return;
     }
-    await fetch("/api/captions/rate", {
+    const res = await fetch("/api/captions/rate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ historyId, captionIndex: index, rating }),
     });
+    if (!res.ok) {
+      return;
+    }
   }
 
   async function toggleFavorite(index: number) {
@@ -317,6 +323,7 @@ export function DashboardPageClient() {
 
   useEffect(() => {
     if (tab === "trending" && !trendingLoaded && !trLoading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- load trending when tab opens
       void loadTrending();
     }
   }, [tab, trendingLoaded, trLoading]);
@@ -576,7 +583,7 @@ export function DashboardPageClient() {
                 <ul className="space-y-4">
                   {captions.map((caption, index) => (
                     <li
-                      key={`${caption}-${index}`}
+                      key={historyId ? `${historyId}-${index}` : `cap-${index}`}
                       className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950"
                     >
                       <div className="flex items-start justify-between gap-4">
@@ -618,24 +625,22 @@ export function DashboardPageClient() {
                             ["medium", "Medium"],
                             ["best", "Best"],
                           ] as const
-                        ).map(([key, label]) => (
-                          <button
-                            key={key}
-                            type="button"
-                            onClick={() => setRating(index, key)}
-                            className={`rounded-lg border px-2 py-1 text-xs font-medium ${
-                              ratings[index] === key
-                                ? key === "worst"
-                                  ? "border-red-600 bg-red-50 text-red-700 dark:border-red-500 dark:bg-red-950/50 dark:text-red-300"
-                                  : key === "medium"
-                                    ? "border-amber-500 bg-amber-50 text-amber-800 dark:border-amber-500 dark:bg-amber-950/40 dark:text-amber-200"
-                                    : "border-emerald-600 bg-emerald-50 text-emerald-800 dark:border-emerald-500 dark:bg-emerald-950/40 dark:text-emerald-200"
-                                : "border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                            }`}
-                          >
-                            {label}
-                          </button>
-                        ))}
+                        ).map(([ratingKey, label]) => {
+                          const selected = ratings[String(index)] === ratingKey;
+                          return (
+                            <button
+                              key={ratingKey}
+                              type="button"
+                              aria-pressed={selected}
+                              onClick={() => setRating(index, ratingKey)}
+                              className={`rounded-lg border px-2 py-1 text-xs font-medium ${
+                                selected ? CAPTION_RATING_ACTIVE[ratingKey] : CAPTION_RATING_IDLE
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
                       </div>
                     </li>
                   ))}

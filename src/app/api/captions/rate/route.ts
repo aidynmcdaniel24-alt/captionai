@@ -15,10 +15,20 @@ export async function POST(req: Request) {
 
   const body = await req.json();
   const historyId = (body.historyId ?? "").toString().trim();
-  const captionIndex = Number(body.captionIndex);
+  const rawIndex = body.captionIndex;
+  if (rawIndex === null || rawIndex === undefined || rawIndex === "") {
+    return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
+  }
+  const captionIndex = Number(rawIndex);
   const rating = (body.rating ?? "").toString().trim().toLowerCase();
 
-  if (!historyId || !Number.isInteger(captionIndex) || captionIndex < 0 || !RATINGS.has(rating)) {
+  if (
+    !historyId ||
+    Number.isNaN(captionIndex) ||
+    !Number.isInteger(captionIndex) ||
+    captionIndex < 0 ||
+    !RATINGS.has(rating)
+  ) {
     return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
   }
 

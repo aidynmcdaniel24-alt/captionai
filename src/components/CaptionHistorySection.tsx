@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { CAPTION_RATING_ACTIVE, CAPTION_RATING_IDLE } from "@/lib/caption-rating-styles";
 
 type HistoryRow = {
   id: string;
@@ -41,7 +42,9 @@ export function CaptionHistorySection({ refreshKey }: { refreshKey?: number }) {
   }, []);
 
   useEffect(() => {
-    load();
+    // Mount: fetch history; load() sets loading inside async task after first await.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional initial load
+    void load();
   }, [load, refreshKey]);
 
   async function remove(id: string) {
@@ -202,24 +205,22 @@ export function CaptionHistorySection({ refreshKey }: { refreshKey?: number }) {
                           ["medium", "Medium"],
                           ["best", "Best"],
                         ] as const
-                      ).map(([k, label]) => (
-                        <button
-                          key={k}
-                          type="button"
-                          onClick={() => rateCaption(row.id, i, k)}
-                          className={`rounded-lg border px-2 py-0.5 text-xs font-medium ${
-                            r === k
-                              ? k === "worst"
-                                ? "border-red-600 bg-red-50 text-red-700 dark:border-red-500 dark:bg-red-950/50 dark:text-red-300"
-                                : k === "medium"
-                                  ? "border-amber-500 bg-amber-50 text-amber-800 dark:border-amber-500 dark:bg-amber-950/40 dark:text-amber-200"
-                                  : "border-emerald-600 bg-emerald-50 text-emerald-800 dark:border-emerald-500 dark:bg-emerald-950/40 dark:text-emerald-200"
-                              : "border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
+                      ).map(([ratingKey, label]) => {
+                        const selected = r === ratingKey;
+                        return (
+                          <button
+                            key={ratingKey}
+                            type="button"
+                            aria-pressed={selected}
+                            onClick={() => rateCaption(row.id, i, ratingKey)}
+                            className={`rounded-lg border px-2 py-0.5 text-xs font-medium ${
+                              selected ? CAPTION_RATING_ACTIVE[ratingKey] : CAPTION_RATING_IDLE
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
                     </div>
                   </li>
                 );
