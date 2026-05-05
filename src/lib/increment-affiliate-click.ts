@@ -51,17 +51,17 @@ export async function recordAffiliateLinkClick(rawCode: string): Promise<void> {
 
   const { data: stats } = await supabaseServer
     .from("affiliate_stats")
-    .select("total_clicks")
+    .select("clicks")
     .eq("affiliate_user_id", userId)
     .maybeSingle();
 
-  const next = (stats?.total_clicks ?? 0) + 1;
+  const next = (stats?.clicks ?? 0) + 1;
   const now = new Date().toISOString();
 
   if (stats) {
     const { error: upErr } = await supabaseServer
       .from("affiliate_stats")
-      .update({ total_clicks: next, updated_at: now })
+      .update({ clicks: next, updated_at: now })
       .eq("affiliate_user_id", userId);
     if (upErr) {
       console.error("[affiliate click] fallback update failed:", upErr.message);
@@ -71,7 +71,7 @@ export async function recordAffiliateLinkClick(rawCode: string): Promise<void> {
 
   const { error: insErr } = await supabaseServer.from("affiliate_stats").insert({
     affiliate_user_id: userId,
-    total_clicks: 1,
+    clicks: 1,
     updated_at: now,
   });
   if (insErr) {

@@ -1,4 +1,5 @@
 -- Replace RPCs if your affiliate_stats PK column is affiliate_user_id (not user_id).
+-- Column names: clicks, signups, paying_customers (see affiliate_program.sql).
 -- Safe to run repeatedly (create or replace).
 
 create or replace function public.increment_affiliate_clicks (p_code text)
@@ -30,10 +31,10 @@ begin
   if v_uid is null then
     return;
   end if;
-  insert into public.affiliate_stats (affiliate_user_id, total_clicks)
+  insert into public.affiliate_stats (affiliate_user_id, clicks)
   values (v_uid, 1)
   on conflict (affiliate_user_id) do update set
-    total_clicks = public.affiliate_stats.total_clicks + 1,
+    clicks = public.affiliate_stats.clicks + 1,
     updated_at = now();
 end;
 $$;
@@ -67,10 +68,10 @@ begin
          commission_total_cents = p_commission_cents
    where referred_user_id = p_referred_user_id;
 
-  insert into public.affiliate_stats (affiliate_user_id, total_paying, earnings_cents)
+  insert into public.affiliate_stats (affiliate_user_id, paying_customers, earnings_cents)
   values (v_referrer, 1, p_commission_cents)
   on conflict (affiliate_user_id) do update set
-    total_paying = public.affiliate_stats.total_paying + 1,
+    paying_customers = public.affiliate_stats.paying_customers + 1,
     earnings_cents = public.affiliate_stats.earnings_cents + excluded.earnings_cents,
     updated_at = now();
 
@@ -85,10 +86,10 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.affiliate_stats (affiliate_user_id, total_signups)
+  insert into public.affiliate_stats (affiliate_user_id, signups)
   values (p_referrer_user_id, 1)
   on conflict (affiliate_user_id) do update set
-    total_signups = public.affiliate_stats.total_signups + 1,
+    signups = public.affiliate_stats.signups + 1,
     updated_at = now();
 end;
 $$;

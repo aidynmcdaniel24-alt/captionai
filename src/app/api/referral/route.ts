@@ -83,13 +83,13 @@ export async function GET(req: Request) {
 
   const { data: statsRow } = await supabaseServer
     .from("affiliate_stats")
-    .select("total_clicks, total_signups, total_paying, earnings_cents")
+    .select("clicks, signups, paying_customers, earnings_cents")
     .eq("affiliate_user_id", userId)
     .maybeSingle();
 
-  const clicks = statsRow?.total_clicks ?? 0;
-  const signups = statsRow?.total_signups ?? 0;
-  const paying = statsRow?.total_paying ?? 0;
+  const clicks = statsRow?.clicks ?? 0;
+  const signups = statsRow?.signups ?? 0;
+  const paying = statsRow?.paying_customers ?? 0;
   const earningsCents = statsRow?.earnings_cents ?? 0;
 
   return NextResponse.json({

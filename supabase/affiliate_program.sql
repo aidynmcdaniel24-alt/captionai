@@ -10,9 +10,9 @@ create table if not exists public.affiliates (
 
 create table if not exists public.affiliate_stats (
   affiliate_user_id text primary key references public.affiliates (user_id) on delete cascade,
-  total_clicks int not null default 0,
-  total_signups int not null default 0,
-  total_paying int not null default 0,
+  clicks int not null default 0,
+  signups int not null default 0,
+  paying_customers int not null default 0,
   earnings_cents int not null default 0,
   updated_at timestamptz not null default now()
 );
@@ -60,10 +60,10 @@ begin
   if v_uid is null then
     return;
   end if;
-  insert into public.affiliate_stats (affiliate_user_id, total_clicks)
+  insert into public.affiliate_stats (affiliate_user_id, clicks)
   values (v_uid, 1)
   on conflict (affiliate_user_id) do update set
-    total_clicks = public.affiliate_stats.total_clicks + 1,
+    clicks = public.affiliate_stats.clicks + 1,
     updated_at = now();
 end;
 $$;
@@ -98,10 +98,10 @@ begin
          commission_total_cents = p_commission_cents
    where referred_user_id = p_referred_user_id;
 
-  insert into public.affiliate_stats (affiliate_user_id, total_paying, earnings_cents)
+  insert into public.affiliate_stats (affiliate_user_id, paying_customers, earnings_cents)
   values (v_referrer, 1, p_commission_cents)
   on conflict (affiliate_user_id) do update set
-    total_paying = public.affiliate_stats.total_paying + 1,
+    paying_customers = public.affiliate_stats.paying_customers + 1,
     earnings_cents = public.affiliate_stats.earnings_cents + excluded.earnings_cents,
     updated_at = now();
 
@@ -117,10 +117,10 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.affiliate_stats (affiliate_user_id, total_signups)
+  insert into public.affiliate_stats (affiliate_user_id, signups)
   values (p_referrer_user_id, 1)
   on conflict (affiliate_user_id) do update set
-    total_signups = public.affiliate_stats.total_signups + 1,
+    signups = public.affiliate_stats.signups + 1,
     updated_at = now();
 end;
 $$;
@@ -150,7 +150,7 @@ select rc.referrer_user_id,
 
 -- Backfill counters from attributions (optional repair)
 update public.affiliate_stats s
-   set total_signups = coalesce (sub.c, 0),
+   set signups = coalesce (sub.c, 0),
        updated_at = now ()
   from (
          select referrer_user_id,
@@ -159,7 +159,7 @@ update public.affiliate_stats s
           group by referrer_user_id
        ) sub
  where s.affiliate_user_id = sub.referrer_user_id
-   and coalesce (s.total_signups, 0) < coalesce (sub.c, 0);
+   and coalesce (s.signups, 0) < coalesce (sub.c, 0);
 
 alter table public.caption_history
   add column if not exists ai_ratings jsonb;
