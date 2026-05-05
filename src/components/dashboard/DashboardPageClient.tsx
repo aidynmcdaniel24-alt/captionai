@@ -545,7 +545,10 @@ export function DashboardPageClient() {
               {error ? <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p> : null}
 
               <div className="mt-4">
-                <BestTimeCard platform={platform === "Custom" ? platformCustom || "Instagram" : platform} />
+                <BestTimeCard
+                  platform={platform === "Custom" ? platformCustom || "Instagram" : platform}
+                  topic={topic}
+                />
               </div>
             </div>
 
