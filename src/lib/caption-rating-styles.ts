@@ -1,4 +1,12 @@
-export const CAPTION_RATING_ACTIVE: Record<"worst" | "medium" | "best", string> = {
+export type CaptionRatingKey = "worst" | "medium" | "best";
+
+export const CAPTION_RATING_LABELS: Record<CaptionRatingKey, string> = {
+  worst: "Worst",
+  medium: "Medium",
+  best: "Best",
+};
+
+export const CAPTION_RATING_ACTIVE: Record<CaptionRatingKey, string> = {
   worst:
     "border-red-600 bg-red-50 text-red-700 dark:border-red-500 dark:bg-red-950/50 dark:text-red-300",
   medium:

@@ -4,6 +4,7 @@ import { logAdminEvent } from "@/lib/admin-log";
 import { containsBlockedWord, getBlockedWordList } from "@/lib/blocked-words";
 import { getGroqClient } from "@/lib/groq-client";
 import { withGroqRetry } from "@/lib/groq-retry";
+import type { CaptionRatingKey } from "@/lib/caption-rating-styles";
 import { supabaseServer } from "@/lib/supabase/server";
 
 type Plan = "free" | "pro";
@@ -37,19 +38,45 @@ Rules:
 - Keep each caption unique and engaging.
 - Match tone exactly.
 - Add relevant hashtags at the end of each caption.
+- Rank the three captions by predicted engagement for this platform: assign exactly one "best", one "medium", and one "worst" based on hook strength, hashtag fit, length appropriateness, and scroll-stopping potential.
 - Return valid JSON only, with this exact shape:
-{"captions":["caption 1","caption 2","caption 3"],"emojiPerCaption":[["emoji1","emoji2"],["emoji1"],["emoji1","emoji2","emoji3"]]}
+{"captions":["caption 1","caption 2","caption 3"],"emojiPerCaption":[["emoji1","emoji2"],["emoji1"],["emoji1","emoji2","emoji3"]],"captionRatings":["worst"|"medium"|"best","worst"|"medium"|"best","worst"|"medium"|"best"]}
+captionRatings[i] must rate captions[i]; use each of worst, medium, and best exactly once across the three captions (one best, one medium, one worst).
 emojiPerCaption must have exactly 3 arrays (one per caption), each array has 2-4 relevant emoji characters (not words).
 `;
 }
 
-type Parsed = { captions: string[]; emojiPerCaption: string[][] };
+type Parsed = { captions: string[]; emojiPerCaption: string[][]; captionRatings: CaptionRatingKey[] };
+
+const RATING_SET = new Set<CaptionRatingKey>(["worst", "medium", "best"]);
+
+function normalizeCaptionRatings(raw: unknown): CaptionRatingKey[] | null {
+  if (!Array.isArray(raw) || raw.length !== 3) {
+    return null;
+  }
+  const labels = raw.map((x) => String(x).trim().toLowerCase()) as CaptionRatingKey[];
+  const set = new Set(labels);
+  if (set.size !== 3) {
+    return null;
+  }
+  for (const r of RATING_SET) {
+    if (!set.has(r)) {
+      return null;
+    }
+  }
+  return labels;
+}
+
+function defaultCaptionRatings(): CaptionRatingKey[] {
+  return ["medium", "worst", "best"];
+}
 
 function parseModelJson(raw: string): Parsed | null {
   try {
     const parsed = JSON.parse(raw) as {
       captions?: string[];
       emojiPerCaption?: string[][];
+      captionRatings?: unknown;
     };
     if (!parsed.captions || parsed.captions.length !== 3) {
       return null;
@@ -67,7 +94,8 @@ function parseModelJson(raw: string): Parsed | null {
     while (emojiPerCaption.length < 3) {
       emojiPerCaption.push([]);
     }
-    return { captions, emojiPerCaption: emojiPerCaption.slice(0, 3) };
+    const captionRatings = normalizeCaptionRatings(parsed.captionRatings) ?? defaultCaptionRatings();
+    return { captions, emojiPerCaption: emojiPerCaption.slice(0, 3), captionRatings };
   } catch {
     return null;
   }
@@ -183,6 +211,7 @@ export async function POST(req: Request) {
 
   let captions: string[] = [];
   let emojiPerCaption: string[][] = [[], [], []];
+  let captionRatings: CaptionRatingKey[] = defaultCaptionRatings();
 
   try {
     const completion = await withGroqRetry(() =>
@@ -216,6 +245,7 @@ export async function POST(req: Request) {
 
     captions = parsed.captions;
     emojiPerCaption = parsed.emojiPerCaption;
+    captionRatings = parsed.captionRatings;
 
     for (const cap of captions) {
       const b = containsBlockedWord(cap, blockedList);
@@ -261,6 +291,7 @@ export async function POST(req: Request) {
         tone,
         captions,
         language,
+        ai_ratings: captionRatings,
       })
       .select("id")
       .single();
@@ -271,9 +302,28 @@ export async function POST(req: Request) {
 
     const historyId = inserted?.id as string | undefined;
 
+    if (historyId) {
+      for (let i = 0; i < 3; i++) {
+        const { error: rateErr } = await supabaseServer.from("caption_ratings").upsert(
+          {
+            user_id: userId,
+            history_id: historyId,
+            caption_index: i,
+            rating: captionRatings[i],
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,history_id,caption_index" }
+        );
+        if (rateErr) {
+          console.warn("[caption_ratings]", rateErr.message);
+        }
+      }
+    }
+
     return NextResponse.json({
       captions,
       emojiPerCaption,
+      captionRatings,
       historyId,
       plan,
       usage: {

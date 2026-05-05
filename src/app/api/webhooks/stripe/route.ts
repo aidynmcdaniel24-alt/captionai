@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
+import { commissionCentsFromPayment } from "@/lib/affiliate-commission";
 import { getStripe } from "@/lib/stripe";
 import { supabaseServer } from "@/lib/supabase/server";
 
@@ -98,6 +99,18 @@ export async function POST(req: Request) {
       const errRes = await setPlanPro(userId, cid);
       if (errRes) {
         return errRes;
+      }
+
+      const amountTotal = session.amount_total ?? 0;
+      const commission = commissionCentsFromPayment(amountTotal);
+      if (commission > 0) {
+        const { error: convErr } = await supabaseServer.rpc("record_affiliate_first_conversion", {
+          p_referred_user_id: userId,
+          p_commission_cents: commission,
+        });
+        if (convErr) {
+          console.warn("[stripe webhook] affiliate commission:", convErr.message);
+        }
       }
     }
   }

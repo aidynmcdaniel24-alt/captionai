@@ -13,6 +13,7 @@ type HistoryRow = {
   language?: string;
   captions: string[];
   created_at: string;
+  ai_ratings?: string[] | null;
   favoriteIndexes?: number[];
   ratings?: Record<string, "worst" | "medium" | "best">;
 };
@@ -25,7 +26,7 @@ export async function GET() {
 
   const { data, error } = await supabaseServer
     .from("caption_history")
-    .select("id, topic, platform, tone, language, captions, created_at")
+    .select("id, topic, platform, tone, language, captions, created_at, ai_ratings")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(10);
@@ -72,12 +73,25 @@ export async function GET() {
     rateByHistory.set(h, rec);
   }
 
-  const items: HistoryRow[] = rows.map((row) => ({
-    ...row,
-    language: row.language ?? "English",
-    favoriteIndexes: favByHistory.get(row.id) ?? [],
-    ratings: rateByHistory.get(row.id),
-  }));
+  const items: HistoryRow[] = rows.map((row) => {
+    let ratings = rateByHistory.get(row.id);
+    if (!ratings || Object.keys(ratings).length === 0) {
+      const ar = row.ai_ratings;
+      if (Array.isArray(ar) && ar.length >= 3) {
+        ratings = {
+          "0": ar[0] as "worst" | "medium" | "best",
+          "1": ar[1] as "worst" | "medium" | "best",
+          "2": ar[2] as "worst" | "medium" | "best",
+        };
+      }
+    }
+    return {
+      ...row,
+      language: row.language ?? "English",
+      favoriteIndexes: favByHistory.get(row.id) ?? [],
+      ratings,
+    };
+  });
 
   return NextResponse.json({ items });
 }

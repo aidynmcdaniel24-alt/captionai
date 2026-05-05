@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CAPTION_RATING_ACTIVE, CAPTION_RATING_IDLE } from "@/lib/caption-rating-styles";
+import {
+  CAPTION_RATING_ACTIVE,
+  CAPTION_RATING_LABELS,
+  type CaptionRatingKey,
+} from "@/lib/caption-rating-styles";
 
 type HistoryRow = {
   id: string;
@@ -12,7 +16,7 @@ type HistoryRow = {
   captions: string[];
   created_at: string;
   favoriteIndexes?: number[];
-  ratings?: Record<string, "worst" | "medium" | "best">;
+  ratings?: Record<string, CaptionRatingKey>;
 };
 
 export function CaptionHistorySection({ refreshKey }: { refreshKey?: number }) {
@@ -89,27 +93,6 @@ export function CaptionHistorySection({ refreshKey }: { refreshKey?: number }) {
     );
   }
 
-  async function rateCaption(
-    historyId: string,
-    captionIndex: number,
-    rating: "worst" | "medium" | "best"
-  ) {
-    await fetch("/api/captions/rate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ historyId, captionIndex, rating }),
-    });
-    setItems((prev) =>
-      prev.map((row) => {
-        if (row.id !== historyId) {
-          return row;
-        }
-        const ratings = { ...(row.ratings ?? {}), [String(captionIndex)]: rating };
-        return { ...row, ratings };
-      })
-    );
-  }
-
   if (loading) {
     return (
       <div className="rounded-2xl border border-zinc-200 bg-white p-6 text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60">
@@ -141,7 +124,7 @@ export function CaptionHistorySection({ refreshKey }: { refreshKey?: number }) {
     <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
       <h2 className="mb-1 text-xl font-semibold text-zinc-900 dark:text-white">Recent caption history</h2>
       <p className="mb-4 text-sm text-zinc-500">
-        Last 10 generations. Copy any line, rate, favorite, or delete a batch.
+        Last 10 generations. Each line shows an AI quality score. Copy, favorite, or delete a batch.
       </p>
       <ul className="space-y-6">
         {items.map((row) => (
@@ -170,7 +153,7 @@ export function CaptionHistorySection({ refreshKey }: { refreshKey?: number }) {
               {row.captions.map((cap, i) => {
                 const key = `${row.id}-${i}`;
                 const isFav = row.favoriteIndexes?.includes(i);
-                const r = row.ratings?.[String(i)];
+                const r = row.ratings?.[String(i)] as CaptionRatingKey | undefined;
                 return (
                   <li
                     key={key}
@@ -198,30 +181,15 @@ export function CaptionHistorySection({ refreshKey }: { refreshKey?: number }) {
                       </div>
                     </div>
                     <p className="text-xs text-zinc-500">{cap.length} characters</p>
-                    <div className="flex flex-wrap gap-2">
-                      {(
-                        [
-                          ["worst", "Worst"],
-                          ["medium", "Medium"],
-                          ["best", "Best"],
-                        ] as const
-                      ).map(([ratingKey, label]) => {
-                        const selected = r === ratingKey;
-                        return (
-                          <button
-                            key={ratingKey}
-                            type="button"
-                            aria-pressed={selected}
-                            onClick={() => rateCaption(row.id, i, ratingKey)}
-                            className={`rounded-lg border px-2 py-0.5 text-xs font-medium ${
-                              selected ? CAPTION_RATING_ACTIVE[ratingKey] : CAPTION_RATING_IDLE
-                            }`}
-                          >
-                            {label}
-                          </button>
-                        );
-                      })}
-                    </div>
+                    {r ? (
+                      <div className="flex flex-wrap gap-2">
+                        <span
+                          className={`rounded-lg border px-2 py-0.5 text-xs font-medium ${CAPTION_RATING_ACTIVE[r]}`}
+                        >
+                          AI score: {CAPTION_RATING_LABELS[r]}
+                        </span>
+                      </div>
+                    ) : null}
                   </li>
                 );
               })}

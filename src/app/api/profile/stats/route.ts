@@ -44,11 +44,19 @@ export async function GET() {
 
   let referralsCount = 0;
   const { count: refCount, error: refErr } = await supabaseServer
-    .from("referral_claims")
+    .from("affiliate_signup_attributions")
     .select("*", { count: "exact", head: true })
     .eq("referrer_user_id", userId);
   if (!refErr && typeof refCount === "number") {
     referralsCount = refCount;
+  } else {
+    const { count: legacyCount, error: legErr } = await supabaseServer
+      .from("referral_claims")
+      .select("*", { count: "exact", head: true })
+      .eq("referrer_user_id", userId);
+    if (!legErr && typeof legacyCount === "number") {
+      referralsCount = legacyCount;
+    }
   }
 
   let abSummary = { experiments: 0, totalPicks: 0 };

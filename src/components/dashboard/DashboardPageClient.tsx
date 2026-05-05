@@ -3,7 +3,11 @@
 import { BrandLogo } from "@/components/BrandLogo";
 import { CaptionHistorySection } from "@/components/CaptionHistorySection";
 import { BestTimeCard } from "@/components/dashboard/BestTimeCard";
-import { CAPTION_RATING_ACTIVE, CAPTION_RATING_IDLE } from "@/lib/caption-rating-styles";
+import {
+  CAPTION_RATING_ACTIVE,
+  CAPTION_RATING_LABELS,
+  type CaptionRatingKey,
+} from "@/lib/caption-rating-styles";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
@@ -28,6 +32,7 @@ type Tab = "captions" | "hashtags" | "bio" | "trending" | "ab";
 type ApiResult = {
   captions?: string[];
   emojiPerCaption?: string[][];
+  captionRatings?: CaptionRatingKey[];
   historyId?: string;
   plan?: "free" | "pro";
   usage?: {
@@ -63,7 +68,7 @@ export function DashboardPageClient() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [historyKey, setHistoryKey] = useState(0);
-  const [ratings, setRatings] = useState<Record<string, "worst" | "medium" | "best">>({});
+  const [captionRatings, setCaptionRatings] = useState<CaptionRatingKey[]>([]);
   const [fav, setFav] = useState<Record<number, boolean>>({});
 
   // Hashtags tab
@@ -140,10 +145,18 @@ export function DashboardPageClient() {
     }
   }
 
+  function isBestLockedForFree(index: number) {
+    return plan !== "pro" && captionRatings[index] === "best";
+  }
+
+  function captionsForExport(): string[] {
+    return captions.filter((_, i) => !isBestLockedForFree(i));
+  }
+
   async function handleGenerate() {
     setError("");
     setIsLoading(true);
-    setRatings({});
+    setCaptionRatings([]);
     setFav({});
 
     try {
@@ -167,6 +180,7 @@ export function DashboardPageClient() {
           setUsageText(`Free limit reached: ${data.count}/${data.limit} used today.`);
           setCaptions([]);
           setEmojiPerCaption([]);
+          setCaptionRatings([]);
           setHistoryId(null);
           return;
         }
@@ -181,8 +195,12 @@ export function DashboardPageClient() {
       setShowPaywall(false);
       setCaptions(data.captions ?? []);
       setEmojiPerCaption(data.emojiPerCaption ?? []);
+      setCaptionRatings(data.captionRatings ?? []);
       setHistoryId(data.historyId ?? null);
       setHistoryKey((k) => k + 1);
+      if (data.plan === "pro" || data.plan === "free") {
+        setPlan(data.plan);
+      }
 
       if (data.usage?.limit) {
         setUsageText(`Free plan usage: ${data.usage.count}/${data.usage.limit} today`);
@@ -198,44 +216,41 @@ export function DashboardPageClient() {
   }
 
   async function handleCopy(caption: string, index: number) {
+    if (isBestLockedForFree(index)) {
+      setError("Upgrade to Pro to copy your Best-rated caption.");
+      return;
+    }
+    setError("");
     await navigator.clipboard.writeText(caption);
     setCopiedIndex(index);
-    setTimeout(() => setCopiedIndex(null), 1200);
+    setTimeout(() => setCopiedIndex(null), 2000);
   }
 
   async function copyAll() {
     if (captions.length === 0) {
       return;
     }
-    await navigator.clipboard.writeText(captions.join("\n\n"));
+    const lines = captionsForExport();
+    if (lines.length === 0) {
+      return;
+    }
+    await navigator.clipboard.writeText(lines.join("\n\n"));
   }
 
   function downloadTxt() {
     if (captions.length === 0) {
       return;
     }
-    const blob = new Blob([captions.join("\n\n")], { type: "text/plain;charset=utf-8" });
+    const lines = captionsForExport();
+    if (lines.length === 0) {
+      return;
+    }
+    const blob = new Blob([lines.join("\n\n")], { type: "text/plain;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "captionai-captions.txt";
     a.click();
     URL.revokeObjectURL(a.href);
-  }
-
-  async function setRating(index: number, rating: "worst" | "medium" | "best") {
-    const idx = String(index);
-    setRatings((r) => ({ ...r, [idx]: rating }));
-    if (!historyId) {
-      return;
-    }
-    const res = await fetch("/api/captions/rate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ historyId, captionIndex: index, rating }),
-    });
-    if (!res.ok) {
-      return;
-    }
   }
 
   async function toggleFavorite(index: number) {
@@ -586,15 +601,69 @@ export function DashboardPageClient() {
                       key={historyId ? `${historyId}-${index}` : `cap-${index}`}
                       className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950"
                     >
+                      {captionRatings[index] ? (
+                        <div className="mb-3 flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-medium text-zinc-500">AI score:</span>
+                          <span
+                            className={`rounded-lg border px-2 py-1 text-xs font-medium ${CAPTION_RATING_ACTIVE[captionRatings[index]!]}`}
+                          >
+                            {CAPTION_RATING_LABELS[captionRatings[index]!]}
+                          </span>
+                        </div>
+                      ) : null}
                       <div className="flex items-start justify-between gap-4">
-                        <p className="leading-7 text-zinc-800 dark:text-zinc-200">{caption}</p>
+                        <div className="min-w-0 flex-1">
+                          {isBestLockedForFree(index) ? (
+                            <div className="relative overflow-hidden rounded-xl border border-purple-500/30 bg-zinc-100/80 dark:bg-zinc-900/40">
+                              <p className="select-none px-4 py-3 leading-7 blur-xl" aria-hidden>
+                                {caption}
+                              </p>
+                              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/75 px-4 text-center dark:bg-zinc-950/80">
+                                <span className="text-zinc-700 dark:text-zinc-200" aria-hidden>
+                                  <svg
+                                    className="mx-auto h-8 w-8"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth={1.75}
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M16.5 10.5V6.75a4.5 4.5 0 00-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
+                                    />
+                                  </svg>
+                                </span>
+                                <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                                  Upgrade to Pro to unlock
+                                </p>
+                                <button
+                                  type="button"
+                                  className="mt-1 rounded-full bg-purple-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-purple-500 disabled:opacity-50"
+                                  disabled={checkoutLoading}
+                                  onClick={() => startCheckout("month")}
+                                >
+                                  Upgrade to Pro
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="leading-7 text-zinc-800 dark:text-zinc-200">{caption}</p>
+                          )}
+                        </div>
                         <div className="flex shrink-0 flex-col items-end gap-2">
                           <button
                             type="button"
-                            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-800"
+                            title={
+                              isBestLockedForFree(index)
+                                ? "Upgrade to Pro to copy your Best-rated caption"
+                                : "Copy caption"
+                            }
+                            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:hover:bg-zinc-800"
+                            disabled={isBestLockedForFree(index)}
                             onClick={() => handleCopy(caption, index)}
                           >
-                            {copiedIndex === index ? "Copied" : "Copy"}
+                            {copiedIndex === index ? "Copied!" : "Copy"}
                           </button>
                           <button
                             type="button"
@@ -607,8 +676,10 @@ export function DashboardPageClient() {
                           </button>
                         </div>
                       </div>
-                      <p className="mt-2 text-xs text-zinc-500">{caption.length} characters</p>
-                      {emojiPerCaption[index]?.length ? (
+                      {!isBestLockedForFree(index) ? (
+                        <p className="mt-2 text-xs text-zinc-500">{caption.length} characters</p>
+                      ) : null}
+                      {!isBestLockedForFree(index) && emojiPerCaption[index]?.length ? (
                         <div className="mt-2 flex flex-wrap gap-1">
                           {emojiPerCaption[index]!.map((em) => (
                             <span key={em} className="text-lg">
@@ -617,31 +688,6 @@ export function DashboardPageClient() {
                           ))}
                         </div>
                       ) : null}
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="text-xs font-medium text-zinc-500">Rate:</span>
-                        {(
-                          [
-                            ["worst", "Worst"],
-                            ["medium", "Medium"],
-                            ["best", "Best"],
-                          ] as const
-                        ).map(([ratingKey, label]) => {
-                          const selected = ratings[String(index)] === ratingKey;
-                          return (
-                            <button
-                              key={ratingKey}
-                              type="button"
-                              aria-pressed={selected}
-                              onClick={() => setRating(index, ratingKey)}
-                              className={`rounded-lg border px-2 py-1 text-xs font-medium ${
-                                selected ? CAPTION_RATING_ACTIVE[ratingKey] : CAPTION_RATING_IDLE
-                              }`}
-                            >
-                              {label}
-                            </button>
-                          );
-                        })}
-                      </div>
                     </li>
                   ))}
                 </ul>

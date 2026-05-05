@@ -67,9 +67,10 @@ export default function ProfilePage() {
         if (!res.ok || cancelled) {
           return;
         }
-        const data = (await res.json()) as { link?: string };
-        if (data.link && !cancelled) {
-          setRefLink(data.link);
+        const data = (await res.json()) as { link?: string; trackingLink?: string };
+        const href = data.trackingLink ?? data.link;
+        if (href && !cancelled) {
+          setRefLink(href);
         }
       } catch {
         /* ignore */

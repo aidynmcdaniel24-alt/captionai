@@ -108,3 +108,7 @@ create table if not exists public.admin_logs (
 
 create index if not exists admin_logs_created_idx on public.admin_logs (created_at desc);
 create index if not exists admin_logs_level_idx on public.admin_logs (level, created_at desc);
+
+-- ═══ Affiliate program + ai_ratings on caption_history ═══════════════════════
+-- Run `supabase/affiliate_program.sql` after this file for affiliates, stats,
+-- signup attributions, RPCs, and caption_history.ai_ratings.
