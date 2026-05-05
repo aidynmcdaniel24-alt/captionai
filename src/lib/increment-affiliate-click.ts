@@ -1,4 +1,53 @@
+import "server-only";
+
 import { supabaseServer } from "@/lib/supabase/server";
+
+async function resolveAffiliateUserIdForCode(codeLower: string, trimmed: string): Promise<string | null> {
+  const { data: affEq } = await supabaseServer.from("affiliates").select("user_id").eq("code", codeLower).maybeSingle();
+  if (affEq?.user_id) {
+    return affEq.user_id;
+  }
+  if (trimmed !== codeLower) {
+    const { data: affTrim } = await supabaseServer.from("affiliates").select("user_id").eq("code", trimmed).maybeSingle();
+    if (affTrim?.user_id) {
+      return affTrim.user_id;
+    }
+  }
+  const { data: affIlike } = await supabaseServer.from("affiliates").select("user_id").ilike("code", codeLower).maybeSingle();
+  if (affIlike?.user_id) {
+    return affIlike.user_id;
+  }
+
+  let leg =
+    (
+      await supabaseServer.from("referral_codes").select("user_id, code").eq("code", codeLower).maybeSingle()
+    ).data ?? null;
+  if (!leg?.user_id && trimmed !== codeLower) {
+    leg =
+      (
+        await supabaseServer.from("referral_codes").select("user_id, code").eq("code", trimmed).maybeSingle()
+      ).data ?? null;
+  }
+  if (!leg?.user_id) {
+    leg =
+      (
+        await supabaseServer.from("referral_codes").select("user_id, code").ilike("code", codeLower).maybeSingle()
+      ).data ?? null;
+  }
+  if (!leg?.user_id) {
+    return null;
+  }
+
+  await supabaseServer.from("affiliates").upsert(
+    { user_id: leg.user_id, code: leg.code ?? codeLower },
+    { onConflict: "user_id" }
+  );
+  await supabaseServer
+    .from("affiliate_stats")
+    .upsert({ affiliate_user_id: leg.user_id }, { onConflict: "affiliate_user_id" });
+
+  return leg.user_id;
+}
 
 /**
  * Count a visit to /r/:code. Prefer RPC (atomic); if PostgREST returns an error
@@ -10,7 +59,7 @@ export async function recordAffiliateLinkClick(rawCode: string): Promise<void> {
     return;
   }
 
-  const { error: rpcError } = await supabaseServer.rpc("increment_affiliate_clicks", {
+  const { data: rpcData, error: rpcError } = await supabaseServer.rpc("increment_affiliate_clicks", {
     p_code: trimmed,
   });
 
@@ -18,31 +67,17 @@ export async function recordAffiliateLinkClick(rawCode: string): Promise<void> {
     return;
   }
 
-  console.warn("[affiliate click] RPC increment_affiliate_clicks failed:", rpcError.message);
+  console.warn(
+    "[affiliate click] RPC increment_affiliate_clicks failed:",
+    rpcError.message,
+    rpcError.code,
+    rpcError.details,
+    "rpcData:",
+    rpcData
+  );
 
   const codeLower = trimmed.toLowerCase();
-
-  let userId: string | null = null;
-  const { data: aff } = await supabaseServer.from("affiliates").select("user_id").ilike("code", codeLower).maybeSingle();
-  if (aff?.user_id) {
-    userId = aff.user_id;
-  } else {
-    const { data: leg } = await supabaseServer
-      .from("referral_codes")
-      .select("user_id, code")
-      .ilike("code", codeLower)
-      .maybeSingle();
-    if (leg?.user_id) {
-      userId = leg.user_id;
-      await supabaseServer.from("affiliates").upsert(
-        { user_id: leg.user_id, code: leg.code ?? codeLower },
-        { onConflict: "user_id" }
-      );
-      await supabaseServer
-        .from("affiliate_stats")
-        .upsert({ affiliate_user_id: userId }, { onConflict: "affiliate_user_id" });
-    }
-  }
+  const userId = await resolveAffiliateUserIdForCode(codeLower, trimmed);
 
   if (!userId) {
     console.warn("[affiliate click] No affiliate row for code:", codeLower);

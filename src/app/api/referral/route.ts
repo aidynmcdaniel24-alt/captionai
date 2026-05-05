@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getAppUrl } from "@/lib/get-app-url";
 import { supabaseServer } from "@/lib/supabase/server";
 
+/** Node ensures Clerk + Supabase service role env match production API behavior. */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
