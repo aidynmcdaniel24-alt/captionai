@@ -162,14 +162,30 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: attrErr.message }, { status: 500 });
   }
 
-  const { error: rpcErr } = await supabaseServer.rpc("increment_affiliate_signup", {
-    p_referrer_user_id: row.user_id,
-  });
+  const referrerId = row.user_id;
+  const { data: signupStats } = await supabaseServer
+    .from("affiliate_stats")
+    .select("signups")
+    .eq("affiliate_user_id", referrerId)
+    .maybeSingle();
 
-  if (rpcErr) {
-    console.error("[referral] increment_affiliate_signup:", rpcErr.message);
+  const now = new Date().toISOString();
+  const nextSignups = (signupStats?.signups ?? 0) + 1;
+
+  const { error: statsErr } = signupStats
+    ? await supabaseServer
+        .from("affiliate_stats")
+        .update({ signups: nextSignups, updated_at: now })
+        .eq("affiliate_user_id", referrerId)
+    : await supabaseServer.from("affiliate_stats").insert({
+        affiliate_user_id: referrerId,
+        signups: 1,
+        updated_at: now,
+      });
+
+  if (statsErr) {
     await supabaseServer.from("affiliate_signup_attributions").delete().eq("referred_user_id", userId);
-    return NextResponse.json({ error: rpcErr.message }, { status: 500 });
+    return NextResponse.json({ error: statsErr.message }, { status: 500 });
   }
 
   try {
