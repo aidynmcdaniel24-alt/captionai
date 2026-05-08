@@ -166,8 +166,8 @@ export async function POST(req: Request) {
 
   const { data: already } = await supabaseServer
     .from("affiliate_signup_attributions")
-    .select("id")
-    .eq("referred_user_id", userId)
+    .select("lead_user_id")
+    .eq("lead_user_id", userId)
     .maybeSingle();
 
   if (already) {
@@ -175,9 +175,8 @@ export async function POST(req: Request) {
   }
 
   const { error: attrErr } = await supabaseServer.from("affiliate_signup_attributions").insert({
-    referrer_user_id: referrerUserId,
-    referred_user_id: userId,
-    code,
+    affiliate_user_id: referrerUserId,
+    lead_user_id: userId,
   });
 
   if (attrErr) {
@@ -213,7 +212,7 @@ export async function POST(req: Request) {
   }
 
   if (statsErr) {
-    await supabaseServer.from("affiliate_signup_attributions").delete().eq("referred_user_id", userId);
+    await supabaseServer.from("affiliate_signup_attributions").delete().eq("lead_user_id", userId);
     return NextResponse.json({ error: statsErr.message }, { status: 500 });
   }
 

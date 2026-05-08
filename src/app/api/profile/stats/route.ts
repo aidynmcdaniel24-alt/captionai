@@ -46,7 +46,7 @@ export async function GET() {
   const { count: refCount, error: refErr } = await supabaseServer
     .from("affiliate_signup_attributions")
     .select("*", { count: "exact", head: true })
-    .eq("referrer_user_id", userId);
+    .eq("affiliate_user_id", userId);
   if (!refErr && typeof refCount === "number") {
     referralsCount = refCount;
   } else {
