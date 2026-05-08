@@ -8,6 +8,13 @@ create table if not exists public.affiliates (
   created_at timestamptz not null default now()
 );
 
+-- Aliases for API / PostgREST (same data as user_id + code)
+alter table public.affiliates
+  add column if not exists affiliate_code text generated always as (code) stored;
+
+alter table public.affiliates
+  add column if not exists affiliate_user_id text generated always as (user_id) stored;
+
 create table if not exists public.affiliate_stats (
   affiliate_user_id text primary key references public.affiliates (user_id) on delete cascade,
   clicks int not null default 0,
@@ -30,41 +37,18 @@ create table if not exists public.affiliate_signup_attributions (
 create index if not exists affiliate_signup_attributions_referrer_idx
   on public.affiliate_signup_attributions (referrer_user_id);
 
--- Atomic click tracking when someone visits /r/:code
-create or replace function public.increment_affiliate_clicks (p_code text)
+-- Increment clicks by affiliate user id (row must exist; API upserts first).
+create or replace function public.increment_affiliate_clicks (p_user_id text)
 returns void
 language plpgsql
 security definer
 set search_path = public
 as $$
-declare
-  v_uid text;
-  v_code text;
 begin
-  select user_id into v_uid from public.affiliates where lower (code) = lower (trim (p_code));
-  if v_uid is null then
-    select rc.user_id, rc.code
-      into v_uid, v_code
-      from public.referral_codes rc
-     where lower (rc.code) = lower (trim (p_code))
-     limit 1;
-    if v_uid is not null then
-      insert into public.affiliates (user_id, code)
-      values (v_uid, v_code)
-      on conflict (user_id) do nothing;
-      insert into public.affiliate_stats (affiliate_user_id)
-      values (v_uid)
-      on conflict (affiliate_user_id) do nothing;
-    end if;
-  end if;
-  if v_uid is null then
-    return;
-  end if;
-  insert into public.affiliate_stats (affiliate_user_id, clicks)
-  values (v_uid, 1)
-  on conflict (affiliate_user_id) do update set
-    clicks = public.affiliate_stats.clicks + 1,
-    updated_at = now();
+  update public.affiliate_stats
+     set clicks = clicks + 1,
+         updated_at = now()
+   where affiliate_user_id = p_user_id;
 end;
 $$;
 
