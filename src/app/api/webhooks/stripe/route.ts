@@ -105,7 +105,7 @@ export async function POST(req: Request) {
       const commission = commissionCentsFromPayment(amountTotal);
       if (commission > 0) {
         const { error: convErr } = await supabaseServer.rpc("record_affiliate_first_conversion", {
-          p_referred_user_id: userId,
+          p_lead_user_id: userId,
           p_commission_cents: commission,
         });
         if (convErr) {

@@ -126,11 +126,11 @@ export async function POST(req: Request) {
   }
 
   // Match DB code (same order as /api/track-click). affiliate_stats FK requires a row in affiliates.
-  let referrerUserId: string | null = null;
+  let affiliateUserId: string | null = null;
 
   const { data: byCode } = await supabaseServer.from("affiliates").select("user_id").ilike("code", code).maybeSingle();
   if (byCode?.user_id) {
-    referrerUserId = byCode.user_id;
+    affiliateUserId = byCode.user_id;
   } else {
     const { data: byAlias, error: aliasErr } = await supabaseServer
       .from("affiliates")
@@ -138,18 +138,18 @@ export async function POST(req: Request) {
       .ilike("affiliate_code", code)
       .maybeSingle();
     if (!aliasErr && byAlias?.user_id) {
-      referrerUserId = byAlias.user_id;
+      affiliateUserId = byAlias.user_id;
     }
   }
 
-  if (!referrerUserId) {
+  if (!affiliateUserId) {
     const { data: legacy } = await supabaseServer
       .from("referral_codes")
       .select("user_id, code")
       .ilike("code", code)
       .maybeSingle();
     if (legacy?.user_id) {
-      referrerUserId = legacy.user_id;
+      affiliateUserId = legacy.user_id;
       const { error: syncAffErr } = await supabaseServer.from("affiliates").upsert(
         { user_id: legacy.user_id, code: legacy.code ?? code },
         { onConflict: "user_id" }
@@ -160,7 +160,7 @@ export async function POST(req: Request) {
     }
   }
 
-  if (!referrerUserId || referrerUserId === userId) {
+  if (!affiliateUserId || affiliateUserId === userId) {
     return NextResponse.json({ error: "Invalid referral code." }, { status: 400 });
   }
 
@@ -175,7 +175,7 @@ export async function POST(req: Request) {
   }
 
   const { error: attrErr } = await supabaseServer.from("affiliate_signup_attributions").insert({
-    affiliate_user_id: referrerUserId,
+    affiliate_user_id: affiliateUserId,
     lead_user_id: userId,
   });
 
@@ -184,7 +184,7 @@ export async function POST(req: Request) {
   }
 
   const { error: rpcErr } = await supabaseServer.rpc("increment_affiliate_signup", {
-    p_referrer_user_id: referrerUserId,
+    p_affiliate_user_id: affiliateUserId,
   });
 
   let statsErr = rpcErr;
@@ -192,7 +192,7 @@ export async function POST(req: Request) {
     const { data: signupStats } = await supabaseServer
       .from("affiliate_stats")
       .select("signups")
-      .eq("affiliate_user_id", referrerUserId)
+      .eq("affiliate_user_id", affiliateUserId)
       .maybeSingle();
 
     const now = new Date().toISOString();
@@ -202,9 +202,9 @@ export async function POST(req: Request) {
       ? await supabaseServer
           .from("affiliate_stats")
           .update({ signups: nextSignups, updated_at: now })
-          .eq("affiliate_user_id", referrerUserId)
+          .eq("affiliate_user_id", affiliateUserId)
       : await supabaseServer.from("affiliate_stats").insert({
-          affiliate_user_id: referrerUserId,
+          affiliate_user_id: affiliateUserId,
           signups: 1,
           updated_at: now,
         });
@@ -218,7 +218,7 @@ export async function POST(req: Request) {
 
   try {
     await supabaseServer.from("referral_claims").insert({
-      referrer_user_id: referrerUserId,
+      referrer_user_id: affiliateUserId,
       referred_user_id: userId,
       code,
     });

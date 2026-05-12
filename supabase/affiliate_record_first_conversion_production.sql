@@ -1,25 +1,14 @@
--- Replace RPCs if your affiliate_stats PK column is affiliate_user_id (not user_id).
--- Column names: clicks, signups, paying_customers (see affiliate_program.sql).
--- Safe to run repeatedly (create or replace).
-
-create or replace function public.increment_affiliate_clicks (p_user_id text)
-returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  update public.affiliate_stats
-     set clicks = clicks + 1,
-         updated_at = now()
-   where affiliate_user_id = p_user_id;
-end;
-$$;
+-- Paste into Supabase SQL Editor (production / staging).
+-- affiliate_signup_attributions: lead_user_id, affiliate_user_id, created_at only.
+-- Conversion idempotency uses affiliate_lead_conversion_credited (one row per credited lead).
 
 create table if not exists public.affiliate_lead_conversion_credited (
   lead_user_id text primary key,
   created_at timestamptz not null default now()
 );
+
+create unique index if not exists affiliate_signup_attributions_lead_user_id_key
+  on public.affiliate_signup_attributions (lead_user_id);
 
 create or replace function public.record_affiliate_first_conversion (
   p_lead_user_id text,

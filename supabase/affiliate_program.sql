@@ -25,17 +25,19 @@ create table if not exists public.affiliate_stats (
 );
 
 create table if not exists public.affiliate_signup_attributions (
-  id uuid primary key default gen_random_uuid (),
-  referrer_user_id text not null,
-  referred_user_id text not null unique,
-  code text not null,
-  created_at timestamptz not null default now (),
-  first_payment_at timestamptz,
-  commission_total_cents int not null default 0
+  lead_user_id text primary key,
+  affiliate_user_id text not null,
+  created_at timestamptz not null default now()
 );
 
-create index if not exists affiliate_signup_attributions_referrer_idx
-  on public.affiliate_signup_attributions (referrer_user_id);
+create index if not exists affiliate_signup_attributions_affiliate_idx
+  on public.affiliate_signup_attributions (affiliate_user_id);
+
+-- One-time credit per paying lead when attributions rows have no conversion columns (see record_affiliate_first_conversion).
+create table if not exists public.affiliate_lead_conversion_credited (
+  lead_user_id text primary key,
+  created_at timestamptz not null default now()
+);
 
 -- Increment clicks by affiliate user id (row must exist; API upserts first).
 create or replace function public.increment_affiliate_clicks (p_user_id text)
@@ -52,9 +54,9 @@ begin
 end;
 $$;
 
--- First paid subscription for a referred user → commission + stats (idempotent)
+-- First paid subscription for a lead → commission + stats (idempotent via affiliate_lead_conversion_credited)
 create or replace function public.record_affiliate_first_conversion (
-  p_referred_user_id text,
+  p_lead_user_id text,
   p_commission_cents int
 )
 returns boolean
@@ -63,27 +65,29 @@ security definer
 set search_path = public
 as $$
 declare
-  v_referrer text;
+  v_affiliate_user_id text;
+  v_inserted int;
 begin
-  select referrer_user_id
-    into v_referrer
-    from public.affiliate_signup_attributions
-   where referred_user_id = p_referred_user_id
-     and first_payment_at is null
-   limit 1
-   for update;
+  select a.affiliate_user_id
+    into v_affiliate_user_id
+    from public.affiliate_signup_attributions a
+   where a.lead_user_id = p_lead_user_id;
 
-  if v_referrer is null then
+  if v_affiliate_user_id is null then
     return false;
   end if;
 
-  update public.affiliate_signup_attributions
-     set first_payment_at = now (),
-         commission_total_cents = p_commission_cents
-   where referred_user_id = p_referred_user_id;
+  insert into public.affiliate_lead_conversion_credited (lead_user_id)
+  values (p_lead_user_id)
+  on conflict (lead_user_id) do nothing;
+
+  get diagnostics v_inserted = row_count;
+  if v_inserted = 0 then
+    return false;
+  end if;
 
   insert into public.affiliate_stats (affiliate_user_id, paying_customers, earnings_cents)
-  values (v_referrer, 1, p_commission_cents)
+  values (v_affiliate_user_id, 1, p_commission_cents)
   on conflict (affiliate_user_id) do update set
     paying_customers = public.affiliate_stats.paying_customers + 1,
     earnings_cents = public.affiliate_stats.earnings_cents + excluded.earnings_cents,
@@ -94,7 +98,7 @@ end;
 $$;
 
 -- New referral signup counted toward affiliate
-create or replace function public.increment_affiliate_signup (p_referrer_user_id text)
+create or replace function public.increment_affiliate_signup (p_affiliate_user_id text)
 returns void
 language plpgsql
 security definer
@@ -102,7 +106,7 @@ set search_path = public
 as $$
 begin
   insert into public.affiliate_stats (affiliate_user_id, signups)
-  values (p_referrer_user_id, 1)
+  values (p_affiliate_user_id, 1)
   on conflict (affiliate_user_id) do update set
     signups = public.affiliate_stats.signups + 1,
     updated_at = now();
@@ -120,29 +124,27 @@ select a.user_id from public.affiliates a
  on conflict (affiliate_user_id) do nothing;
 
 insert into public.affiliate_signup_attributions (
-  referrer_user_id,
-  referred_user_id,
-  code,
+  affiliate_user_id,
+  lead_user_id,
   created_at
 )
 select rc.referrer_user_id,
        rc.referred_user_id,
-       rc.code,
        rc.created_at
   from public.referral_claims rc
- on conflict (referred_user_id) do nothing;
+ on conflict (lead_user_id) do nothing;
 
 -- Backfill counters from attributions (optional repair)
 update public.affiliate_stats s
    set signups = coalesce (sub.c, 0),
        updated_at = now ()
   from (
-         select referrer_user_id,
+         select affiliate_user_id,
                 count (*)::int as c
            from public.affiliate_signup_attributions
-          group by referrer_user_id
+          group by affiliate_user_id
        ) sub
- where s.affiliate_user_id = sub.referrer_user_id
+ where s.affiliate_user_id = sub.affiliate_user_id
    and coalesce (s.signups, 0) < coalesce (sub.c, 0);
 
 alter table public.caption_history
