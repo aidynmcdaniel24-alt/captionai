@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { commissionCentsFromPayment } from "@/lib/affiliate-commission";
+import { shouldCreditAffiliateCommission } from "@/lib/stripe-mode";
 import { getStripe } from "@/lib/stripe";
 import { supabaseServer } from "@/lib/supabase/server";
 
@@ -103,14 +104,23 @@ export async function POST(req: Request) {
 
       const amountTotal = session.amount_total ?? 0;
       const commission = commissionCentsFromPayment(amountTotal);
-      if (commission > 0) {
+      const creditCommission = shouldCreditAffiliateCommission(event.livemode);
+
+      if (commission > 0 && creditCommission) {
         const { error: convErr } = await supabaseServer.rpc("record_affiliate_first_conversion", {
           p_lead_user_id: userId,
           p_commission_cents: commission,
+          p_is_test: false,
         });
         if (convErr) {
           console.warn("[stripe webhook] affiliate commission:", convErr.message);
         }
+      } else if (commission > 0 && !creditCommission) {
+        console.info("[stripe webhook] affiliate commission skipped (Stripe test / non-live)", {
+          livemode: event.livemode,
+          userId,
+          commissionCents: commission,
+        });
       }
     }
   }

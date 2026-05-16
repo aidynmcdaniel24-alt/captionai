@@ -94,5 +94,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Failed to increment" }, { status: 500 });
   }
 
+  const { error: eventErr } = await supabase.from("affiliate_click_events").insert({
+    affiliate_user_id: affiliateUserId,
+    code: lower,
+  });
+  if (eventErr) {
+    console.warn("[track-click] click event log skipped:", eventErr.message);
+  }
+
   return NextResponse.json({ success: true });
 }

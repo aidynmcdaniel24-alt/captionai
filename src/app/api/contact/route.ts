@@ -1,9 +1,10 @@
 /**
  * Contact form → Gmail SMTP via Nodemailer (no Resend).
  * Requires: GMAIL_SMTP_USER, GMAIL_SMTP_APP_PASSWORD
+ * Delivers to captionaisupport@gmail.com (see SUPPORT_EMAIL).
  */
-import nodemailer from "nodemailer";
 import { NextResponse } from "next/server";
+import { getGmailMailer, verifyGmailMailer } from "@/lib/gmail-mailer";
 import { SUPPORT_EMAIL } from "@/lib/support-contact";
 
 export const runtime = "nodejs";
@@ -21,26 +22,6 @@ function escapeHtml(text: string) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
-}
-
-function getGmailMailer():
-  | { transporter: nodemailer.Transporter; user: string }
-  | null {
-  const user = process.env.GMAIL_SMTP_USER?.trim();
-  const pass = process.env.GMAIL_SMTP_APP_PASSWORD?.replace(/\s/g, "").trim();
-
-  if (!user || !pass) {
-    return null;
-  }
-
-  const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-    auth: { user, pass },
-  });
-
-  return { transporter, user };
 }
 
 export async function POST(req: Request) {
@@ -80,13 +61,28 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         error:
-          "Gmail SMTP is not configured. Set environment variables GMAIL_SMTP_USER (e.g. captionaisupport@gmail.com) and GMAIL_SMTP_APP_PASSWORD (16-character App Password), then redeploy.",
+          "Gmail SMTP is not configured. Set GMAIL_SMTP_USER (e.g. captionaisupport@gmail.com) and GMAIL_SMTP_APP_PASSWORD (16-character Google App Password), then redeploy.",
       },
       { status: 503 }
     );
   }
 
-  const fromAddress = `"CaptionAI" <${mailer.user}>`;
+  try {
+    await verifyGmailMailer(mailer);
+  } catch (e) {
+    const err = e instanceof Error ? e.message : "SMTP verify failed";
+    console.error("[contact/gmail] verify:", err);
+    return NextResponse.json(
+      {
+        error:
+          "Email is not configured correctly. Use a Google App Password for captionaisupport@gmail.com (not your normal Gmail password).",
+        details: process.env.NODE_ENV === "development" ? err : undefined,
+      },
+      { status: 503 }
+    );
+  }
+
+  const fromAddress = `"CaptionAI Support" <${mailer.user}>`;
 
   const safeName = escapeHtml(name);
   const safeEmail = escapeHtml(email);
@@ -96,7 +92,7 @@ export async function POST(req: Request) {
     const info = await mailer.transporter.sendMail({
       from: fromAddress,
       to: SUPPORT_EMAIL,
-      replyTo: email,
+      replyTo: `"${name.replace(/"/g, "")}" <${email}>`,
       subject: `[CaptionAI] Support from ${name}`,
       text: [`Name: ${name}`, `Email: ${email}`, "", message].join("\n"),
       html: `
@@ -109,13 +105,14 @@ export async function POST(req: Request) {
 
     console.info("[contact/gmail]", {
       messageId: info.messageId,
+      from: mailer.user,
       to: SUPPORT_EMAIL,
     });
 
     return NextResponse.json({ ok: true, messageId: info.messageId ?? null });
   } catch (e) {
     const err = e instanceof Error ? e.message : "SMTP error";
-    console.error("[contact/gmail]", err);
+    console.error("[contact/gmail] send:", err);
     return NextResponse.json(
       {
         error: "Could not send your message. Check Gmail app password and try again, or email us directly.",
