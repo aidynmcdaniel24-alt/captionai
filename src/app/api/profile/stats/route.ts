@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { isClerkAdminUser } from "@/lib/admin";
+import { resolveIsClerkAdmin } from "@/lib/admin";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -79,6 +79,6 @@ export async function GET() {
     freeLimit: 5,
     referralsCount,
     abSummary,
-    isAdmin: isClerkAdminUser(userId),
+    isAdmin: await resolveIsClerkAdmin(userId),
   });
 }

@@ -1,7 +1,7 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { AdminPanel } from "@/components/admin/AdminPanel";
-import { isClerkAdminUser } from "@/lib/admin";
+import { resolveIsClerkAdmin } from "@/lib/admin";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,11 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   const { userId } = await auth();
 
-  if (!userId || !isClerkAdminUser(userId)) {
+  if (!userId) {
+    redirect("/sign-in?redirect_url=/admin");
+  }
+
+  if (!(await resolveIsClerkAdmin(userId))) {
     notFound();
   }
 

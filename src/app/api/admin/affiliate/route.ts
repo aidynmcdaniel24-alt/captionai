@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { isClerkAdminUser } from "@/lib/admin";
+import { resolveIsClerkAdmin } from "@/lib/admin";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -30,7 +30,7 @@ type AffiliateEvent =
 
 export async function GET() {
   const { userId } = await auth();
-  if (!userId || !isClerkAdminUser(userId)) {
+  if (!userId || !(await resolveIsClerkAdmin(userId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
