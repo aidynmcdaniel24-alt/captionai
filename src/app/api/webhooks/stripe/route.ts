@@ -2,49 +2,27 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { commissionCentsFromPayment } from "@/lib/affiliate-commission";
 import { shouldCreditAffiliateCommission } from "@/lib/stripe-mode";
+import {
+  checkoutSessionIsPaidSubscription,
+  clerkUserIdFromCheckoutSession,
+  stripeCustomerIdFromCheckoutSession,
+} from "@/lib/stripe-checkout";
 import { getStripe } from "@/lib/stripe";
+import { upsertProSubscription } from "@/lib/subscription-db";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function customerIdFromSession(session: Stripe.Checkout.Session) {
-  const c = session.customer;
-  if (typeof c === "string") {
-    return c;
-  }
-  return c?.id ?? null;
-}
-
 async function setPlanPro(userId: string, stripeCustomerId: string | null) {
-  const { error } = await supabaseServer.from("subscriptions").upsert(
-    {
-      user_id: userId,
-      plan: "pro",
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id" }
-  );
-
-  if (error) {
-    console.error("[stripe webhook] subscriptions upsert:", error.message);
+  const result = await upsertProSubscription(userId, stripeCustomerId);
+  if (!result.ok) {
+    console.error("[stripe webhook] subscriptions upsert:", result.message);
+    if (result.message.toLowerCase().includes("stripe_customer_id")) {
+      console.warn("[stripe webhook] run supabase/step5_stripe_portal.sql to add stripe_customer_id column");
+    }
     return NextResponse.json({ error: "Could not update subscription in database." }, { status: 500 });
   }
-
-  if (stripeCustomerId) {
-    const { error: cidErr } = await supabaseServer
-      .from("subscriptions")
-      .update({ stripe_customer_id: stripeCustomerId, updated_at: new Date().toISOString() })
-      .eq("user_id", userId);
-
-    if (cidErr) {
-      console.warn(
-        "[stripe webhook] stripe_customer_id update skipped (run supabase/step5_stripe_portal.sql?):",
-        cidErr.message
-      );
-    }
-  }
-
   return null;
 }
 
@@ -90,13 +68,10 @@ export async function POST(req: Request) {
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
-    const userId = session.client_reference_id ?? session.metadata?.clerk_user_id;
+    const userId = clerkUserIdFromCheckoutSession(session);
 
-    const paid =
-      session.payment_status === "paid" || session.payment_status === "no_payment_required";
-
-    if (userId && session.mode === "subscription" && paid) {
-      const cid = customerIdFromSession(session);
+    if (userId && checkoutSessionIsPaidSubscription(session)) {
+      const cid = stripeCustomerIdFromCheckoutSession(session);
       const errRes = await setPlanPro(userId, cid);
       if (errRes) {
         return errRes;

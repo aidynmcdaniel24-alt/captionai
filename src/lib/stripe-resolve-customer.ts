@@ -1,5 +1,5 @@
 import type Stripe from "stripe";
-import { supabaseServer } from "@/lib/supabase/server";
+import { persistStripeCustomerId } from "@/lib/subscription-db";
 
 function customerIdFromStripe(ref: string | Stripe.Customer | Stripe.DeletedCustomer | null): string | null {
   if (!ref) return null;
@@ -8,17 +8,12 @@ function customerIdFromStripe(ref: string | Stripe.Customer | Stripe.DeletedCust
   return ref.id;
 }
 
-async function persistCustomerId(userId: string, customerId: string) {
-  const { error } = await supabaseServer
-    .from("subscriptions")
-    .update({
-      stripe_customer_id: customerId,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("user_id", userId);
-
-  if (error) {
-    console.warn("[stripe-resolve-customer] could not save stripe_customer_id:", error.message);
+async function storedCustomerIsValid(stripe: Stripe, customerId: string): Promise<boolean> {
+  try {
+    const customer = await stripe.customers.retrieve(customerId);
+    return !("deleted" in customer && customer.deleted);
+  } catch {
+    return false;
   }
 }
 
@@ -60,7 +55,7 @@ export async function resolveStripeCustomerId(
   existingFromDb: string | null | undefined
 ): Promise<string | null> {
   const trimmed = existingFromDb?.trim();
-  if (trimmed) {
+  if (trimmed && (await storedCustomerIsValid(stripe, trimmed))) {
     return trimmed;
   }
 
@@ -73,7 +68,7 @@ export async function resolveStripeCustomerId(
     for (const sub of search.data) {
       const cid = customerIdFromStripe(sub.customer);
       if (cid) {
-        await persistCustomerId(userId, cid);
+        await persistStripeCustomerId(userId, cid);
         return cid;
       }
     }
@@ -95,7 +90,7 @@ export async function resolveStripeCustomerId(
 
   const cid = await pickCustomerWhenDuplicates(stripe, list.data);
   if (cid) {
-    await persistCustomerId(userId, cid);
+    await persistStripeCustomerId(userId, cid);
   }
   return cid;
 }

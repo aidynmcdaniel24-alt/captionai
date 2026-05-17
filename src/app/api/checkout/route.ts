@@ -2,6 +2,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getAppUrl } from "@/lib/get-app-url";
 import { getStripe } from "@/lib/stripe";
+import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,6 +44,14 @@ export async function POST(req: Request) {
 
   const baseUrl = getAppUrl(req);
 
+  const { data: subRow } = await supabaseServer
+    .from("subscriptions")
+    .select("stripe_customer_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const existingCustomerId = subRow?.stripe_customer_id?.trim();
+
   try {
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
@@ -54,7 +63,11 @@ export async function POST(req: Request) {
       subscription_data: {
         metadata: { clerk_user_id: userId, billing_interval: interval },
       },
-      ...(email ? { customer_email: email } : {}),
+      ...(existingCustomerId
+        ? { customer: existingCustomerId }
+        : email
+          ? { customer_email: email }
+          : {}),
     });
 
     if (!session.url) {
