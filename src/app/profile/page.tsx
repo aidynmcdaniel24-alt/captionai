@@ -16,6 +16,7 @@ export default function ProfilePage() {
   const [abSummary, setAbSummary] = useState<{ experiments: number; totalPicks: number } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [portalError, setPortalError] = useState("");
   const [copiedRef, setCopiedRef] = useState(false);
 
   const loadStats = useCallback(async () => {
@@ -82,13 +83,18 @@ export default function ProfilePage() {
   }, []);
 
   async function openBillingPortal() {
+    setPortalError("");
     setPortalLoading(true);
     try {
-      const res = await fetch("/api/billing/portal", { method: "POST" });
-      const data = (await res.json()) as { url?: string };
+      const res = await fetch("/api/billing/portal", { method: "POST", credentials: "same-origin" });
+      const data = (await res.json()) as { url?: string; error?: string };
       if (res.ok && data.url) {
         window.location.href = data.url;
+        return;
       }
+      setPortalError(data.error || "Could not open billing portal. Try again.");
+    } catch {
+      setPortalError("Could not open billing portal. Try again.");
     } finally {
       setPortalLoading(false);
     }
@@ -234,14 +240,21 @@ export default function ProfilePage() {
               </Link>
             ) : null}
             {plan === "pro" ? (
-              <button
-                type="button"
-                className="rounded-xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-900 hover:bg-zinc-100 disabled:opacity-60 dark:border-zinc-600 dark:text-zinc-100 dark:hover:bg-zinc-800"
-                disabled={portalLoading}
-                onClick={openBillingPortal}
-              >
-                {portalLoading ? "Opening portal…" : "Manage subscription"}
-              </button>
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  className="rounded-xl border border-zinc-300 px-4 py-3 text-sm font-medium text-zinc-900 hover:bg-zinc-100 disabled:opacity-60 dark:border-zinc-600 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                  disabled={portalLoading}
+                  onClick={openBillingPortal}
+                >
+                  {portalLoading ? "Opening portal…" : "Manage subscription"}
+                </button>
+                {portalError ? (
+                  <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+                    {portalError}
+                  </p>
+                ) : null}
+              </div>
             ) : (
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Link

@@ -1,10 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 
-export default function SuccessPage() {
+function SuccessContent() {
+  const searchParams = useSearchParams();
+  const sessionId = searchParams.get("session_id");
   const [syncStatus, setSyncStatus] = useState<"waiting" | "pro" | "pending">("waiting");
+
+  useEffect(() => {
+    if (!sessionId) {
+      return;
+    }
+    void fetch("/api/billing/sync-checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ sessionId }),
+    }).catch(() => {
+      /* webhook may still apply */
+    });
+  }, [sessionId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,5 +85,19 @@ export default function SuccessPage() {
         </Link>
       </div>
     </main>
+  );
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 px-6 py-16 text-white">
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+        </main>
+      }
+    >
+      <SuccessContent />
+    </Suspense>
   );
 }

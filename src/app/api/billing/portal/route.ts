@@ -54,7 +54,7 @@ export async function POST(req: Request) {
   }
 
   const baseUrl = getAppUrl(req);
-  const returnUrl = `${baseUrl}/dashboard`;
+  const returnUrl = `${baseUrl}/profile`;
 
   try {
     const portal = await stripe.billingPortal.sessions.create({
