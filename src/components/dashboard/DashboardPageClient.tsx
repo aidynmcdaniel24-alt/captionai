@@ -480,15 +480,6 @@ export function DashboardPageClient() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setShowOnboarding(true)}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-300 text-sm font-bold text-zinc-700 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
-              aria-label="Open getting started guide"
-              title="Help"
-            >
-              ?
-            </button>
             <ThemeToggle />
             {plan === "free" ? (
               <button

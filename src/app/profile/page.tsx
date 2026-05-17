@@ -1,13 +1,35 @@
 "use client";
 
 import { BestTimeCard } from "@/components/dashboard/BestTimeCard";
+import { WelcomeOnboardingModal } from "@/components/dashboard/WelcomeOnboardingModal";
 import { SignOutButton, useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+type BillingInfo = {
+  plan: "free" | "pro";
+  priceLabel: string | null;
+  nextBillingDate: string | null;
+  cancelAtPeriodEnd: boolean;
+};
+
+function formatBillingDate(iso: string | null): string {
+  if (!iso) {
+    return "—";
+  }
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
 export default function ProfilePage() {
   const { user, isLoaded } = useUser();
   const [plan, setPlan] = useState<"free" | "pro" | null>(null);
+  const [billing, setBilling] = useState<BillingInfo | null>(null);
+  const [billingLoading, setBillingLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [totalCaptions, setTotalCaptions] = useState<number | null>(null);
   const [usageToday, setUsageToday] = useState<number | null>(null);
   const [freeLimit, setFreeLimit] = useState(5);
@@ -54,10 +76,34 @@ export default function ProfilePage() {
     }
   }, []);
 
+  const loadBilling = useCallback(async () => {
+    setBillingLoading(true);
+    try {
+      const res = await fetch("/api/billing/subscription", { credentials: "same-origin" });
+      if (!res.ok) {
+        return;
+      }
+      const data = (await res.json()) as BillingInfo & { error?: string };
+      const resolvedPlan = data.plan === "pro" ? "pro" : "free";
+      setBilling({
+        plan: resolvedPlan,
+        priceLabel: data.priceLabel ?? null,
+        nextBillingDate: data.nextBillingDate ?? null,
+        cancelAtPeriodEnd: Boolean(data.cancelAtPeriodEnd),
+      });
+      setPlan(resolvedPlan);
+    } catch {
+      /* ignore */
+    } finally {
+      setBillingLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch profile stats on mount
     void loadStats();
-  }, [loadStats]);
+    void loadBilling();
+  }, [loadStats, loadBilling]);
 
   useEffect(() => {
     let cancelled = false;
@@ -106,6 +152,9 @@ export default function ProfilePage() {
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
     "—";
 
+  const subscriptionPlan = billing?.plan ?? plan;
+  const isPro = subscriptionPlan === "pro";
+
   return (
     <main className="min-h-screen bg-zinc-50 px-4 py-10 text-zinc-900 dark:bg-gradient-to-b dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900 dark:text-white">
       <div className="mx-auto max-w-lg">
@@ -130,22 +179,6 @@ export default function ProfilePage() {
             <div>
               <dt className="text-xs uppercase tracking-wide text-zinc-500">Email</dt>
               <dd className="mt-1 text-zinc-900 dark:text-zinc-100">{primaryEmail}</dd>
-            </div>
-            <div>
-              <dt className="text-xs uppercase tracking-wide text-zinc-500">Plan</dt>
-              <dd className="mt-1">
-                {plan === null ? (
-                  <span className="text-zinc-500">Loading…</span>
-                ) : plan === "pro" ? (
-                  <span className="rounded-lg border border-emerald-700/80 bg-emerald-50 px-2 py-1 text-sm text-emerald-800 dark:border-emerald-800/80 dark:bg-emerald-950/40 dark:text-emerald-300">
-                    Pro
-                  </span>
-                ) : (
-                  <span className="rounded-lg border border-zinc-300 bg-zinc-100 px-2 py-1 text-sm text-zinc-700 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-300">
-                    Free
-                  </span>
-                )}
-              </dd>
             </div>
             <div>
               <dt className="text-xs uppercase tracking-wide text-zinc-500">Captions generated (saved)</dt>
@@ -176,6 +209,62 @@ export default function ProfilePage() {
               </div>
             ) : null}
           </dl>
+
+          <section className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950/50">
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Subscription</h2>
+            {billingLoading && subscriptionPlan === null ? (
+              <p className="mt-3 text-sm text-zinc-500">Loading…</p>
+            ) : (
+              <dl className="mt-4 space-y-3">
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-zinc-500">Current plan</dt>
+                  <dd className="mt-1">
+                    {isPro ? (
+                      <span className="rounded-lg border border-emerald-700/80 bg-emerald-50 px-2 py-1 text-sm text-emerald-800 dark:border-emerald-800/80 dark:bg-emerald-950/40 dark:text-emerald-300">
+                        Pro
+                      </span>
+                    ) : (
+                      <span className="rounded-lg border border-zinc-300 bg-zinc-100 px-2 py-1 text-sm text-zinc-700 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-300">
+                        Free
+                      </span>
+                    )}
+                  </dd>
+                </div>
+                {isPro && billing?.priceLabel ? (
+                  <div>
+                    <dt className="text-xs uppercase tracking-wide text-zinc-500">Price</dt>
+                    <dd className="mt-1 text-sm text-zinc-900 dark:text-zinc-100">{billing.priceLabel}</dd>
+                  </div>
+                ) : null}
+                {isPro ? (
+                  <div>
+                    <dt className="text-xs uppercase tracking-wide text-zinc-500">
+                      {billing?.cancelAtPeriodEnd ? "Pro access until" : "Next billing date"}
+                    </dt>
+                    <dd className="mt-1 text-sm text-zinc-900 dark:text-zinc-100">
+                      {formatBillingDate(billing?.nextBillingDate ?? null)}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            )}
+            <div className="mt-4 flex flex-col gap-2">
+              <Link
+                href="/subscription"
+                className="rounded-xl border border-zinc-300 px-4 py-3 text-center text-sm font-medium text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                Manage Subscription
+              </Link>
+              {!isPro && subscriptionPlan !== null ? (
+                <Link
+                  href="/upgrade"
+                  className="rounded-xl bg-purple-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-purple-500"
+                >
+                  Upgrade to Pro
+                </Link>
+              ) : null}
+            </div>
+          </section>
 
           <div className="mt-6">
             <BestTimeCard platform="Instagram" />
@@ -220,29 +309,13 @@ export default function ProfilePage() {
                 Admin panel
               </Link>
             ) : null}
-            {plan === "pro" ? (
-              <Link
-                href="/subscription"
-                className="rounded-xl border border-zinc-300 px-4 py-3 text-center text-sm font-medium text-zinc-900 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-100 dark:hover:bg-zinc-800"
-              >
-                Manage subscription
-              </Link>
-            ) : (
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Link
-                  href="/upgrade"
-                  className="flex-1 rounded-xl border border-zinc-300 px-4 py-3 text-center text-sm font-medium text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                >
-                  Upgrade monthly
-                </Link>
-                <Link
-                  href="/upgrade?billing=annual"
-                  className="flex-1 rounded-xl border border-emerald-500/50 px-4 py-3 text-center text-sm font-medium text-emerald-800 hover:bg-emerald-50 dark:text-emerald-200 dark:hover:bg-emerald-950/30"
-                >
-                  Upgrade $79/yr
-                </Link>
-              </div>
-            )}
+            <button
+              type="button"
+              onClick={() => setShowOnboarding(true)}
+              className="rounded-xl border border-zinc-300 px-4 py-3 text-center text-sm font-medium text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              Help &amp; Tutorial
+            </button>
             <SignOutButton>
               <button
                 type="button"
@@ -254,6 +327,8 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      <WelcomeOnboardingModal open={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </main>
   );
 }
