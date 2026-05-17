@@ -1,7 +1,22 @@
 "use client";
 
+import { RequestPayoutPanel } from "@/components/affiliate/RequestPayoutPanel";
+import {
+  convertUsdCentsToCurrency,
+  formatCurrencyAmount,
+  PAYOUT_CURRENCIES,
+  type ExchangeRatesFromUsd,
+  type PayoutCurrency,
+} from "@/lib/affiliate-currency";
 import { SignInButton, useAuth } from "@clerk/nextjs";
 import { useCallback, useEffect, useState } from "react";
+
+type PayoutInfo = {
+  minPayoutCents: number;
+  availableCents: number;
+  eligible: boolean;
+  hasPendingPayout: boolean;
+};
 
 type ReferralResponse = {
   code?: string;
@@ -15,6 +30,8 @@ type ReferralResponse = {
     earningsCents: number;
     earningsFormatted: string;
   };
+  payout?: PayoutInfo;
+  exchangeRates?: ExchangeRatesFromUsd;
   error?: string;
 };
 
@@ -23,6 +40,7 @@ export function AffiliatePageClient() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ReferralResponse | null>(null);
   const [copied, setCopied] = useState<"track" | "query" | null>(null);
+  const [displayCurrency, setDisplayCurrency] = useState<PayoutCurrency>("USD");
 
   const load = useCallback(async () => {
     if (!isSignedIn) {
@@ -104,6 +122,16 @@ export function AffiliatePageClient() {
   const track = data?.trackingLink ?? "";
   const legacy = data?.link ?? "";
   const stats = data?.stats;
+  const payout = data?.payout;
+  const exchangeRates = data?.exchangeRates;
+  const earningsCents = stats?.earningsCents ?? 0;
+  const convertedEarnings =
+    exchangeRates != null
+      ? formatCurrencyAmount(
+          convertUsdCentsToCurrency(earningsCents, displayCurrency, exchangeRates),
+          displayCurrency
+        )
+      : null;
 
   return (
     <div className="space-y-8">
@@ -163,13 +191,35 @@ export function AffiliatePageClient() {
               {stats?.totalPayingCustomers ?? 0}
             </dd>
           </div>
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-50/80 p-4 dark:bg-emerald-950/30">
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-50/80 p-4 dark:bg-emerald-950/30 sm:col-span-2 lg:col-span-1">
             <dt className="text-xs font-medium uppercase tracking-wide text-emerald-800 dark:text-emerald-300">
-              Earnings (USD)
+              Earnings
             </dt>
             <dd className="mt-1 text-2xl font-semibold tabular-nums text-emerald-900 dark:text-emerald-100">
               ${stats?.earningsFormatted ?? "0.00"}
+              <span className="text-base font-normal text-emerald-800/80 dark:text-emerald-200/80"> USD</span>
             </dd>
+            {exchangeRates ? (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <label className="text-xs text-emerald-800 dark:text-emerald-300">
+                  <span className="sr-only">Display currency</span>
+                  <select
+                    className="rounded border border-emerald-600/30 bg-white/80 px-2 py-0.5 text-xs text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-950/50 dark:text-emerald-100"
+                    value={displayCurrency}
+                    onChange={(e) => setDisplayCurrency(e.target.value as PayoutCurrency)}
+                  >
+                    {PAYOUT_CURRENCIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {convertedEarnings && displayCurrency !== "USD" ? (
+                  <span className="text-sm text-emerald-800 dark:text-emerald-200">≈ {convertedEarnings}</span>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </dl>
         <button
@@ -179,6 +229,9 @@ export function AffiliatePageClient() {
         >
           Refresh stats
         </button>
+        {payout && exchangeRates ? (
+          <RequestPayoutPanel payout={payout} exchangeRates={exchangeRates} onSuccess={() => void load()} />
+        ) : null}
       </section>
     </div>
   );

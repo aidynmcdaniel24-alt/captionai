@@ -1,5 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { fetchExchangeRatesFromUsd } from "@/lib/affiliate-currency";
+import { getAffiliatePayoutSummary } from "@/lib/affiliate-payout";
 import { getAppUrl } from "@/lib/get-app-url";
 import { supabaseServer } from "@/lib/supabase/server";
 
@@ -92,6 +94,8 @@ export async function GET(req: Request) {
   const signups = statsRow?.signups ?? 0;
   const paying = statsRow?.paying_customers ?? 0;
   const earningsCents = statsRow?.earnings_cents ?? 0;
+  const payout = await getAffiliatePayoutSummary(userId, earningsCents);
+  const exchangeRates = await fetchExchangeRatesFromUsd();
 
   return NextResponse.json({
     code,
@@ -105,6 +109,8 @@ export async function GET(req: Request) {
       earningsCents,
       earningsFormatted: (earningsCents / 100).toFixed(2),
     },
+    payout,
+    exchangeRates,
   });
 }
 
