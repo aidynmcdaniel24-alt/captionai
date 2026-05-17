@@ -1,16 +1,12 @@
 "use client";
 
-import { THEME_STORAGE_KEY } from "@/lib/theme-storage";
 import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useLayoutEffect,
-  useState,
-} from "react";
-
-type Theme = "light" | "dark";
+  parseTheme,
+  THEME_STORAGE_KEY,
+  type Theme,
+  writeThemeCookie,
+} from "@/lib/theme-storage";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 const ThemeContext = createContext<{
   theme: Theme;
@@ -18,37 +14,29 @@ const ThemeContext = createContext<{
   toggle: () => void;
 } | null>(null);
 
-function readTheme(): Theme {
-  if (typeof window === "undefined") {
-    return "light";
-  }
-  const stored = window.localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
-  if (stored === "light" || stored === "dark") {
-    return stored;
-  }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
 function applyThemeToDocument(theme: Theme) {
   document.documentElement.setAttribute("data-theme", theme);
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("light");
+type ThemeProviderProps = {
+  children: React.ReactNode;
+  initialTheme: Theme;
+};
 
-  useLayoutEffect(() => {
-    const fromDom = document.documentElement.getAttribute("data-theme");
-    if (fromDom === "light" || fromDom === "dark") {
-      setThemeState(fromDom);
-      return;
+export function ThemeProvider({ children, initialTheme }: ThemeProviderProps) {
+  const [theme, setThemeState] = useState<Theme>(initialTheme);
+
+  useEffect(() => {
+    const fromStorage = parseTheme(window.localStorage.getItem(THEME_STORAGE_KEY));
+    if (fromStorage && fromStorage !== initialTheme) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- migrate legacy localStorage-only preference
+      setThemeState(fromStorage);
     }
-    const t = readTheme();
-    setThemeState(t);
-    applyThemeToDocument(t);
-  }, []);
+  }, [initialTheme]);
 
   useEffect(() => {
     applyThemeToDocument(theme);
+    writeThemeCookie(theme);
     try {
       window.localStorage.setItem(THEME_STORAGE_KEY, theme);
     } catch {

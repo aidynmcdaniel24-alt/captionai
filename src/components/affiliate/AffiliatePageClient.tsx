@@ -49,6 +49,7 @@ export function AffiliatePageClient() {
     if (!isLoaded) {
       return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- load affiliate stats when auth is ready
     void load();
   }, [isLoaded, isSignedIn, load]);
 

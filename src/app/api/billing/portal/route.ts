@@ -43,6 +43,24 @@ export async function POST(req: Request) {
     row?.stripe_customer_id ?? null
   );
 
+  // #region agent log
+  fetch("http://127.0.0.1:7679/ingest/774c81b3-4974-4a96-b8a5-09735d7f7aaa", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f63b09" },
+    body: JSON.stringify({
+      sessionId: "f63b09",
+      hypothesisId: "B",
+      location: "billing/portal/route.ts:resolve",
+      message: "portal customer resolved",
+      data: {
+        hasDbCustomer: Boolean(row?.stripe_customer_id),
+        resolved: Boolean(customerId),
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+
   if (!customerId) {
     return NextResponse.json(
       {

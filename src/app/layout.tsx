@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
+import { cookies } from "next/headers";
 import { ClientProviders } from "@/components/ClientProviders";
-import { THEME_STORAGE_KEY } from "@/lib/theme-storage";
+import { parseTheme, THEME_STORAGE_KEY, type Theme } from "@/lib/theme-storage";
 import "./globals.css";
-
-/** Runs before paint so `data-theme` matches localStorage / system preference (avoids wrong Tailwind `dark:` on first frame). */
-const themeInitScript = `(function(){try{var k=${JSON.stringify(THEME_STORAGE_KEY)};var d=document.documentElement;var t=localStorage.getItem(k);if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}d.setAttribute("data-theme",t);}catch(e){}})();`;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,23 +33,28 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+async function getInitialTheme(): Promise<Theme> {
+  const cookieStore = await cookies();
+  return parseTheme(cookieStore.get(THEME_STORAGE_KEY)?.value) ?? "light";
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialTheme = await getInitialTheme();
+
   return (
     <ClerkProvider>
       <html
         lang="en"
         suppressHydrationWarning
+        data-theme={initialTheme}
         className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       >
-        <head>
-          <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-        </head>
         <body className="flex min-h-full flex-col bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50">
-          <ClientProviders>{children}</ClientProviders>
+          <ClientProviders initialTheme={initialTheme}>{children}</ClientProviders>
         </body>
       </html>
     </ClerkProvider>

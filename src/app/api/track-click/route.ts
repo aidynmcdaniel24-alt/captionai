@@ -1,19 +1,6 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-function createServiceRoleClient(): SupabaseClient {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/[\s"]/g, "");
-  if (!supabaseUrl || !key) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for click tracking.");
-  }
-  return createClient(supabaseUrl, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
+import { supabaseServer } from "@/lib/supabase/server";
 
 async function resolveAffiliateUserId(
   supabase: SupabaseClient,
@@ -48,13 +35,7 @@ async function resolveAffiliateUserId(
 }
 
 export async function POST(req: Request) {
-  let supabase: SupabaseClient;
-  try {
-    supabase = createServiceRoleClient();
-  } catch (e) {
-    console.error("[track-click]", e);
-    return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
-  }
+  const supabase: SupabaseClient = supabaseServer;
 
   let body: { affiliate_code?: string };
   try {
@@ -91,7 +72,40 @@ export async function POST(req: Request) {
 
   if (rpcError) {
     console.error("[track-click] rpc:", rpcError);
-    return NextResponse.json({ error: "Failed to increment" }, { status: 500 });
+    const { data: statsRow } = await supabase
+      .from("affiliate_stats")
+      .select("clicks")
+      .eq("affiliate_user_id", affiliateUserId)
+      .maybeSingle();
+    const nextClicks = (statsRow?.clicks ?? 0) + 1;
+    const now = new Date().toISOString();
+    const { error: manualErr } = statsRow
+      ? await supabase
+          .from("affiliate_stats")
+          .update({ clicks: nextClicks, updated_at: now })
+          .eq("affiliate_user_id", affiliateUserId)
+      : await supabase.from("affiliate_stats").insert({
+          affiliate_user_id: affiliateUserId,
+          clicks: 1,
+          updated_at: now,
+        });
+    if (manualErr) {
+      // #region agent log
+      fetch("http://127.0.0.1:7679/ingest/774c81b3-4974-4a96-b8a5-09735d7f7aaa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f63b09" },
+        body: JSON.stringify({
+          sessionId: "f63b09",
+          hypothesisId: "C",
+          location: "track-click/route.ts:rpc-fallback",
+          message: "click increment failed",
+          data: { rpcError: rpcError.message, manualErr: manualErr.message },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+      return NextResponse.json({ error: "Failed to increment" }, { status: 500 });
+    }
   }
 
   const { error: eventErr } = await supabase.from("affiliate_click_events").insert({
@@ -101,6 +115,21 @@ export async function POST(req: Request) {
   if (eventErr) {
     console.warn("[track-click] click event log skipped:", eventErr.message);
   }
+
+  // #region agent log
+  fetch("http://127.0.0.1:7679/ingest/774c81b3-4974-4a96-b8a5-09735d7f7aaa", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f63b09" },
+    body: JSON.stringify({
+      sessionId: "f63b09",
+      hypothesisId: "C",
+      location: "track-click/route.ts:success",
+      message: "click tracked",
+      data: { ok: true },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
 
   return NextResponse.json({ success: true });
 }

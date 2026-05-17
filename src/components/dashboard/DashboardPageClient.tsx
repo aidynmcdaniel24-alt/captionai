@@ -256,11 +256,21 @@ export function DashboardPageClient() {
     if (!historyId) {
       return;
     }
-    await fetch("/api/captions/favorite", {
-      method: on ? "POST" : "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ historyId, captionIndex: index }),
-    });
+    try {
+      const res = await fetch("/api/captions/favorite", {
+        method: on ? "POST" : "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ historyId, captionIndex: index }),
+      });
+      if (!res.ok) {
+        setFav((f) => ({ ...f, [index]: !on }));
+        const data = (await res.json()) as { error?: string };
+        setError(data.error || "Could not update favorite.");
+      }
+    } catch {
+      setFav((f) => ({ ...f, [index]: !on }));
+      setError("Could not update favorite.");
+    }
   }
 
   async function runHashtags() {
@@ -321,12 +331,19 @@ export function DashboardPageClient() {
 
   async function loadTrending() {
     setTrLoading(true);
+    setError("");
     try {
       const res = await fetch("/api/trending");
-      const data = (await res.json()) as { topics?: string[] };
+      const data = (await res.json()) as { topics?: string[]; error?: string };
+      if (!res.ok) {
+        setTrending([]);
+        setError(data.error || "Could not load trending topics.");
+        return;
+      }
       setTrending(data.topics ?? []);
     } catch {
       setTrending([]);
+      setError("Could not load trending topics.");
     } finally {
       setTrLoading(false);
       setTrendingLoaded(true);
@@ -374,20 +391,41 @@ export function DashboardPageClient() {
     if (!abA.trim() || !abB.trim()) {
       return;
     }
-    const res = await fetch("/api/ab-test", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "create",
-        variantA: abA,
-        variantB: abB,
-        label: topic.slice(0, 80),
-        platform: platform === "Custom" ? platformCustom : platform,
-      }),
-    });
-    const data = (await res.json()) as { id?: string; error?: string };
-    if (res.ok && data.id) {
-      setAbExpId(data.id);
+    setError("");
+    try {
+      const res = await fetch("/api/ab-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create",
+          variantA: abA,
+          variantB: abB,
+          label: topic.slice(0, 80),
+          platform: platform === "Custom" ? platformCustom : platform,
+        }),
+      });
+      const data = (await res.json()) as { id?: string; error?: string };
+      // #region agent log
+      fetch("http://127.0.0.1:7679/ingest/774c81b3-4974-4a96-b8a5-09735d7f7aaa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f63b09" },
+        body: JSON.stringify({
+          sessionId: "f63b09",
+          hypothesisId: "A",
+          location: "DashboardPageClient.tsx:saveAbExperiment",
+          message: "ab-test create response",
+          data: { ok: res.ok, status: res.status, hasId: Boolean(data.id) },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+      if (res.ok && data.id) {
+        setAbExpId(data.id);
+        return;
+      }
+      setError(data.error || "Could not save A/B experiment.");
+    } catch {
+      setError("Could not save A/B experiment.");
     }
   }
 
@@ -395,11 +433,20 @@ export function DashboardPageClient() {
     if (!abExpId) {
       return;
     }
-    await fetch("/api/ab-test", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "pick", id: abExpId, pick: side }),
-    });
+    setError("");
+    try {
+      const res = await fetch("/api/ab-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "pick", id: abExpId, pick: side }),
+      });
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        setError(data.error || "Could not record your pick.");
+      }
+    } catch {
+      setError("Could not record your pick.");
+    }
   }
 
   const showFreeWarning = plan === "free" && usageToday !== null && usageToday >= 3 && usageToday < freeLimit;
@@ -488,6 +535,15 @@ export function DashboardPageClient() {
           ))}
         </div>
 
+        {error ? (
+          <p
+            className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300"
+            role="alert"
+          >
+            {error}
+          </p>
+        ) : null}
+
         {tab === "captions" ? (
           <>
             <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
@@ -561,7 +617,6 @@ export function DashboardPageClient() {
               </button>
 
               {usageText ? <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-300">{usageText}</p> : null}
-              {error ? <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p> : null}
 
               <div className="mt-4">
                 <BestTimeCard

@@ -36,18 +36,19 @@ export function BestTimeCard({ platform, topic = "" }: { platform: string; topic
 
   const staticText = useMemo(() => fallbackTip(displayPlatform), [displayPlatform]);
 
+  const displayAiText = trimmedTopic ? aiText : null;
+  const displayLoading = trimmedTopic ? loading : false;
+  const displayUsedAi = trimmedTopic ? usedAi : false;
+
   useEffect(() => {
     if (!trimmedTopic) {
-      setAiText(null);
-      setLoading(false);
-      setUsedAi(false);
       return;
     }
 
     const ac = new AbortController();
-    setLoading(true);
-    setUsedAi(false);
     const t = window.setTimeout(() => {
+      setLoading(true);
+      setUsedAi(false);
       void (async () => {
         try {
           const res = await fetch("/api/tools/best-time", {
@@ -90,13 +91,13 @@ export function BestTimeCard({ platform, topic = "" }: { platform: string; topic
   }, [trimmedTopic, displayPlatform]);
 
   const text =
-    trimmedTopic && loading
+    trimmedTopic && displayLoading
       ? "Analyzing your topic…"
-      : trimmedTopic && aiText
-        ? aiText
+      : displayAiText
+        ? displayAiText
         : staticText;
 
-  const footnote = usedAi && aiText
+  const footnote = displayUsedAi && displayAiText
     ? "Suggested from your topic with AI — pair with your analytics for best results."
     : "Heuristic guide — pair with your analytics for best results.";
 
@@ -106,7 +107,7 @@ export function BestTimeCard({ platform, topic = "" }: { platform: string; topic
         Best time to post
       </p>
       <p
-        className={`mt-2 text-sm leading-relaxed text-zinc-800 dark:text-zinc-200 ${trimmedTopic && loading ? "animate-pulse" : ""}`}
+        className={`mt-2 text-sm leading-relaxed text-zinc-800 dark:text-zinc-200 ${displayLoading ? "animate-pulse" : ""}`}
       >
         {text}
       </p>

@@ -29,6 +29,13 @@ export function resolveClerkAdminUserIds(): string[] {
   if (fromEnv.length > 0) {
     return fromEnv;
   }
+  const emailAllowlist = process.env.CLERK_ADMIN_EMAIL?.trim();
+  if (process.env.NODE_ENV === "production") {
+    if (emailAllowlist) {
+      return [];
+    }
+    return [];
+  }
   return [DEFAULT_CLERK_ADMIN_USER_ID];
 }
 

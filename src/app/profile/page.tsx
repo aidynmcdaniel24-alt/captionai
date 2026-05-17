@@ -57,6 +57,7 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch profile stats on mount
     void loadStats();
   }, [loadStats]);
 

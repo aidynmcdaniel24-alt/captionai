@@ -26,7 +26,17 @@ export async function POST(req: Request) {
   const stripe = getStripe();
   const priceIdMonthly = process.env.STRIPE_PRICE_ID?.trim();
   const priceIdAnnual = process.env.STRIPE_PRICE_ID_ANNUAL?.trim();
-  const priceId = interval === "year" ? priceIdAnnual ?? priceIdMonthly : priceIdMonthly;
+  if (interval === "year" && !priceIdAnnual) {
+    return NextResponse.json(
+      {
+        error:
+          "Annual billing is not configured. Set STRIPE_PRICE_ID_ANNUAL in your environment for $79/yr checkout.",
+      },
+      { status: 500 }
+    );
+  }
+
+  const priceId = interval === "year" ? priceIdAnnual! : priceIdMonthly;
 
   if (!stripe || !priceId) {
     return NextResponse.json(
@@ -44,11 +54,15 @@ export async function POST(req: Request) {
 
   const baseUrl = getAppUrl(req);
 
-  const { data: subRow } = await supabaseServer
+  const { data: subRow, error: subReadError } = await supabaseServer
     .from("subscriptions")
     .select("stripe_customer_id")
     .eq("user_id", userId)
     .maybeSingle();
+
+  if (subReadError) {
+    return NextResponse.json({ error: subReadError.message }, { status: 500 });
+  }
 
   const existingCustomerId = subRow?.stripe_customer_id?.trim();
 
