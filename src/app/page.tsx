@@ -1,46 +1,22 @@
 import type { Metadata } from "next";
+import { LandingJsonLd } from "@/components/landing/LandingJsonLd";
 import { LandingPage } from "@/components/landing/LandingPage";
+import { SEO_KEYWORDS } from "@/lib/seo";
 
-const title =
-  "CaptionAI — AI captions for Instagram, TikTok, LinkedIn & more";
+const title = "CaptionAI — Free AI Caption Generator for Instagram, TikTok & LinkedIn";
 
 const description =
-  "Generate scroll-stopping social captions in seconds. Try a free live demo, then sign up for Pro for unlimited AI caption generations.";
-
-const keywords = [
-  "CaptionAI",
-  "AI captions",
-  "Instagram captions",
-  "TikTok captions",
-  "social media captions",
-  "LinkedIn captions",
-  "Twitter captions",
-  "X captions",
-  "caption generator",
-  "AI copywriting",
-  "content creator tools",
-];
+  "Caption generator free for social media captions. Create Instagram captions, TikTok captions, and LinkedIn captions in seconds with our AI caption generator.";
 
 export const metadata: Metadata = {
-  title: {
-    absolute: title,
-  },
+  title: { absolute: title },
   description,
-  keywords,
+  keywords: [...SEO_KEYWORDS],
   authors: [{ name: "CaptionAI" }],
   creator: "CaptionAI",
   publisher: "CaptionAI",
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-    },
-  },
-  alternates: {
-    canonical: "/",
-  },
+  robots: { index: true, follow: true },
+  alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -48,15 +24,10 @@ export const metadata: Metadata = {
     siteName: "CaptionAI",
     title,
     description,
-    images: [
-      {
-        url: "/captionai-logo.png",
-        alt: "CaptionAI — AI-powered social media captions",
-      },
-    ],
+    images: [{ url: "/captionai-logo.png", alt: "CaptionAI — AI caption generator" }],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title,
     description,
     images: ["/captionai-logo.png"],
@@ -64,5 +35,10 @@ export const metadata: Metadata = {
 };
 
 export default function Home() {
-  return <LandingPage />;
+  return (
+    <>
+      <LandingJsonLd />
+      <LandingPage />
+    </>
+  );
 }

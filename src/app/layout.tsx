@@ -26,7 +26,15 @@ export const metadata: Metadata = {
     template: "%s | CaptionAI",
   },
   description:
-    "Generate AI-powered social media captions for Instagram, TikTok, LinkedIn, and Twitter.",
+    "Free AI caption generator for social media captions — Instagram captions, TikTok captions, LinkedIn captions, and more.",
+  keywords: [
+    "AI caption generator",
+    "social media captions",
+    "Instagram captions",
+    "TikTok captions",
+    "LinkedIn captions",
+    "caption generator free",
+  ],
   applicationName: "CaptionAI",
   verification: {
     google: "_mZFRSlXhZILEG4l5dqO8nTkVyG-B-mxBTiLUX5nTIY",

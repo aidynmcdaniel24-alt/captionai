@@ -1,11 +1,13 @@
-import type { Metadata } from "next";
 import { MarketingDocLayout } from "@/components/marketing/MarketingDocLayout";
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support-contact";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: "Privacy Policy",
-  description: "How CaptionAI collects, uses, and protects your information.",
-};
+  description:
+    "CaptionAI privacy policy — how we handle data when you use our AI caption generator and social media caption tools.",
+  path: "/privacy",
+});
 
 const linkClass =
   "font-medium text-purple-700 underline decoration-purple-300 underline-offset-2 hover:text-purple-600 dark:text-purple-400 dark:decoration-purple-600 dark:hover:text-purple-300";

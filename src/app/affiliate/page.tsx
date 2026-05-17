@@ -1,12 +1,15 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { AffiliatePageClient } from "@/components/affiliate/AffiliatePageClient";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: "Affiliate program",
-  description: "Share CaptionAI with your audience and earn rewards when referrals subscribe to Pro.",
-};
+  description:
+    "Earn by sharing CaptionAI — the AI caption generator for Instagram, TikTok, and LinkedIn captions.",
+  path: "/affiliate",
+  noIndex: true,
+});
 
 export default function AffiliatePage() {
   return (

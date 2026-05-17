@@ -49,6 +49,17 @@ type AffiliateTotals = {
   earningsCents: number;
 };
 
+type PayoutRequestRow = {
+  id: string;
+  affiliate_user_id: string;
+  amount_cents: number;
+  payment_method: string;
+  payment_handle: string;
+  preferred_currency: string;
+  status: string;
+  created_at: string;
+};
+
 export function AdminPanel({
   totalUsers,
   proCount,
@@ -68,7 +79,7 @@ export function AdminPanel({
   allErr?: string;
   recent: RecentUser[];
 }) {
-  const [tab, setTab] = useState<"overview" | "errors" | "logs" | "affiliate">("overview");
+  const [tab, setTab] = useState<"overview" | "errors" | "logs" | "affiliate" | "payouts">("overview");
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [logLoading, setLogLoading] = useState(false);
   const [logError, setLogError] = useState("");
@@ -77,6 +88,13 @@ export function AdminPanel({
   const [affiliateWarnings, setAffiliateWarnings] = useState<string[]>([]);
   const [affiliateLoading, setAffiliateLoading] = useState(false);
   const [affiliateError, setAffiliateError] = useState("");
+  const [payoutItems, setPayoutItems] = useState<PayoutRequestRow[]>([]);
+  const [payoutPendingCents, setPayoutPendingCents] = useState(0);
+  const [payoutPaidCents, setPayoutPaidCents] = useState(0);
+  const [payoutLoading, setPayoutLoading] = useState(false);
+  const [payoutError, setPayoutError] = useState("");
+  const [payoutWarnings, setPayoutWarnings] = useState<string[]>([]);
+  const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
 
   const loadLogs = useCallback(async (level?: string) => {
     setLogLoading(true);
@@ -132,6 +150,56 @@ export function AdminPanel({
     }
   }, []);
 
+  const loadPayouts = useCallback(async () => {
+    setPayoutLoading(true);
+    setPayoutError("");
+    try {
+      const res = await fetch("/api/admin/payouts");
+      const data = (await res.json()) as {
+        items?: PayoutRequestRow[];
+        totalPendingCents?: number;
+        totalPaidCents?: number;
+        warnings?: string[];
+        error?: string;
+      };
+      if (!res.ok) {
+        setPayoutError(data.error || "Could not load payout requests.");
+        setPayoutItems([]);
+        return;
+      }
+      setPayoutItems(data.items ?? []);
+      setPayoutPendingCents(data.totalPendingCents ?? 0);
+      setPayoutPaidCents(data.totalPaidCents ?? 0);
+      setPayoutWarnings(data.warnings ?? []);
+    } catch {
+      setPayoutError("Could not load payout requests.");
+      setPayoutItems([]);
+    } finally {
+      setPayoutLoading(false);
+    }
+  }, []);
+
+  async function markPayoutPaid(id: string) {
+    setMarkingPaidId(id);
+    try {
+      const res = await fetch("/api/admin/payouts/mark-paid", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setPayoutError(data.error || "Could not mark as paid.");
+        return;
+      }
+      await loadPayouts();
+    } catch {
+      setPayoutError("Could not mark as paid.");
+    } finally {
+      setMarkingPaidId(null);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-4xl">
       <div className="mb-8 flex items-center justify-between gap-4">
@@ -146,6 +214,7 @@ export function AdminPanel({
           [
             ["overview", "Overview"],
             ["affiliate", "Affiliate"],
+            ["payouts", "Payouts"],
             ["errors", "Error logs"],
             ["logs", "All logs"],
           ] as const
@@ -163,6 +232,9 @@ export function AdminPanel({
               }
               if (id === "affiliate") {
                 void loadAffiliate();
+              }
+              if (id === "payouts") {
+                void loadPayouts();
               }
             }}
             className={`rounded-lg px-4 py-2 text-sm font-medium ${
@@ -222,6 +294,19 @@ export function AdminPanel({
         </>
       ) : null}
 
+      {tab === "payouts" ? (
+        <PayoutsSection
+          loading={payoutLoading}
+          error={payoutError}
+          warnings={payoutWarnings}
+          totalPendingCents={payoutPendingCents}
+          totalPaidCents={payoutPaidCents}
+          items={payoutItems}
+          markingPaidId={markingPaidId}
+          onMarkPaid={markPayoutPaid}
+        />
+      ) : null}
+
       {tab === "affiliate" ? (
         <AffiliateActivitySection
           loading={affiliateLoading}
@@ -276,6 +361,118 @@ export function AdminPanel({
           )}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function PayoutsSection({
+  loading,
+  error,
+  warnings,
+  totalPendingCents,
+  totalPaidCents,
+  items,
+  markingPaidId,
+  onMarkPaid,
+}: {
+  loading: boolean;
+  error: string;
+  warnings: string[];
+  totalPendingCents: number;
+  totalPaidCents: number;
+  items: PayoutRequestRow[];
+  markingPaidId: string | null;
+  onMarkPaid: (id: string) => void;
+}) {
+  const fmt = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+
+  return (
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+      <h2 className="text-lg font-semibold text-white">Affiliate payout requests</h2>
+      <p className="mt-1 text-sm text-zinc-500">
+        50 most recent requests from <code className="text-zinc-400">affiliate_payout_requests</code>, newest
+        first.
+      </p>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <StatCard label="Total pending payouts" value={fmt(totalPendingCents)} />
+        <StatCard label="Total paid out (all time)" value={fmt(totalPaidCents)} />
+      </div>
+
+      {warnings.length > 0 ? (
+        <ul className="mt-4 space-y-1 text-xs text-amber-200/90">
+          {warnings.map((w) => (
+            <li key={w}>{w}</li>
+          ))}
+        </ul>
+      ) : null}
+
+      {loading ? (
+        <p className="mt-4 text-zinc-500">Loading…</p>
+      ) : error ? (
+        <p className="mt-4 text-amber-200/90">{error}</p>
+      ) : (
+        <ul className="mt-4 max-h-[520px] space-y-3 overflow-y-auto text-sm">
+          {items.length === 0 ? (
+            <li className="text-zinc-500">No payout requests yet.</li>
+          ) : (
+            items.map((row) => (
+              <li
+                key={row.id}
+                className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className="text-zinc-300">
+                      Affiliate:{" "}
+                      <span className="font-mono text-xs">{row.affiliate_user_id}</span>
+                    </p>
+                    <p className="text-zinc-400">
+                      Amount: <span className="text-zinc-200">{fmt(row.amount_cents)}</span>
+                      {" · "}
+                      Method:{" "}
+                      <span className="capitalize">
+                        {row.payment_method === "paypal"
+                          ? "PayPal"
+                          : row.payment_method === "venmo"
+                            ? "Venmo"
+                            : row.payment_method}
+                      </span>
+                    </p>
+                    <p className="text-zinc-400">
+                      Handle: <span className="font-mono text-xs">{row.payment_handle}</span>
+                      {" · "}
+                      Currency: {row.preferred_currency}
+                    </p>
+                    <p className="text-xs text-zinc-500">
+                      Status:{" "}
+                      <span
+                        className={
+                          row.status === "paid" ? "text-emerald-400" : "text-amber-300"
+                        }
+                      >
+                        {row.status}
+                      </span>
+                      {" · "}
+                      Requested: {new Date(row.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                  {row.status === "pending" ? (
+                    <button
+                      type="button"
+                      disabled={markingPaidId === row.id}
+                      onClick={() => onMarkPaid(row.id)}
+                      className="shrink-0 rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-600 disabled:opacity-50"
+                    >
+                      {markingPaidId === row.id ? "Saving…" : "Mark as Paid"}
+                    </button>
+                  ) : null}
+                </div>
+              </li>
+            ))
+          )}
+        </ul>
+      )}
     </div>
   );
 }

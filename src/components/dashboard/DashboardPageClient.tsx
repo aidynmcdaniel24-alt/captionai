@@ -7,6 +7,10 @@ import {
   CAPTION_RATING_LABELS,
   type CaptionRatingKey,
 } from "@/lib/caption-rating-styles";
+import {
+  hasSeenOnboarding,
+  WelcomeOnboardingModal,
+} from "@/components/dashboard/WelcomeOnboardingModal";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
@@ -84,6 +88,7 @@ export function DashboardPageClient() {
   const [abB, setAbB] = useState("");
   const [abExpId, setAbExpId] = useState<string | null>(null);
   const [abLoading, setAbLoading] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const shell =
     "min-h-screen bg-zinc-50 text-zinc-900 dark:bg-gradient-to-b dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900 dark:text-white";
@@ -115,6 +120,12 @@ export function DashboardPageClient() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate plan/usage on mount
     void refreshPlan();
   }, [refreshPlan]);
+
+  useEffect(() => {
+    if (!hasSeenOnboarding()) {
+      setShowOnboarding(true);
+    }
+  }, []);
 
   async function startCheckout(interval?: "month" | "year") {
     setCheckoutLoading(true);
@@ -469,6 +480,15 @@ export function DashboardPageClient() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowOnboarding(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-300 text-sm font-bold text-zinc-700 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              aria-label="Open getting started guide"
+              title="Help"
+            >
+              ?
+            </button>
             <ThemeToggle />
             {plan === "free" ? (
               <button
@@ -908,6 +928,8 @@ export function DashboardPageClient() {
           </div>
         </div>
       ) : null}
+
+      <WelcomeOnboardingModal open={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </main>
   );
 }

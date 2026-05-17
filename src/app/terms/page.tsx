@@ -1,11 +1,12 @@
-import type { Metadata } from "next";
 import { MarketingShell } from "@/components/marketing/MarketingShell";
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support-contact";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: "Terms of Service",
-  description: "Terms of Service for CaptionAI.",
-};
+  description: "Terms of Service for CaptionAI — AI caption generator, Pro subscriptions, and acceptable use.",
+  path: "/terms",
+});
 
 export default function TermsPage() {
   return (

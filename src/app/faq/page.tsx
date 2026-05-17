@@ -1,12 +1,14 @@
-import type { Metadata } from "next";
 import { MarketingDocLayout } from "@/components/marketing/MarketingDocLayout";
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support-contact";
+import { buildPageMetadata } from "@/lib/seo";
 import Link from "next/link";
 
-export const metadata: Metadata = {
-  title: "FAQ",
-  description: "Answers about CaptionAI — platforms, plans, billing, security, and support.",
-};
+export const metadata = buildPageMetadata({
+  title: "FAQ — AI Caption Generator Help",
+  description:
+    "FAQ for CaptionAI: free caption generator, Instagram and TikTok captions, Pro plans, billing, and how our AI social media captions work.",
+  path: "/faq",
+});
 
 const faqs: { q: string; a: string }[] = [
   {
