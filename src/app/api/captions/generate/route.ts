@@ -5,6 +5,11 @@ import { containsBlockedWord, getBlockedWordList } from "@/lib/blocked-words";
 import { getGroqClient } from "@/lib/groq-client";
 import { withGroqRetry } from "@/lib/groq-retry";
 import type { CaptionRatingKey } from "@/lib/caption-rating-styles";
+import {
+  defaultCaptionRatings,
+  parseCaptionModelJson,
+  type ParsedCaptionResponse,
+} from "@/lib/parse-caption-response";
 import { supabaseServer } from "@/lib/supabase/server";
 
 type Plan = "free" | "pro";
@@ -46,59 +51,61 @@ emojiPerCaption must have exactly 3 arrays (one per caption), each array has 2-4
 `;
 }
 
-type Parsed = { captions: string[]; emojiPerCaption: string[][]; captionRatings: CaptionRatingKey[] };
+const PARSE_RETRY_ATTEMPTS = 3;
 
-const RATING_SET = new Set<CaptionRatingKey>(["worst", "medium", "best"]);
+const STRICT_JSON_SYSTEM =
+  "You write high-quality social media captions. Output must be a single JSON object only—no markdown fences, no commentary, no text before or after the JSON.";
 
-function normalizeCaptionRatings(raw: unknown): CaptionRatingKey[] | null {
-  if (!Array.isArray(raw) || raw.length !== 3) {
-    return null;
-  }
-  const labels = raw.map((x) => String(x).trim().toLowerCase()) as CaptionRatingKey[];
-  const set = new Set(labels);
-  if (set.size !== 3) {
-    return null;
-  }
-  for (const r of RATING_SET) {
-    if (!set.has(r)) {
-      return null;
-    }
-  }
-  return labels;
+async function fetchCaptionsFromGroq(
+  groq: NonNullable<ReturnType<typeof getGroqClient>>,
+  topic: string,
+  platform: string,
+  tone: string,
+  language: string,
+  attempt: number
+): Promise<string> {
+  const strict = attempt > 0;
+  const completion = await withGroqRetry(() =>
+    groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      temperature: strict ? 0.5 : 0.9,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: strict ? STRICT_JSON_SYSTEM : "You write high-quality social media captions and always return strict JSON when asked.",
+        },
+        {
+          role: "user",
+          content: buildPrompt(topic, platform, tone, language),
+        },
+      ],
+    })
+  );
+  return completion.choices[0]?.message?.content ?? "";
 }
 
-function defaultCaptionRatings(): CaptionRatingKey[] {
-  return ["medium", "worst", "best"];
-}
-
-function parseModelJson(raw: string): Parsed | null {
-  try {
-    const parsed = JSON.parse(raw) as {
-      captions?: string[];
-      emojiPerCaption?: string[][];
-      captionRatings?: unknown;
-    };
-    if (!parsed.captions || parsed.captions.length !== 3) {
-      return null;
+async function generateParsedCaptions(
+  groq: NonNullable<ReturnType<typeof getGroqClient>>,
+  topic: string,
+  platform: string,
+  tone: string,
+  language: string,
+  userId: string
+): Promise<ParsedCaptionResponse | null> {
+  for (let attempt = 0; attempt < PARSE_RETRY_ATTEMPTS; attempt++) {
+    const content = await fetchCaptionsFromGroq(groq, topic, platform, tone, language, attempt);
+    const parsed = parseCaptionModelJson(content);
+    if (parsed) {
+      return parsed;
     }
-    const captions = parsed.captions.map((item) => item.trim()).filter(Boolean);
-    if (captions.length !== 3) {
-      return null;
-    }
-    let emojiPerCaption: string[][] =
-      Array.isArray(parsed.emojiPerCaption) && parsed.emojiPerCaption.length === 3
-        ? parsed.emojiPerCaption.map((row) =>
-            (Array.isArray(row) ? row : []).map((e) => String(e).trim()).filter(Boolean)
-          )
-        : [[], [], []];
-    while (emojiPerCaption.length < 3) {
-      emojiPerCaption.push([]);
-    }
-    const captionRatings = normalizeCaptionRatings(parsed.captionRatings) ?? defaultCaptionRatings();
-    return { captions, emojiPerCaption: emojiPerCaption.slice(0, 3), captionRatings };
-  } catch {
-    return null;
+    await logAdminEvent("warn", "groq parse captions invalid JSON", {
+      userId,
+      attempt: attempt + 1,
+      preview: content.slice(0, 200),
+    });
   }
+  return null;
 }
 
 export async function POST(req: Request) {
@@ -214,29 +221,10 @@ export async function POST(req: Request) {
   let captionRatings: CaptionRatingKey[] = defaultCaptionRatings();
 
   try {
-    const completion = await withGroqRetry(() =>
-      groq.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
-        temperature: 0.9,
-        messages: [
-          {
-            role: "system",
-            content:
-              "You write high-quality social media captions and always return strict JSON when asked.",
-          },
-          {
-            role: "user",
-            content: buildPrompt(topic, platform, tone, language),
-          },
-        ],
-      })
-    );
-
-    const content = completion.choices[0]?.message?.content ?? "";
-    const parsed = parseModelJson(content);
+    const parsed = await generateParsedCaptions(groq, topic, platform, tone, language, userId);
 
     if (!parsed) {
-      await logAdminEvent("warn", "groq parse captions invalid JSON", { userId });
+      await logAdminEvent("error", "groq parse captions failed after retries", { userId });
       return NextResponse.json(
         { error: "AI response format was invalid. Please try again." },
         { status: 502 }

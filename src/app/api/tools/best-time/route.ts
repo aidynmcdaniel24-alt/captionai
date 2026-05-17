@@ -2,19 +2,13 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { containsBlockedWord, getBlockedWordList } from "@/lib/blocked-words";
 import { getGroqClient } from "@/lib/groq-client";
+import { extractJsonPayload } from "@/lib/groq-json";
 import { withGroqRetry } from "@/lib/groq-retry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const TOPIC_MAX = 500;
-
-function extractJsonPayload(raw: string): string {
-  const s = raw.trim();
-  const fence = /^```(?:json)?\s*([\s\S]*?)```/m;
-  const m = s.match(fence);
-  return m ? m[1].trim() : s;
-}
 
 function parseBestTime(raw: string): string | null {
   const payload = extractJsonPayload(raw);
