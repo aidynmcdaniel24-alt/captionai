@@ -5,16 +5,29 @@ export type FaqItem = { id: string; q: string; a: string };
 export type FaqCategory = {
   id: string;
   title: string;
+  /** Short label for category pills */
+  pillLabel: string;
   icon: "rocket" | "pricing" | "sparkles" | "account" | "technical";
   iconClass: string;
   iconBgClass: string;
   items: FaqItem[];
 };
 
+export const FAQ_ALL_PILL = "all" as const;
+
+export type FaqPillId =
+  | typeof FAQ_ALL_PILL
+  | "getting-started"
+  | "plans-pricing"
+  | "features"
+  | "account-billing"
+  | "technical";
+
 export const FAQ_CATEGORIES: FaqCategory[] = [
   {
     id: "getting-started",
     title: "Getting Started",
+    pillLabel: "Getting Started",
     icon: "rocket",
     iconClass: "text-violet-600 dark:text-violet-400",
     iconBgClass: "bg-violet-500/15 dark:bg-violet-500/20",
@@ -34,6 +47,7 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
   {
     id: "plans-pricing",
     title: "Plans & Pricing",
+    pillLabel: "Pricing",
     icon: "pricing",
     iconClass: "text-emerald-600 dark:text-emerald-400",
     iconBgClass: "bg-emerald-500/15 dark:bg-emerald-500/20",
@@ -58,6 +72,7 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
   {
     id: "features",
     title: "Features",
+    pillLabel: "Features",
     icon: "sparkles",
     iconClass: "text-purple-600 dark:text-purple-400",
     iconBgClass: "bg-purple-500/15 dark:bg-purple-500/20",
@@ -72,6 +87,7 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
   {
     id: "account-billing",
     title: "Account & Billing",
+    pillLabel: "Account",
     icon: "account",
     iconClass: "text-amber-600 dark:text-amber-400",
     iconBgClass: "bg-amber-500/15 dark:bg-amber-500/20",
@@ -96,6 +112,7 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
   {
     id: "technical",
     title: "Technical",
+    pillLabel: "Technical",
     icon: "technical",
     iconClass: "text-sky-600 dark:text-sky-400",
     iconBgClass: "bg-sky-500/15 dark:bg-sky-500/20",
@@ -109,17 +126,30 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
   },
 ];
 
-export function filterFaqCategories(query: string): FaqCategory[] {
-  const trimmed = query.trim().toLowerCase();
-  if (!trimmed) return FAQ_CATEGORIES;
+export const FAQ_PILLS: { id: FaqPillId; label: string }[] = [
+  { id: FAQ_ALL_PILL, label: "All" },
+  ...FAQ_CATEGORIES.map((c) => ({ id: c.id as FaqPillId, label: c.pillLabel })),
+];
 
-  return FAQ_CATEGORIES.map((category) => ({
-    ...category,
-    items: category.items.filter(
-      (item) =>
-        item.q.toLowerCase().includes(trimmed) ||
-        item.a.toLowerCase().includes(trimmed) ||
-        category.title.toLowerCase().includes(trimmed),
-    ),
-  })).filter((category) => category.items.length > 0);
+export function filterFaqCategories(query: string, categoryId?: FaqPillId): FaqCategory[] {
+  const trimmed = query.trim().toLowerCase();
+  const base =
+    categoryId && categoryId !== FAQ_ALL_PILL && !trimmed
+      ? FAQ_CATEGORIES.filter((c) => c.id === categoryId)
+      : FAQ_CATEGORIES;
+
+  if (!trimmed) return base;
+
+  return base
+    .map((category) => ({
+      ...category,
+      items: category.items.filter(
+        (item) =>
+          item.q.toLowerCase().includes(trimmed) ||
+          item.a.toLowerCase().includes(trimmed) ||
+          category.title.toLowerCase().includes(trimmed) ||
+          category.pillLabel.toLowerCase().includes(trimmed),
+      ),
+    }))
+    .filter((category) => category.items.length > 0);
 }
