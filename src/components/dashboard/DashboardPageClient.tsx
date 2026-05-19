@@ -1,7 +1,6 @@
 "use client";
 
 import { BrandLogo } from "@/components/BrandLogo";
-import { CaptionHistorySection } from "@/components/dashboard/CaptionHistorySection";
 import { GeneratedCaptionsPanel } from "@/components/dashboard/GeneratedCaptionsPanel";
 import type { CaptionRatingKey } from "@/lib/caption-rating-styles";
 import {
@@ -648,8 +647,6 @@ export function DashboardPageClient() {
                 onDownloadTxt={downloadTxt}
               />
             ) : null}
-
-            <CaptionHistorySection key={historyId ?? "none"} plan={plan} />
 
           </>
         ) : null}
