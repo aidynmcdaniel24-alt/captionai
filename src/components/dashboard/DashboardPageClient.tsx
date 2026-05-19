@@ -1,12 +1,9 @@
 "use client";
 
 import { BrandLogo } from "@/components/BrandLogo";
-import { BestTimeCard } from "@/components/dashboard/BestTimeCard";
-import {
-  CAPTION_RATING_ACTIVE,
-  CAPTION_RATING_LABELS,
-  type CaptionRatingKey,
-} from "@/lib/caption-rating-styles";
+import { CaptionHistorySection } from "@/components/dashboard/CaptionHistorySection";
+import { GeneratedCaptionsPanel } from "@/components/dashboard/GeneratedCaptionsPanel";
+import type { CaptionRatingKey } from "@/lib/caption-rating-styles";
 import {
   hasSeenOnboarding,
   WelcomeOnboardingModal,
@@ -629,133 +626,31 @@ export function DashboardPageClient() {
 
               {usageText ? <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-300">{usageText}</p> : null}
 
-              <div className="mt-4">
-                <BestTimeCard
-                  platform={platform === "Custom" ? platformCustom || "Instagram" : platform}
-                  topic={topic}
-                />
-              </div>
             </div>
 
             {captions.length > 0 ? (
-              <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="text-xl font-semibold">Your captions</h2>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-600"
-                      onClick={copyAll}
-                    >
-                      Copy all
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-600"
-                      onClick={downloadTxt}
-                    >
-                      Download .txt
-                    </button>
-                  </div>
-                </div>
-                <ul className="space-y-4">
-                  {captions.map((caption, index) => (
-                    <li
-                      key={historyId ? `${historyId}-${index}` : `cap-${index}`}
-                      className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950"
-                    >
-                      {captionRatings[index] ? (
-                        <div className="mb-3 flex flex-wrap items-center gap-2">
-                          <span className="text-xs font-medium text-zinc-500">AI score:</span>
-                          <span
-                            className={`rounded-lg border px-2 py-1 text-xs font-medium ${CAPTION_RATING_ACTIVE[captionRatings[index]!]}`}
-                          >
-                            {CAPTION_RATING_LABELS[captionRatings[index]!]}
-                          </span>
-                        </div>
-                      ) : null}
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0 flex-1">
-                          {isBestLockedForFree(index) ? (
-                            <div className="relative min-h-[12rem] overflow-hidden rounded-xl border border-purple-500/40 bg-zinc-100/80 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] dark:border-purple-500/35 dark:bg-zinc-900/40 dark:shadow-none">
-                              <p className="select-none px-4 py-3 leading-7 blur-xl" aria-hidden>
-                                {caption}
-                              </p>
-                              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/80 px-4 py-5 text-center backdrop-blur-[2px] dark:bg-zinc-950/85">
-                                <span className="text-purple-600 dark:text-purple-400" aria-hidden>
-                                  <svg
-                                    className="mx-auto h-7 w-7"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth={1.75}
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      d="M16.5 10.5V6.75a4.5 4.5 0 00-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
-                                    />
-                                  </svg>
-                                </span>
-                                <p className="max-w-[16rem] text-sm font-semibold leading-snug text-zinc-900 dark:text-white">
-                                  Upgrade to Pro to unlock
-                                </p>
-                                <button
-                                  type="button"
-                                  className="shrink-0 rounded-full bg-purple-600 px-4 py-2 text-xs font-semibold text-white shadow-sm ring-1 ring-purple-500/30 hover:bg-purple-500 disabled:opacity-50"
-                                  disabled={checkoutLoading}
-                                  onClick={() => startCheckout("month")}
-                                >
-                                  Upgrade to Pro
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <p className="leading-7 text-zinc-800 dark:text-zinc-200">{caption}</p>
-                          )}
-                        </div>
-                        <div className="flex shrink-0 flex-col items-end gap-2">
-                          <button
-                            type="button"
-                            title={
-                              isBestLockedForFree(index)
-                                ? "Upgrade to Pro to copy your Best-rated caption"
-                                : "Copy caption"
-                            }
-                            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:hover:bg-zinc-800"
-                            disabled={isBestLockedForFree(index)}
-                            onClick={() => handleCopy(caption, index)}
-                          >
-                            {copiedIndex === index ? "Copied!" : "Copy"}
-                          </button>
-                          <button
-                            type="button"
-                            title="Favorite"
-                            className="text-lg leading-none text-zinc-500 hover:text-amber-500 dark:text-zinc-400"
-                            onClick={() => toggleFavorite(index)}
-                            aria-label={fav[index] ? "Remove favorite" : "Add favorite"}
-                          >
-                            {fav[index] ? "★" : "☆"}
-                          </button>
-                        </div>
-                      </div>
-                      {!isBestLockedForFree(index) ? (
-                        <p className="mt-2 text-xs text-zinc-500">{caption.length} characters</p>
-                      ) : null}
-                      {!isBestLockedForFree(index) && emojiPerCaption[index]?.length ? (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {emojiPerCaption[index]!.map((em) => (
-                            <span key={em} className="text-lg">
-                              {em}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <GeneratedCaptionsPanel
+                captions={captions}
+                captionRatings={captionRatings}
+                emojiPerCaption={emojiPerCaption}
+                historyId={historyId}
+                platform={platform === "Custom" ? platformCustom || "Instagram" : platform}
+                tone={tone}
+                topic={topic}
+                plan={plan}
+                copiedIndex={copiedIndex}
+                fav={fav}
+                checkoutLoading={checkoutLoading}
+                onCopy={handleCopy}
+                onToggleFavorite={toggleFavorite}
+                onStartCheckout={startCheckout}
+                onCopyAll={copyAll}
+                onDownloadTxt={downloadTxt}
+              />
             ) : null}
+
+            <CaptionHistorySection key={historyId ?? "none"} plan={plan} />
+
           </>
         ) : null}
 
