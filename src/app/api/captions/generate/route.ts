@@ -28,6 +28,36 @@ function resolvePlatform(platform: string, custom: string) {
   return p.slice(0, 80) || "Instagram";
 }
 
+const PLATFORM_GUIDANCE: Record<string, string> = {
+  instagram:
+    "Visually evocative, aspirational, 1-2 short paragraphs. Open with a strong hook in the first line, finish with 5-10 niche hashtags.",
+  tiktok:
+    "Punchy, trend-aware, hook in the first 5 words. Very short caption (1-2 lines) with 3-5 viral/niche hashtags, casual tone.",
+  linkedin:
+    "Professional but human storytelling. 2-4 short paragraphs with a clear insight or lesson; 3-5 industry hashtags at the end.",
+  "twitter/x":
+    "Under 280 characters total. Single tight thought, witty or punchy hook, 1-3 hashtags max. No filler.",
+  facebook:
+    "Casual, friendly, conversational like talking to a friend. Slightly longer is fine, end with a light question to invite comments. 2-4 hashtags max.",
+  youtube:
+    "Longer-form video description style: 2-4 paragraphs with relevant keywords for search, a call to subscribe/like, timestamps or chapter teasers if natural. 5-10 keyword-rich hashtags.",
+  pinterest:
+    "Descriptive, SEO-keyword-rich pin description. Lead with the main subject and benefit, include searchable phrases, 3-5 keyword hashtags.",
+  threads:
+    "Short, casual, conversational like a quick thought. 1-3 sentences, low-key tone, 0-3 hashtags only (Threads users use few hashtags).",
+  bluesky:
+    "Casual and conversational like Twitter but a bit looser. Under 300 characters, 0-2 hashtags max, personable voice.",
+};
+
+function platformGuidance(platform: string): string {
+  const key = platform.trim().toLowerCase();
+  const direct = PLATFORM_GUIDANCE[key];
+  if (direct) {
+    return direct;
+  }
+  return "Match the conventions of this platform's typical posts: appropriate length, voice, and hashtag count.";
+}
+
 function buildPrompt(topic: string, platform: string, tone: string, language: string) {
   return `
 You are an expert social media copywriter.
@@ -38,11 +68,14 @@ Topic: "${topic}"
 Platform: "${platform}"
 Tone: "${tone}"
 
+Platform style guide for ${platform}:
+${platformGuidance(platform)}
+
 Rules:
-- Make each caption platform-specific.
+- Tailor each caption specifically to ${platform}'s style, length conventions, and audience behavior (see platform style guide above).
 - Keep each caption unique and engaging.
-- Match tone exactly.
-- Add relevant hashtags at the end of each caption.
+- Match the requested tone exactly.
+- Add relevant hashtags at the end of each caption, matching the hashtag conventions described in the platform style guide.
 - Rank the three captions by predicted engagement for this platform: assign exactly one "best", one "medium", and one "worst" based on hook strength, hashtag fit, length appropriateness, and scroll-stopping potential.
 - Return valid JSON only, with this exact shape:
 {"captions":["caption 1","caption 2","caption 3"],"emojiPerCaption":[["emoji1","emoji2"],["emoji1"],["emoji1","emoji2","emoji3"]],"captionRatings":["worst"|"medium"|"best","worst"|"medium"|"best","worst"|"medium"|"best"]}

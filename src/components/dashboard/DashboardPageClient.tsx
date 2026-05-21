@@ -8,11 +8,23 @@ import {
   WelcomeOnboardingModal,
 } from "@/components/dashboard/WelcomeOnboardingModal";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { UserButton } from "@clerk/nextjs";
+import { UserAvatar } from "@/components/UserAvatar";
+import { UserButton, useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-const PLATFORM_OPTIONS = ["Instagram", "TikTok", "LinkedIn", "Twitter/X", "Custom"] as const;
+const PLATFORM_OPTIONS = [
+  "Instagram",
+  "TikTok",
+  "LinkedIn",
+  "Twitter/X",
+  "Facebook",
+  "YouTube",
+  "Pinterest",
+  "Threads",
+  "Bluesky",
+  "Custom",
+] as const;
 const tones = ["funny", "professional", "hype", "inspirational"] as const;
 
 const LANGUAGES = [
@@ -24,6 +36,25 @@ const LANGUAGES = [
   "Italian",
   "Japanese",
   "Korean",
+];
+
+type CaptionTemplate = {
+  icon: string;
+  label: string;
+  prompt: string;
+};
+
+const CAPTION_TEMPLATES: CaptionTemplate[] = [
+  { icon: "🚀", label: "Product Launch", prompt: "new product launch showcase features and benefits" },
+  { icon: "🎬", label: "Behind the Scenes", prompt: "behind the scenes look at how we work" },
+  { icon: "💥", label: "Sale Announcement", prompt: "limited time sale discount offer" },
+  { icon: "💪", label: "Motivational Quote", prompt: "motivational message to inspire my audience" },
+  { icon: "📅", label: "Event Promotion", prompt: "upcoming event details and why to attend" },
+  { icon: "🍽️", label: "Food & Drink", prompt: "delicious food photo at restaurant" },
+  { icon: "🏋️", label: "Fitness", prompt: "gym workout progress transformation" },
+  { icon: "✈️", label: "Travel", prompt: "travel photo exploring new destination" },
+  { icon: "🛍️", label: "Fashion", prompt: "outfit of the day style look" },
+  { icon: "🎮", label: "Gaming", prompt: "gaming setup highlights" },
 ];
 
 type Tab = "captions" | "hashtags" | "bio" | "trending" | "ab";
@@ -48,6 +79,7 @@ type ApiResult = {
 };
 
 export function DashboardPageClient() {
+  const { user } = useUser();
   const [tab, setTab] = useState<Tab>("captions");
   const [topic, setTopic] = useState("");
   const [platform, setPlatform] = useState<(typeof PLATFORM_OPTIONS)[number]>("Instagram");
@@ -458,6 +490,15 @@ export function DashboardPageClient() {
 
   const showFreeWarning = plan === "free" && usageToday !== null && usageToday >= 3 && usageToday < freeLimit;
 
+  const displayName =
+    user?.firstName ||
+    user?.fullName ||
+    user?.username ||
+    user?.primaryEmailAddress?.emailAddress?.split("@")[0] ||
+    "";
+  const userImageUrl = user?.imageUrl ?? null;
+  const userEmail = user?.primaryEmailAddress?.emailAddress ?? null;
+
   return (
     <main className={`${shell} px-6 py-8`}>
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
@@ -474,6 +515,16 @@ export function DashboardPageClient() {
               <p className="text-xs uppercase tracking-widest text-purple-600 dark:text-purple-300">CaptionAI</p>
               <h1 className="text-3xl font-semibold">AI Caption Studio</h1>
             </div>
+            {displayName ? (
+              <Link
+                href="/profile"
+                className="ml-2 hidden items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 py-1 pl-1 pr-3 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800 sm:inline-flex"
+                aria-label="View your profile"
+              >
+                <UserAvatar imageUrl={userImageUrl} name={displayName} email={userEmail} size="sm" />
+                <span className="max-w-[10rem] truncate">Hi, {displayName}</span>
+              </Link>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <ThemeToggle />
@@ -554,6 +605,36 @@ export function DashboardPageClient() {
         {tab === "captions" ? (
           <>
             <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+              <div className="mb-4">
+                <p className="mb-2 text-sm text-zinc-600 dark:text-zinc-300">Start from a template</p>
+                <div
+                  className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2 [scrollbar-width:thin]"
+                  role="list"
+                  aria-label="Caption templates"
+                >
+                  {CAPTION_TEMPLATES.map((tpl) => {
+                    const active = topic === tpl.prompt;
+                    return (
+                      <button
+                        key={tpl.label}
+                        type="button"
+                        role="listitem"
+                        onClick={() => setTopic(tpl.prompt)}
+                        aria-pressed={active}
+                        className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
+                          active
+                            ? "border-purple-500 bg-purple-600 text-white shadow-sm hover:bg-purple-500"
+                            : "border-zinc-200 bg-zinc-50 text-zinc-800 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:border-purple-500/60 dark:hover:bg-purple-950/40 dark:hover:text-purple-100"
+                        }`}
+                      >
+                        <span aria-hidden="true">{tpl.icon}</span>
+                        <span>{tpl.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Photo/topic description</label>
               <textarea
                 className="min-h-32 w-full rounded-xl border border-zinc-300 bg-white p-3 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
