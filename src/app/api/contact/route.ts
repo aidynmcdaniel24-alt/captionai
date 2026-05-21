@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import { getGmailMailer, verifyGmailMailer } from "@/lib/gmail-mailer";
 import { SUPPORT_EMAIL } from "@/lib/support-contact";
+import { CONTACT_SUBJECT_OPTIONS, isContactSubject } from "@/lib/contact-form";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ type Body = {
   name?: string;
   email?: string;
   message?: string;
+  subject?: string;
 };
 
 function escapeHtml(text: string) {
@@ -35,6 +37,8 @@ export async function POST(req: Request) {
   const name = (body.name ?? "").toString().trim();
   const email = (body.email ?? "").toString().trim();
   const message = (body.message ?? "").toString().trim();
+  const rawSubject = (body.subject ?? "General Question").toString().trim();
+  const subject = isContactSubject(rawSubject) ? rawSubject : CONTACT_SUBJECT_OPTIONS[0];
 
   if (!name || name.length > 200) {
     return NextResponse.json({ error: "Please enter your name." }, { status: 400 });
@@ -86,6 +90,7 @@ export async function POST(req: Request) {
 
   const safeName = escapeHtml(name);
   const safeEmail = escapeHtml(email);
+  const safeSubject = escapeHtml(subject);
   const safeMessage = escapeHtml(message).replace(/\r\n|\n|\r/g, "<br />");
 
   try {
@@ -93,11 +98,12 @@ export async function POST(req: Request) {
       from: fromAddress,
       to: SUPPORT_EMAIL,
       replyTo: `"${name.replace(/"/g, "")}" <${email}>`,
-      subject: `[CaptionAI] Support from ${name}`,
-      text: [`Name: ${name}`, `Email: ${email}`, "", message].join("\n"),
+      subject: `[CaptionAI] ${subject} — from ${name}`,
+      text: [`Name: ${name}`, `Email: ${email}`, `Subject: ${subject}`, "", message].join("\n"),
       html: `
         <p><strong>Name:</strong> ${safeName}</p>
         <p><strong>Email:</strong> ${safeEmail}</p>
+        <p><strong>Subject:</strong> ${safeSubject}</p>
         <hr />
         <p>${safeMessage}</p>
       `.trim(),
