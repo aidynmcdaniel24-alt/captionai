@@ -25,7 +25,7 @@ const PLATFORM_OPTIONS = [
   "Bluesky",
   "Custom",
 ] as const;
-const tones = ["funny", "professional", "hype", "inspirational"] as const;
+const TONE_OPTIONS = ["funny", "professional", "hype", "inspirational", "Custom"] as const;
 
 const LANGUAGES = [
   "English",
@@ -84,7 +84,8 @@ export function DashboardPageClient() {
   const [topic, setTopic] = useState("");
   const [platform, setPlatform] = useState<(typeof PLATFORM_OPTIONS)[number]>("Instagram");
   const [platformCustom, setPlatformCustom] = useState("");
-  const [tone, setTone] = useState<(typeof tones)[number]>("inspirational");
+  const [tone, setTone] = useState<(typeof TONE_OPTIONS)[number]>("inspirational");
+  const [toneCustom, setToneCustom] = useState("");
   const [language, setLanguage] = useState("English");
   const [captions, setCaptions] = useState<string[]>([]);
   const [emojiPerCaption, setEmojiPerCaption] = useState<string[][]>([]);
@@ -120,6 +121,10 @@ export function DashboardPageClient() {
 
   const shell =
     "min-h-screen bg-zinc-50 text-zinc-900 dark:bg-gradient-to-b dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900 dark:text-white";
+
+  const resolvedTone = tone === "Custom" ? toneCustom.trim().slice(0, 80) || "casual" : tone;
+  const resolvedPlatform =
+    platform === "Custom" ? platformCustom.trim().slice(0, 80) || "Instagram" : platform;
 
   const refreshPlan = useCallback(async () => {
     try {
@@ -205,6 +210,7 @@ export function DashboardPageClient() {
           platform,
           platformCustom,
           tone,
+          toneCustom,
           language,
         }),
       });
@@ -322,7 +328,7 @@ export function DashboardPageClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           topic,
-          platform: platform === "Custom" ? platformCustom || "Social" : platform,
+          platform: resolvedPlatform,
           count: 15,
         }),
       });
@@ -349,8 +355,8 @@ export function DashboardPageClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           about: topic,
-          platform: platform === "Custom" ? platformCustom || "Instagram" : platform,
-          tone,
+          platform: resolvedPlatform,
+          tone: resolvedTone,
         }),
       });
       const data = (await res.json()) as { bio?: string; error?: string };
@@ -408,8 +414,8 @@ export function DashboardPageClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           topic,
-          platform: platform === "Custom" ? platformCustom || "Instagram" : platform,
-          tone,
+          platform: resolvedPlatform,
+          tone: resolvedTone,
         }),
       });
       const data = (await res.json()) as { a?: string; b?: string; error?: string };
@@ -440,7 +446,7 @@ export function DashboardPageClient() {
           variantA: abA,
           variantB: abB,
           label: topic.slice(0, 80),
-          platform: platform === "Custom" ? platformCustom : platform,
+          platform: resolvedPlatform,
         }),
       });
       const data = (await res.json()) as { id?: string; error?: string };
@@ -660,25 +666,35 @@ export function DashboardPageClient() {
                   {platform === "Custom" ? (
                     <input
                       className="mt-2 w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-                      placeholder="Your platform name"
+                      placeholder='e.g. "YouTube Shorts", "Discord", "Newsletter"'
                       value={platformCustom}
                       onChange={(e) => setPlatformCustom(e.target.value)}
+                      maxLength={80}
                     />
                   ) : null}
                 </div>
                 <div>
                   <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Tone</label>
                   <select
-                    className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                    className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                     value={tone}
-                    onChange={(e) => setTone(e.target.value as (typeof tones)[number])}
+                    onChange={(e) => setTone(e.target.value as (typeof TONE_OPTIONS)[number])}
                   >
-                    {tones.map((t) => (
+                    {TONE_OPTIONS.map((t) => (
                       <option key={t} value={t}>
                         {t}
                       </option>
                     ))}
                   </select>
+                  {tone === "Custom" ? (
+                    <input
+                      className="mt-2 w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                      placeholder='e.g. "sarcastic Gen Z", "luxury brand", "dad jokes"'
+                      value={toneCustom}
+                      onChange={(e) => setToneCustom(e.target.value)}
+                      maxLength={80}
+                    />
+                  ) : null}
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Language</label>
@@ -714,8 +730,8 @@ export function DashboardPageClient() {
                 captionRatings={captionRatings}
                 emojiPerCaption={emojiPerCaption}
                 historyId={historyId}
-                platform={platform === "Custom" ? platformCustom || "Instagram" : platform}
-                tone={tone}
+                platform={resolvedPlatform}
+                tone={resolvedTone}
                 topic={topic}
                 plan={plan}
                 copiedIndex={copiedIndex}

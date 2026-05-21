@@ -1,6 +1,8 @@
 import { SettingsQuickActions } from "@/components/SettingsQuickActions";
 import { UserProfile } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 /**
  * Clerk v7+ uses colorForeground / colorMutedForeground (not deprecated colorText / colorTextSecondary).
@@ -38,7 +40,12 @@ const userProfileAppearance = {
  * Enable strategies under Clerk Dashboard → Configure → Multi-factor (SMS, Authenticator app, etc.).
  * Leave “Require multi-factor authentication” OFF so 2FA stays optional for all users.
  */
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const { userId } = await auth();
+  if (!userId) {
+    redirect("/sign-in?redirect_url=/settings");
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 px-4 py-8 text-white">
       <div className="mx-auto max-w-5xl">

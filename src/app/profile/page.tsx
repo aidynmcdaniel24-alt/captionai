@@ -5,6 +5,7 @@ import { WelcomeOnboardingModal } from "@/components/dashboard/WelcomeOnboarding
 import { UserAvatar } from "@/components/UserAvatar";
 import { SignOutButton, useUser } from "@clerk/nextjs";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 type BillingInfo = {
@@ -26,7 +27,8 @@ function formatBillingDate(iso: string | null): string {
 }
 
 export default function ProfilePage() {
-  const { user, isLoaded } = useUser();
+  const router = useRouter();
+  const { user, isLoaded, isSignedIn } = useUser();
   const [plan, setPlan] = useState<"free" | "pro" | null>(null);
   const [billing, setBilling] = useState<BillingInfo | null>(null);
   const [billingLoading, setBillingLoading] = useState(true);
@@ -101,10 +103,19 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch profile stats on mount
+    if (isLoaded && !isSignedIn) {
+      router.replace("/sign-in?redirect_url=/profile");
+    }
+  }, [isLoaded, isSignedIn, router]);
+
+  useEffect(() => {
+    if (!isSignedIn) {
+      return;
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch profile stats once signed in
     void loadStats();
     void loadBilling();
-  }, [loadStats, loadBilling]);
+  }, [isSignedIn, loadStats, loadBilling]);
 
   useEffect(() => {
     let cancelled = false;
@@ -137,7 +148,7 @@ export default function ProfilePage() {
     setTimeout(() => setCopiedRef(false), 1500);
   }
 
-  if (!isLoaded) {
+  if (!isLoaded || !isSignedIn) {
     return (
       <main className="min-h-screen bg-zinc-50 px-4 py-12 dark:bg-gradient-to-b dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900">
         <div className="mx-auto max-w-lg animate-pulse rounded-2xl border border-zinc-200 bg-white p-8 dark:border-zinc-800 dark:bg-zinc-900/60">

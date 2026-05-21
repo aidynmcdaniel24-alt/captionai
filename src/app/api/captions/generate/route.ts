@@ -28,6 +28,15 @@ function resolvePlatform(platform: string, custom: string) {
   return p.slice(0, 80) || "Instagram";
 }
 
+function resolveTone(tone: string, custom: string) {
+  const t = tone.trim();
+  if (t.toLowerCase() === "custom") {
+    const c = custom.trim();
+    return c ? c.slice(0, 80) : "casual";
+  }
+  return t.slice(0, 80) || "inspirational";
+}
+
 const PLATFORM_GUIDANCE: Record<string, string> = {
   instagram:
     "Visually evocative, aspirational, 1-2 short paragraphs. Open with a strong hook in the first line, finish with 5-10 niche hashtags.",
@@ -152,10 +161,12 @@ export async function POST(req: Request) {
   const topic = (body.topic ?? "").toString().trim();
   const platformRaw = (body.platform ?? "Instagram").toString();
   const platformCustom = (body.platformCustom ?? "").toString();
-  const tone = (body.tone ?? "inspirational").toString();
+  const toneRaw = (body.tone ?? "inspirational").toString();
+  const toneCustom = (body.toneCustom ?? "").toString();
   const language = (body.language ?? "English").toString().trim().slice(0, 40) || "English";
 
   const platform = resolvePlatform(platformRaw, platformCustom);
+  const tone = resolveTone(toneRaw, toneCustom);
 
   if (!topic) {
     return NextResponse.json({ error: "Topic is required." }, { status: 400 });
