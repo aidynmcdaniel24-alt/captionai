@@ -13,8 +13,8 @@ import { UserButton, useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-const PLATFORM_PLACEHOLDER = 'e.g. "Instagram, TikTok, LinkedIn, YouTube Shorts..."';
-const TONE_PLACEHOLDER = 'e.g. "funny, professional, hype, inspirational, sarcastic..."';
+const PLATFORM_PLACEHOLDER = "e.g. Instagram, TikTok, LinkedIn";
+const TONE_PLACEHOLDER = "e.g. funny, professional, hype, inspirational";
 
 const LANGUAGES = [
   "English",
@@ -71,8 +71,8 @@ export function DashboardPageClient() {
   const { user } = useUser();
   const [tab, setTab] = useState<Tab>("captions");
   const [topic, setTopic] = useState("");
-  const [platform, setPlatform] = useState("Instagram");
-  const [tone, setTone] = useState("inspirational");
+  const [platform, setPlatform] = useState("");
+  const [tone, setTone] = useState("");
   const [language, setLanguage] = useState("English");
   const [captions, setCaptions] = useState<string[]>([]);
   const [emojiPerCaption, setEmojiPerCaption] = useState<string[][]>([]);
