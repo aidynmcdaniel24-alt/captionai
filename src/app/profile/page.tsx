@@ -2,6 +2,7 @@
 
 import { BestTimeCard } from "@/components/dashboard/BestTimeCard";
 import { WelcomeOnboardingModal } from "@/components/dashboard/WelcomeOnboardingModal";
+import { ChangePhotoButton } from "@/components/ChangePhotoButton";
 import { UserAvatar } from "@/components/UserAvatar";
 import { SignOutButton, useUser } from "@clerk/nextjs";
 import Link from "next/link";
@@ -197,12 +198,7 @@ export default function ProfilePage() {
               <p className="text-sm text-zinc-500 dark:text-zinc-400">
                 {user?.imageUrl ? "Your profile photo is visible to your account." : "Add a photo to personalize your account."}
               </p>
-              <Link
-                href="/settings"
-                className="inline-flex items-center justify-center rounded-lg border border-purple-500/40 bg-purple-50 px-4 py-2 text-sm font-medium text-purple-900 transition hover:bg-purple-100 dark:bg-purple-950/30 dark:text-purple-200 dark:hover:bg-purple-950/50"
-              >
-                {user?.imageUrl ? "Change photo" : "Upload photo"}
-              </Link>
+              <ChangePhotoButton hasImage={Boolean(user?.imageUrl)} />
             </div>
           </div>
 
