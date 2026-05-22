@@ -6,7 +6,7 @@ const TIPS: Record<string, string> = {
   Instagram: "Weekdays 10am–2pm & 7pm–9pm (your audience’s timezone). Reels often spike early evening.",
   TikTok: "Evenings 6pm–10pm and lunch 12pm–2pm — test Tue–Thu for consistency.",
   "Twitter/X": "Weekday mornings 8–10am and lunch; breaking topics anytime.",
-  LinkedIn: "Tuesday–Thursday 9–11am — professional tone peaks mid-morning.",
+  LinkedIn: "Tue–Thu 8–11am and 12–1pm — weekday business hours peak engagement.",
   Default: "Post when your audience is awake — experiment for a week and compare saves/clicks.",
 };
 
