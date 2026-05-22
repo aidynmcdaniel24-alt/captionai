@@ -45,102 +45,81 @@ type PlatformProfile = {
   examples: string[];
 };
 
+const TWITTER_X_PROFILE: PlatformProfile = {
+  voice:
+    "Witty, tight, punchy. One single thought, sharpened to a point. Self-aware, slightly mischievous, occasionally self-deprecating. Conversational lowercase usually lands best.",
+  length:
+    "STRICT MAXIMUM 280 characters total — hashtags and emoji included. Aim for under 240 for retweetability. One line, occasionally two short lines. NEVER exceed 280 characters.",
+  hashtags:
+    "0 hashtags is best. Maximum 1 hashtag, only if it is genuinely topical. NEVER use more than 1 hashtag. Most great tweets use zero.",
+  notes:
+    "The hook IS the post. No warm-up, no setup, no 'thread coming below'. Should feel like a quote a stranger would screenshot. Self-deprecating humor and clean specific observations beat motivational lines every time.",
+  examples: [
+    "spent 20 mins writing a caption. AI did it in 5 seconds. I need to rethink my career choices.",
+    "the most underrated business strategy is remembering people's names.",
+    "you don't need a brand. you need a regular tuesday that people miss when it's gone.",
+  ],
+};
+
 const PLATFORM_PROFILES: Record<string, PlatformProfile> = {
   instagram: {
     voice:
-      "Visual storytelling. Lifestyle-focused, aspirational but human. Sensory details and small specifics that paint a picture.",
+      "Storytelling and lifestyle-focused. Visual, sensory, slightly aspirational but grounded in a real moment. Sounds like a friend sharing a personal scene from their day, not a brand running an ad.",
     length:
-      "3-5 short lines of body copy with line breaks for breathing room, then a blank line, then hashtags on the last line.",
+      "EXACTLY 3-5 sentences of body copy. After the body copy, leave one blank line and place all hashtags together on the FINAL line.",
     hashtags:
-      "5-10 niche-leaning hashtags. Mix one or two slightly bigger reach tags with mostly niche ones. Lowercase, no spaces.",
+      "8-12 hashtags total, placed on a NEW LINE at the very end of the caption (after a blank line). Mix 2-3 broader reach tags with 6-9 niche tags that genuinely match the content. All lowercase, no spaces, no banned or generic spam tags.",
     notes:
-      "Open with a hook that creates a feeling or a scene in the first 5 words. End with a soft question or invitation to comment. Avoid corporate buzzwords.",
+      "Open with a hook that creates a feeling or paints a scene in the first 5 words. Build a small lifestyle/storytelling moment across 3-5 sentences using specific sensory details. ALWAYS end with a soft, genuine question that invites people to share their own version in the comments. No corporate buzzwords, no influencer cliches.",
     examples: [
-      "6am. Fog still on the river. The espresso machine is the loudest thing in the room.\n\nThis is the version of the city only the early ones see.\n\nWhat hour does your favorite version of your city start?\n\n#neworleansliving #slowmornings #cafeculture #espresso #thirdwavecoffee #morningritual #nolaeats",
-      "POV: you ordered the cortado but stayed for the playlist.\n\nWe didn't plan a vibe. We just played the records we love and somehow strangers started staying for hours.\n\nTell me a place that did that to you.\n\n#coffeeshopvibes #cortado #nolacafe #independentcoffee #vinylcommunity #localfinds #neworleans",
+      "Some days you just need to slow down and remember why you started. This moment reminded me that the little things are actually the big things. The light hit the window just right and I forgot what I was rushing toward. What's been your reminder lately? \u2728\n\n#lifestyle #mindset #inspiration #grateful #contentcreator #slowliving #intentionalliving #selfcare #morningroutine #goodvibes",
+      "POV: you ordered the cortado but stayed for the playlist. We didn't plan a vibe \u2014 we just played the records we love and somehow strangers ended up staying for hours. The best moments aren't the ones you schedule. They're the ones you let happen. What's a place that surprised you like that?\n\n#coffeeshopvibes #cortado #independentcoffee #vinylcommunity #localfinds #slowmornings #cafeculture #thirdwavecoffee #morningritual #neworleans",
     ],
   },
   tiktok: {
     voice:
-      "Gen Z native. Trending phrasing, often lowercase, slightly chaotic energy. No corporate speak, ever. Use pattern interrupts like 'pov:', 'no one talks about', 'wait for it', 'tell me why', 'the way I…'.",
+      "Gen Z native, very punchy and energetic. Often lowercase. Sounds like a friend texting you something they're hyped about. No corporate speak, no influencer voice, ever.",
     length:
-      "1-3 short lines maximum. The first 5 words must stop the scroll. Total under ~150 characters before hashtags.",
+      "STRICT 1-3 short lines maximum. The first 5 words must stop the scroll. Total caption body under ~150 characters before hashtags. NEVER write a paragraph.",
     hashtags:
-      "3-5 tags. Mix one broad (#fyp / #foryou) with 2-3 niche tags that match the actual content. Lowercase, no spaces.",
+      "3-5 hashtags maximum. Mix 1 broad reach tag (#fyp / #foryou / #foryoupage) with 2-4 niche tags that match the actual content. Lowercase, no spaces.",
     notes:
-      "Curiosity gap or pattern interrupt up front. Reward the scroll with a punchline, twist, or callout. Sound like a friend texting, not a brand.",
+      "MUST open with a punchy TikTok-native hook. STRONGLY PREFER one of these openers: 'POV:', 'Tell me why', 'Not me', 'This is your sign', 'no one talks about', 'wait for it', 'the way I\u2026'. Then one quick payoff line, optional emoji. Reads like a one-liner, not a paragraph.",
     examples: [
-      "no one talks about how the third-wave coffee crowd is just a book club in disguise 📚☕ #fyp #coffeetok #thirdwave",
-      "pov: the locals tried to gatekeep this café and you found it anyway 👀 #fyp #neworleans #cafehopping #hiddengems",
+      "POV: you just found the fastest way to write captions \ud83e\udd2f Drop a \ud83d\udd25 if you needed this #contentcreator #socialmediatips #tiktokhacks",
+      "Tell me why I spent 4 hours on a caption AI just wrote in 5 seconds \ud83d\udc80 #fyp #contentcreator #aitools #socialmediahacks",
+      "Not me realizing my old captions were the reason no one was commenting \ud83d\ude2d this is your sign to switch it up #fyp #creatortips #tiktokgrowth",
     ],
   },
   linkedin: {
     voice:
-      "Professional but human. Thought leadership through story, not jargon. Specific numbers, specific moments, specific lessons. First-person.",
+      "Professional but distinctly human. Thought leadership through a specific story or lesson learned \u2014 NEVER jargon. First-person. Speaks to other operators, builders, and founders like an equal.",
     length:
-      "Longer form, 4-8 short paragraphs of 1-2 sentences each, generous line breaks. Opens with a single bold first line that doubles as the LinkedIn preview hook.",
+      "EXACTLY 3-5 SHORT paragraphs of 1-2 sentences each, separated by generous line breaks. The first paragraph is one bold standalone line that doubles as the LinkedIn preview hook.",
     hashtags:
-      "0-2 hashtags maximum. Industry-relevant, CamelCase or lowercase. Often best to skip hashtags entirely.",
+      "MAXIMUM 2 hashtags. Industry-relevant, CamelCase or lowercase. Often best to skip hashtags entirely. NEVER more than 2.",
     notes:
-      "Open with a contrarian truth, a specific number, or a vulnerable moment. Build a tiny narrative. Land on an insight that's useful to other operators. End with a reflective question.",
+      "Open with a contrarian truth, a specific number, or a vulnerable moment. Build a tiny narrative across the paragraphs. Land on a clear, useful lesson or insight other operators can take away. ALWAYS end with a thought-provoking question for the reader.",
     examples: [
-      "Three years ago I quit a six-figure engineering job to open a coffee shop in New Orleans.\n\nLast Tuesday a customer cried at the bar because the espresso reminded her of her father.\n\nThe spreadsheet measures revenue.\n\nThe relationships measure why we're really here.\n\nNo business plan ever has a line item for 'reminded a stranger of someone they loved.' But maybe it should.\n\nWhat's the most unexpected metric your work actually changes?",
-      "I spent 11 months optimizing our pricing model.\n\nThen a regular told me she comes in three times a week because we remember her dog's name.\n\nWe weren't competing on price. We were competing on belonging.\n\nMost businesses get this backwards.",
+      "I used to spend 30 minutes writing one caption.\n\nNow it takes 10 seconds.\n\nThe lesson? Work smarter, not harder. The tools changed, but more importantly, the way I think about my time changed.\n\nWe romanticize the grind. We rarely audit what the grind is actually for.\n\nWhat tools have changed how you work?",
+      "Three years ago I quit a six-figure engineering job to open a coffee shop.\n\nLast Tuesday a customer cried at the bar because the espresso reminded her of her father.\n\nThe spreadsheet measures revenue. The relationships measure why we're really here.\n\nMost businesses get this backwards.\n\nWhat's the most unexpected metric your work actually changes?",
     ],
   },
-  "twitter/x": {
-    voice:
-      "Witty, tight, opinionated. One single thought, sharpened to a point. Often a contrarian take or a clean observation. Conversational lowercase is fine.",
-    length:
-      "Under 280 characters total, hashtags included. Aim for under 240 for shareability. One line, occasionally two.",
-    hashtags:
-      "0-2 hashtags max. Usually 0. If used, lowercase and topical, not generic.",
-    notes:
-      "No filler words. The hook IS the post. Should feel like a quote you'd screenshot.",
-    examples: [
-      "the most underrated business strategy is remembering people's names.",
-      "you don't need a brand. you need a regular Tuesday that people miss when it's gone.",
-    ],
-  },
-  twitter: {
-    voice:
-      "Witty, tight, opinionated. One single thought, sharpened to a point. Often a contrarian take or a clean observation. Conversational lowercase is fine.",
-    length:
-      "Under 280 characters total, hashtags included. Aim for under 240 for shareability. One line, occasionally two.",
-    hashtags:
-      "0-2 hashtags max. Usually 0. If used, lowercase and topical, not generic.",
-    notes:
-      "No filler words. The hook IS the post. Should feel like a quote you'd screenshot.",
-    examples: [
-      "the most underrated business strategy is remembering people's names.",
-      "you don't need a brand. you need a regular Tuesday that people miss when it's gone.",
-    ],
-  },
-  x: {
-    voice:
-      "Witty, tight, opinionated. One single thought, sharpened to a point. Often a contrarian take or a clean observation. Conversational lowercase is fine.",
-    length:
-      "Under 280 characters total, hashtags included. Aim for under 240 for shareability. One line, occasionally two.",
-    hashtags:
-      "0-2 hashtags max. Usually 0. If used, lowercase and topical, not generic.",
-    notes:
-      "No filler words. The hook IS the post. Should feel like a quote you'd screenshot.",
-    examples: [
-      "the most underrated business strategy is remembering people's names.",
-      "you don't need a brand. you need a regular Tuesday that people miss when it's gone.",
-    ],
-  },
+  "twitter/x": TWITTER_X_PROFILE,
+  twitter: TWITTER_X_PROFILE,
+  x: TWITTER_X_PROFILE,
   facebook: {
     voice:
-      "Conversational, community-focused, like talking to neighbors. Warmer, slightly longer, gently sentimental is OK.",
+      "Conversational and friendly, like talking to a neighbor at the mailbox or a long-time group chat. Warm, personable, lightly nostalgic is fine. Not corporate, not influencer-coded.",
     length:
-      "Medium length, 2-4 short paragraphs. Friendly and personable, not corporate.",
+      "STRICT 2-3 sentences. Short and friendly. No long monologues, no multi-paragraph essays.",
     hashtags:
-      "0-3 hashtags max. Local or community-relevant. Many Facebook posts use none at all.",
+      "0-3 hashtags maximum. Local or community-relevant when used. Many great Facebook posts use no hashtags at all.",
     notes:
-      "Open with a relatable scene or a small story. End with a clear question that invites neighbors to comment with their own version.",
+      "Open with a small, relatable scene or moment. Keep it tight at 2-3 sentences. ALWAYS end with a question or a clear call-to-action that invites friends/community to chime in.",
     examples: [
-      "Funny thing about running a corner café: you start by selling coffee and end up knowing who in the neighborhood just had a baby, who's grieving, and who finally got the promotion.\n\nWe poured our 100,000th cup last week.\n\nThanks for letting us be part of your week. Who's a small business that's been part of yours?",
+      "Funny how a quiet Saturday turned into the best afternoon I've had all month. Sometimes the unplanned hours really are the best ones. What did you get up to this weekend?",
+      "Just poured our 100,000th cup of coffee this morning \u2014 still kind of in shock. Thanks for being part of it, neighbors. Who's a small business that's been part of your week lately?",
     ],
   },
   youtube: {
@@ -246,21 +225,31 @@ function formatPlatformBriefing(profile: PlatformProfile): string {
   return parts.join("\n");
 }
 
-const CAPTION_ARCHETYPES = `Caption 1 — HOOK OPENER: open with a scroll-stopping line in the first 5 words. Curiosity gap, bold claim, or pattern interrupt. The rest of the caption pays off that hook.
+const CAPTION_ARCHETYPES = `Caption 1 — PUNCHY HOOK / POV: open with a scroll-stopping, platform-native hook in the first 5 words (e.g. "POV:", "Tell me why", "Not me", "This is your sign", a bold claim, or a curiosity gap). Energy is direct and punchy. Short and snappy.
 
-Caption 2 — STORY / QUESTION: open with a specific small moment, micro-story, or genuine question that builds emotional connection. Reward the reader with a relatable insight, then invite them to share their own version.
+Caption 2 — STORY / LIFESTYLE MOMENT: open with a specific small moment or sensory detail. Build a tiny human story with concrete imagery, then end with a genuine question that invites the reader to share their own version. Warmer, more grounded, more emotional than Caption 1.
 
-Caption 3 — BOLD / CONTRARIAN: open with a confident, slightly contrarian take or strong statement that gives the reader a reason to nod, screenshot, or argue. End sharp.`;
+Caption 3 — CONTRARIAN INSIGHT / LESSON: open with a confident, slightly contrarian observation, a specific number, or a sharp lesson learned. Reads like something a real operator would screenshot. Ends on a clear takeaway or thought-provoking line.
+
+CRITICAL RULE — ALL THREE MUST BE MEANINGFULLY DIFFERENT:
+The three captions must feel like they were written by three different people. Different opener style, different rhythm, different sentence length, different vocabulary, different emotional register. Do NOT write three variations of the same line, the same vibe, or the same opening word. If two of them feel similar, rewrite one.`;
 
 const QUALITY_RULES = `WHAT MAKES A GREAT CAPTION (apply to all three):
-- The FIRST LINE must stop the scroll. No warm-ups, no "in today's post", no generic openers.
-- Conversational, authentic, human voice. No corporate speak, no buzzwords like "synergy", "leverage", "unlock potential". No vague claims like "amazing", "best ever", "next level" unless used with irony.
-- Use specific, concrete details (numbers, names of things, sensory imagery) over abstractions.
-- Use power words sparingly but deliberately (e.g. "secret", "honestly", "finally", "actually", "the truth is", "POV:", "imagine").
-- Match the requested tone exactly without breaking the platform voice.
-- Be emotionally engaging: make the reader feel something or recognize themselves in it.
-- End with a CTA, question, or invitation that gives the reader a clear next action (comment, share, save, click, etc.) — phrased naturally, not "comment below!!".
-- Hashtags must follow the platform's hashtag rules exactly (count, casing, niche vs broad mix). No banned or generic spam tags.`;
+
+- HUMAN, NOT AI: write like a real person posting from their phone. Use contractions, casual phrasing, occasional sentence fragments, real-sounding rhythm. AVOID sentence patterns that scream ChatGPT: "In a world where...", "Imagine a place where...", "Whether you're a... or a...", "It's not just X, it's Y", "Let's dive in", "Buckle up". If a line sounds like a LinkedIn marketing template, rewrite it.
+- The FIRST LINE must stop the scroll. No warm-ups, no "in today's post", no generic openers, no "Hey guys".
+- SPECIFICS OVER GENERICS: use concrete details, real numbers, names of things, sensory imagery, real emotions. AVOID vague claims like "amazing", "best ever", "next level", "game-changer", "unlock potential", "synergy", "leverage", "level up", "elevate", "transform your life". Replace them with something specific.
+- EMOTIONAL TRUTH: each caption should make the reader feel something real or recognize themselves in it. No fake hype, no manufactured urgency.
+- Use power phrases sparingly but deliberately: "honestly", "actually", "the truth is", "POV:", "tell me why", "not me", "no one talks about", "this is your sign".
+- Match the requested TONE exactly without breaking the platform voice.
+- End with a CTA, question, or invitation phrased like a real human would say it. NEVER use "comment below!!", "double tap if you agree!", "smash that like button", "follow for more!!!".
+- HASHTAGS must follow the platform's hashtag rules EXACTLY:
+    \u2022 Instagram: 8-12 hashtags on a NEW LINE at the end (after a blank line).
+    \u2022 TikTok: 3-5 hashtags, inline at the end is fine.
+    \u2022 LinkedIn: maximum 2 hashtags. Often zero.
+    \u2022 Twitter/X: 0 hashtags is best, maximum 1, and the WHOLE post must be \u2264 280 characters.
+    \u2022 Facebook: 0-3 hashtags maximum.
+  Never exceed the platform's hashtag count. Never use banned or generic spam tags (#love, #instagood without context, #followforfollow, etc.).`;
 
 const RATING_RUBRIC = `RATING RUBRIC (you must apply this honestly):
 Score each caption internally on:
@@ -304,7 +293,7 @@ function buildPrompt({
   const briefing = formatPlatformBriefing(profile);
   const isPro = plan === "pro";
 
-  return `You are a top 1% social media copywriter who writes captions creators actually screenshot and save.
+  return `You are a top 1% social media copywriter who writes captions that real creators screenshot, save, and study. Your captions sound HUMAN, never AI-generated.
 
 REQUEST
   Topic:    "${topic}"
@@ -312,17 +301,25 @@ REQUEST
   Tone:     "${tone}"
   Language: ${language}
 
-PLATFORM BRIEFING for ${platform}
+PLATFORM BRIEFING for ${platform} (these constraints are non-negotiable)
 ${briefing}
 
 ${QUALITY_RULES}
 
-THREE DISTINCT CAPTIONS (the three MUST feel meaningfully different from each other — different opener style, different rhythm, different angle. Do NOT write three variations of the same line.):
+THREE DISTINCT CAPTIONS
 ${CAPTION_ARCHETYPES}
 
 ${RATING_RUBRIC}
 ${isPro ? `\n${PRO_AMPLIFIERS}\n` : "\nSTANDARD MODE: write good, clean captions. Keep them grounded and natural. Use one strong technique per caption rather than stacking many.\n"}
-FINAL OUTPUT — return STRICT JSON ONLY, no markdown fences, no commentary, with this exact shape:
+BEFORE YOU RETURN, SELF-CHECK each caption against this checklist:
+  1. Does it strictly match the ${platform} LENGTH rule above? (TikTok: 1-3 lines. Instagram: 3-5 sentences + hashtags on a new line. LinkedIn: 3-5 short paragraphs. Twitter/X: \u2264 280 characters total. Facebook: 2-3 sentences.)
+  2. Does it strictly match the ${platform} HASHTAG count and placement rule? (TikTok 3-5, Instagram 8-12 on new line, LinkedIn \u2264 2, Twitter/X 0-1, Facebook 0-3.)
+  3. Does it end with a platform-appropriate question or CTA (where the platform calls for one)?
+  4. Does it sound like a real human wrote it from their phone \u2014 not an AI? No "in a world where...", no "let's dive in", no "buckle up", no generic hype.
+  5. Are the three captions MEANINGFULLY DIFFERENT from each other in style, rhythm, opener, and vocabulary?
+If any answer is no, rewrite that caption before returning.
+
+FINAL OUTPUT \u2014 return STRICT JSON ONLY, no markdown fences, no commentary, with this exact shape:
 {
   "captions": ["caption 1 text", "caption 2 text", "caption 3 text"],
   "emojiPerCaption": [["emoji","emoji"], ["emoji"], ["emoji","emoji","emoji"]],
@@ -330,7 +327,7 @@ FINAL OUTPUT — return STRICT JSON ONLY, no markdown fences, no commentary, wit
 }
 
 Requirements:
-- captions has exactly 3 strings; each is the full caption text INCLUDING hashtags where appropriate.
+- captions has exactly 3 strings; each is the FULL caption text INCLUDING hashtags where the platform calls for them (Instagram hashtags on a new line at the end).
 - captionRatings[i] rates captions[i]. Use "best", "medium", "worst" exactly once each across the three.
 - emojiPerCaption has exactly 3 arrays of 2-4 single emoji characters (not words, not text) that fit each caption.
 - Write all caption text in ${language}.`;
