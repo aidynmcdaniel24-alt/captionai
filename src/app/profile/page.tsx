@@ -169,29 +169,29 @@ export default function ProfilePage() {
   const isPro = subscriptionPlan === "pro";
 
   return (
-    <main className="min-h-screen bg-zinc-50 px-4 py-10 text-zinc-900 dark:bg-gradient-to-b dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900 dark:text-white">
+    <main className="min-h-screen bg-zinc-50 px-4 py-6 text-zinc-900 sm:py-10 dark:bg-gradient-to-b dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900 dark:text-white">
       <div className="mx-auto max-w-lg">
         <Link
           href="/dashboard"
-          className="mb-6 inline-flex text-sm font-medium text-purple-600 hover:text-purple-500 dark:text-purple-400 dark:hover:text-purple-300"
+          className="mb-4 inline-flex min-h-[40px] items-center text-sm font-medium text-purple-600 hover:text-purple-500 sm:mb-6 dark:text-purple-400 dark:hover:text-purple-300"
         >
           ← Back to dashboard
         </Link>
 
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70 dark:shadow-xl dark:shadow-black/30">
-          <h1 className="text-2xl font-semibold">Your profile</h1>
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/70 dark:shadow-xl dark:shadow-black/30">
+          <h1 className="text-xl font-semibold sm:text-2xl">Your profile</h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             View your account details. To change your name or email, use Account settings (Clerk).
           </p>
 
-          <div className="mt-6 flex flex-col items-center gap-4 border-t border-zinc-200 pt-6 sm:flex-row sm:items-center sm:gap-6 dark:border-zinc-800">
+          <div className="mt-6 flex flex-col items-center gap-4 border-t border-zinc-200 pt-6 text-center sm:flex-row sm:items-center sm:gap-6 sm:text-left dark:border-zinc-800">
             <UserAvatar
               imageUrl={user?.imageUrl ?? null}
               name={name === "—" ? null : name}
               email={primaryEmail === "—" ? null : primaryEmail}
               size="xl"
             />
-            <div className="flex flex-col items-center gap-2 sm:items-start">
+            <div className="flex w-full flex-col items-center gap-2 sm:items-start">
               <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
                 {name === "—" ? "Welcome" : name}
               </p>
@@ -308,11 +308,11 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={copyReferral}
-                className="mt-3 rounded-lg border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-600"
+                className="mt-3 inline-flex min-h-[44px] w-full items-center justify-center rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium transition hover:bg-zinc-100 sm:w-auto dark:border-zinc-600 dark:hover:bg-zinc-800"
               >
                 {copiedRef ? "Copied" : "Copy link"}
               </button>
-              <p className="mt-2 text-xs text-zinc-500">
+              <p className="mt-3 text-xs text-zinc-500">
                 Short URL pattern: <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">/r/code</code> (
                 see Affiliate page)
               </p>

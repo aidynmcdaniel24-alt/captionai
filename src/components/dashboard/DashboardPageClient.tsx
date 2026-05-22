@@ -544,28 +544,50 @@ export function DashboardPageClient() {
   const showFreeWarning = plan === "free" && usageToday !== null && usageToday >= 3 && usageToday < freeLimit;
 
   return (
-    <main className={`${shell} px-6 py-8`}>
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/70">
-          <div className="flex min-w-0 items-center gap-3">
-            <Link
-              href="/"
-              className="shrink-0 rounded-lg outline-none ring-offset-2 ring-offset-white focus-visible:ring-2 focus-visible:ring-purple-500 dark:ring-offset-zinc-900"
-              aria-label="CaptionAI home"
-            >
-              <BrandLogo className="h-9 w-9" />
-            </Link>
-            <div className="min-w-0">
-              <p className="text-xs uppercase tracking-widest text-purple-600 dark:text-purple-300">CaptionAI</p>
-              <h1 className="text-3xl font-semibold">AI Caption Studio</h1>
+    <main className={`${shell} px-4 py-6 sm:px-6 sm:py-8`}>
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 sm:gap-6">
+        <div className="flex flex-col gap-3 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm backdrop-blur sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4 sm:p-4 dark:border-zinc-800 dark:bg-zinc-900/70">
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <Link
+                href="/"
+                className="shrink-0 rounded-lg outline-none ring-offset-2 ring-offset-white focus-visible:ring-2 focus-visible:ring-purple-500 dark:ring-offset-zinc-900"
+                aria-label="CaptionAI home"
+              >
+                <BrandLogo className="h-9 w-9" />
+              </Link>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-purple-600 sm:text-xs dark:text-purple-300">
+                  CaptionAI
+                </p>
+                <h1 className="truncate text-xl font-semibold sm:text-3xl">AI Caption Studio</h1>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2 sm:hidden">
+              <ThemeToggle />
+              <UserButton userProfileUrl="/settings" userProfileMode="navigation" />
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <ThemeToggle />
+
+          {plan === "free" ? (
+            <button
+              type="button"
+              className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-purple-500 disabled:opacity-50 sm:hidden"
+              disabled={checkoutLoading}
+              onClick={() => startCheckout("month")}
+            >
+              {checkoutLoading ? "Opening checkout…" : "Upgrade — $9/mo"}
+            </button>
+          ) : null}
+
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="hidden sm:block">
+              <ThemeToggle />
+            </div>
             {plan === "free" ? (
               <button
                 type="button"
-                className="inline-flex items-center justify-center rounded-full bg-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-purple-500 disabled:opacity-50"
+                className="hidden min-h-[44px] items-center justify-center rounded-full bg-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-purple-500 disabled:opacity-50 sm:inline-flex"
                 disabled={checkoutLoading}
                 onClick={() => startCheckout("month")}
               >
@@ -578,17 +600,19 @@ export function DashboardPageClient() {
             ) : null}
             <Link
               href="/profile"
-              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              className="inline-flex min-h-[40px] flex-1 items-center justify-center rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100 sm:flex-none dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
             >
               Profile
             </Link>
             <Link
               href="/affiliate"
-              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              className="inline-flex min-h-[40px] flex-1 items-center justify-center rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100 sm:flex-none dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
             >
               Affiliate
             </Link>
-            <UserButton userProfileUrl="/settings" userProfileMode="navigation" />
+            <div className="hidden sm:block">
+              <UserButton userProfileUrl="/settings" userProfileMode="navigation" />
+            </div>
           </div>
         </div>
 
@@ -602,30 +626,38 @@ export function DashboardPageClient() {
           </div>
         ) : null}
 
-        <div className="flex flex-wrap gap-2 rounded-2xl border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-900/60">
-          {(
-            [
-              ["captions", "Captions"],
-              ["hashtags", "Hashtags"],
-              ["bio", "Bio"],
-              ["trending", "Trending"],
-              ["ab", "A/B test"],
-              ["favorites", "Favorites"],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTab(id)}
-              className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-                tab === id
-                  ? "bg-purple-600 text-white"
-                  : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+        <div
+          className="-mx-1 overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-2 hide-scrollbar dark:border-zinc-800 dark:bg-zinc-900/60"
+          role="tablist"
+          aria-label="Studio sections"
+        >
+          <div className="flex min-w-max gap-1.5 sm:gap-2">
+            {(
+              [
+                ["captions", "Captions"],
+                ["hashtags", "Hashtags"],
+                ["bio", "Bio"],
+                ["trending", "Trending"],
+                ["ab", "A/B test"],
+                ["favorites", "Favorites"],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={tab === id}
+                onClick={() => setTab(id)}
+                className={`inline-flex min-h-[40px] shrink-0 items-center justify-center whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition ${
+                  tab === id
+                    ? "bg-purple-600 text-white shadow-sm"
+                    : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {error ? (
@@ -639,11 +671,11 @@ export function DashboardPageClient() {
 
         {tab === "captions" ? (
           <>
-            <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+            <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/80">
               <div className="mb-4">
                 <p className="mb-2 text-sm text-zinc-600 dark:text-zinc-300">Start from a template</p>
                 <div
-                  className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2 [scrollbar-width:thin]"
+                  className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 scrollbar-thin-x sm:-mx-1 sm:px-1"
                   role="group"
                   aria-label="Caption templates"
                 >
@@ -655,7 +687,7 @@ export function DashboardPageClient() {
                         type="button"
                         onClick={() => setTopic(tpl.prompt)}
                         aria-pressed={active}
-                        className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
+                        className={`flex min-h-[40px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
                           active
                             ? "border-purple-500 bg-purple-600 text-white shadow-sm hover:bg-purple-500"
                             : "border-zinc-200 bg-zinc-50 text-zinc-800 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:border-purple-500/60 dark:hover:bg-purple-950/40 dark:hover:text-purple-100"
@@ -671,7 +703,7 @@ export function DashboardPageClient() {
 
               <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Photo/topic description</label>
               <textarea
-                className="min-h-32 w-full rounded-xl border border-zinc-300 bg-white p-3 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                className="min-h-32 w-full rounded-xl border border-zinc-300 bg-white p-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                 placeholder="Example: my coffee shop in New Orleans"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
@@ -682,7 +714,7 @@ export function DashboardPageClient() {
                   <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Platform</label>
                   <input
                     type="text"
-                    className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                    className="block min-h-[48px] w-full rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                     placeholder={PLATFORM_PLACEHOLDER}
                     value={platform}
                     onChange={(e) => setPlatform(e.target.value)}
@@ -693,7 +725,7 @@ export function DashboardPageClient() {
                   <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Tone</label>
                   <input
                     type="text"
-                    className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                    className="block min-h-[48px] w-full rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                     placeholder={TONE_PLACEHOLDER}
                     value={tone}
                     onChange={(e) => setTone(e.target.value)}
@@ -703,7 +735,7 @@ export function DashboardPageClient() {
                 <div className="sm:col-span-2">
                   <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Language</label>
                   <select
-                    className="w-full max-w-md rounded-xl border border-zinc-300 bg-white p-2.5 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                    className="block min-h-[48px] w-full max-w-md rounded-xl border border-zinc-300 bg-white px-3 text-base dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                     value={language}
                     onChange={(e) => setLanguage(e.target.value)}
                   >
@@ -717,7 +749,7 @@ export function DashboardPageClient() {
               </div>
 
               <button
-                className="mt-4 rounded-xl bg-purple-600 px-5 py-2.5 font-medium text-white hover:bg-purple-500 disabled:opacity-70"
+                className="mt-5 inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-purple-600 px-5 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-purple-500 disabled:opacity-70 sm:w-auto"
                 disabled={isLoading}
                 onClick={handleGenerate}
               >
@@ -754,14 +786,14 @@ export function DashboardPageClient() {
         ) : null}
 
         {tab === "hashtags" ? (
-          <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/80">
             <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
               Generate a mix of reach and niche hashtags tailored to your topic and platform.
             </p>
 
             <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Topic</label>
             <textarea
-              className="min-h-24 w-full rounded-xl border border-zinc-300 bg-white p-3 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+              className="min-h-24 w-full rounded-xl border border-zinc-300 bg-white p-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
               placeholder="Example: my coffee shop in New Orleans"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
@@ -771,7 +803,7 @@ export function DashboardPageClient() {
               <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Platform</label>
               <input
                 type="text"
-                className="w-full max-w-md rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                className="block min-h-[48px] w-full max-w-md rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                 placeholder={PLATFORM_PLACEHOLDER}
                 value={platform}
                 onChange={(e) => setPlatform(e.target.value)}
@@ -781,7 +813,7 @@ export function DashboardPageClient() {
 
             <button
               type="button"
-              className="mt-4 rounded-xl bg-purple-600 px-5 py-2.5 font-medium text-white hover:bg-purple-500 disabled:opacity-50"
+              className="mt-5 inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-purple-600 px-5 py-3 text-base font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50 sm:w-auto"
               disabled={htLoading || !topic.trim()}
               onClick={runHashtags}
             >
@@ -790,13 +822,13 @@ export function DashboardPageClient() {
 
             {htags.length > 0 ? (
               <div className="mt-6">
-                <div className="mb-2 flex items-center justify-between">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200">
                     {htags.length} hashtags
                   </p>
                   <button
                     type="button"
-                    className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                    className="inline-flex min-h-[40px] items-center justify-center rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
                     onClick={async () => {
                       await navigator.clipboard.writeText(htags.join(" "));
                     }}
@@ -808,7 +840,7 @@ export function DashboardPageClient() {
                   {htags.map((h) => (
                     <li
                       key={h}
-                      className="rounded-full bg-purple-50 px-3 py-1 text-sm text-purple-800 dark:bg-purple-950/40 dark:text-purple-200"
+                      className="break-all rounded-full bg-purple-50 px-3 py-1.5 text-sm text-purple-800 dark:bg-purple-950/40 dark:text-purple-200"
                     >
                       {h}
                     </li>
@@ -820,14 +852,14 @@ export function DashboardPageClient() {
         ) : null}
 
         {tab === "bio" ? (
-          <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/80">
             <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
               Describe yourself or your brand, pick a platform and tone, and we will write a profile bio.
             </p>
 
             <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">About you / your brand</label>
             <textarea
-              className="min-h-24 w-full rounded-xl border border-zinc-300 bg-white p-3 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+              className="min-h-24 w-full rounded-xl border border-zinc-300 bg-white p-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
               placeholder="Example: indie game developer, makes cozy pixel-art puzzle games"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
@@ -838,7 +870,7 @@ export function DashboardPageClient() {
                 <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Platform</label>
                 <input
                   type="text"
-                  className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  className="block min-h-[48px] w-full rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                   placeholder={PLATFORM_PLACEHOLDER}
                   value={platform}
                   onChange={(e) => setPlatform(e.target.value)}
@@ -849,7 +881,7 @@ export function DashboardPageClient() {
                 <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Tone</label>
                 <input
                   type="text"
-                  className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  className="block min-h-[48px] w-full rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                   placeholder={TONE_PLACEHOLDER}
                   value={tone}
                   onChange={(e) => setTone(e.target.value)}
@@ -860,7 +892,7 @@ export function DashboardPageClient() {
 
             <button
               type="button"
-              className="mt-4 rounded-xl bg-purple-600 px-5 py-2.5 font-medium text-white hover:bg-purple-500 disabled:opacity-50"
+              className="mt-5 inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-purple-600 px-5 py-3 text-base font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50 sm:w-auto"
               disabled={bioLoading || !topic.trim()}
               onClick={runBio}
             >
@@ -869,11 +901,11 @@ export function DashboardPageClient() {
 
             {bio ? (
               <div className="mt-6">
-                <div className="mb-2 flex items-center justify-between">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200">Your bio</p>
                   <button
                     type="button"
-                    className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                    className="inline-flex min-h-[40px] items-center justify-center rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
                     onClick={async () => {
                       await navigator.clipboard.writeText(bio);
                     }}
@@ -881,7 +913,7 @@ export function DashboardPageClient() {
                     Copy
                   </button>
                 </div>
-                <p className="whitespace-pre-wrap rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
+                <p className="whitespace-pre-wrap break-words rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
                   {bio}
                 </p>
               </div>
@@ -890,7 +922,7 @@ export function DashboardPageClient() {
         ) : null}
 
         {tab === "trending" ? (
-          <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900/80">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/80">
             <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">Ideas refreshed periodically — tap one to paste into topic.</p>
             {trLoading ? (
               <p className="text-zinc-500">Loading trends…</p>
@@ -900,7 +932,7 @@ export function DashboardPageClient() {
                   <li key={t}>
                     <button
                       type="button"
-                      className="w-full rounded-xl border border-zinc-200 px-4 py-3 text-left text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                      className="block min-h-[52px] w-full rounded-xl border border-zinc-200 px-4 py-3 text-left text-sm leading-relaxed transition hover:bg-zinc-50 active:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800 dark:active:bg-zinc-800/80"
                       onClick={() => {
                         setTopic(t);
                         setTab("captions");
@@ -916,14 +948,14 @@ export function DashboardPageClient() {
         ) : null}
 
         {tab === "ab" ? (
-          <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/80">
             <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
               Generate two caption variants for the same post and track which one performs better.
             </p>
 
             <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Topic</label>
             <textarea
-              className="min-h-24 w-full rounded-xl border border-zinc-300 bg-white p-3 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+              className="min-h-24 w-full rounded-xl border border-zinc-300 bg-white p-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
               placeholder="Example: launching a new fitness app for beginners"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
@@ -934,7 +966,7 @@ export function DashboardPageClient() {
                 <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Platform</label>
                 <input
                   type="text"
-                  className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  className="block min-h-[48px] w-full rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                   placeholder={PLATFORM_PLACEHOLDER}
                   value={platform}
                   onChange={(e) => setPlatform(e.target.value)}
@@ -945,7 +977,7 @@ export function DashboardPageClient() {
                 <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Tone</label>
                 <input
                   type="text"
-                  className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  className="block min-h-[48px] w-full rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                   placeholder={TONE_PLACEHOLDER}
                   value={tone}
                   onChange={(e) => setTone(e.target.value)}
@@ -956,7 +988,7 @@ export function DashboardPageClient() {
 
             <button
               type="button"
-              className="mt-4 rounded-xl bg-purple-600 px-5 py-2.5 font-medium text-white hover:bg-purple-500 disabled:opacity-50"
+              className="mt-5 inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-purple-600 px-5 py-3 text-base font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50 sm:w-auto"
               disabled={abLoading || !topic.trim()}
               onClick={generateAbPair}
             >
@@ -966,13 +998,13 @@ export function DashboardPageClient() {
             {abA && abB ? (
               <div className="mt-6 space-y-4">
                 <div className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400">
                       Variant A
                     </p>
                     <button
                       type="button"
-                      className="rounded-lg border border-zinc-300 px-2.5 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                      className="inline-flex min-h-[40px] items-center justify-center rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
                       onClick={async () => {
                         await navigator.clipboard.writeText(abA);
                       }}
@@ -980,16 +1012,16 @@ export function DashboardPageClient() {
                       Copy
                     </button>
                   </div>
-                  <p className="mt-2 whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">{abA}</p>
+                  <p className="mt-2 whitespace-pre-wrap break-words text-zinc-800 dark:text-zinc-200">{abA}</p>
                 </div>
                 <div className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400">
                       Variant B
                     </p>
                     <button
                       type="button"
-                      className="rounded-lg border border-zinc-300 px-2.5 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                      className="inline-flex min-h-[40px] items-center justify-center rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
                       onClick={async () => {
                         await navigator.clipboard.writeText(abB);
                       }}
@@ -997,28 +1029,28 @@ export function DashboardPageClient() {
                       Copy
                     </button>
                   </div>
-                  <p className="mt-2 whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">{abB}</p>
+                  <p className="mt-2 whitespace-pre-wrap break-words text-zinc-800 dark:text-zinc-200">{abB}</p>
                 </div>
                 <button
                   type="button"
-                  className="rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-50 sm:w-auto dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
                   onClick={saveAbExperiment}
                   disabled={Boolean(abExpId)}
                 >
                   {abExpId ? "Experiment saved" : "Save experiment"}
                 </button>
                 {abExpId ? (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                     <button
                       type="button"
-                      className="rounded-xl bg-zinc-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600"
+                      className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-zinc-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 sm:w-auto dark:bg-zinc-700 dark:hover:bg-zinc-600"
                       onClick={() => pickAb("a")}
                     >
                       A performed better
                     </button>
                     <button
                       type="button"
-                      className="rounded-xl bg-zinc-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600"
+                      className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-zinc-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 sm:w-auto dark:bg-zinc-700 dark:hover:bg-zinc-600"
                       onClick={() => pickAb("b")}
                     >
                       B performed better
@@ -1031,9 +1063,9 @@ export function DashboardPageClient() {
         ) : null}
 
         {tab === "favorites" ? (
-          <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/80">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
                 <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Saved favorites</h2>
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">
                   Captions you starred from past generations.
@@ -1041,7 +1073,7 @@ export function DashboardPageClient() {
               </div>
               <button
                 type="button"
-                className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                className="inline-flex min-h-[40px] items-center justify-center rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
                 onClick={() => {
                   setFavoritesLoaded(false);
                   void loadFavorites();
@@ -1063,14 +1095,14 @@ export function DashboardPageClient() {
                 {favorites.map((item) => (
                   <li
                     key={item.id}
-                    className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950/40"
+                    className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 sm:p-4 dark:border-zinc-700 dark:bg-zinc-950/40"
                   >
-                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-                      <span className="truncate">
+                    <div className="mb-2 flex flex-col gap-1 text-xs text-zinc-500 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-2 dark:text-zinc-400">
+                      <span className="min-w-0 truncate">
                         <span className="font-medium text-zinc-700 dark:text-zinc-200">Topic:</span>{" "}
                         {item.topic || "—"}
                       </span>
-                      <span>
+                      <span className="truncate">
                         {item.platform} · {item.tone}
                       </span>
                     </div>
@@ -1081,13 +1113,13 @@ export function DashboardPageClient() {
                         return (
                           <li
                             key={`${item.id}-${idx}`}
-                            className="flex items-start justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 text-sm text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                            className="flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white p-3 text-sm text-zinc-800 sm:flex-row sm:items-start sm:justify-between dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                           >
-                            <p className="whitespace-pre-wrap break-words">{text}</p>
-                            <div className="flex shrink-0 flex-col gap-1.5">
+                            <p className="min-w-0 flex-1 whitespace-pre-wrap break-words">{text}</p>
+                            <div className="flex shrink-0 gap-2 sm:flex-col sm:gap-1.5">
                               <button
                                 type="button"
-                                className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                                className="inline-flex min-h-[40px] flex-1 items-center justify-center rounded-md border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 sm:flex-none dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
                                 onClick={async () => {
                                   await navigator.clipboard.writeText(text);
                                 }}
@@ -1096,7 +1128,7 @@ export function DashboardPageClient() {
                               </button>
                               <button
                                 type="button"
-                                className="rounded-md border border-red-200 px-2.5 py-1 text-xs font-medium text-red-700 transition hover:bg-red-50 dark:border-red-900/60 dark:text-red-300 dark:hover:bg-red-950/30"
+                                className="inline-flex min-h-[40px] flex-1 items-center justify-center rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-50 sm:flex-none dark:border-red-900/60 dark:text-red-300 dark:hover:bg-red-950/30"
                                 onClick={() => unfavoriteSaved(item.id, idx)}
                               >
                                 Remove
@@ -1115,34 +1147,35 @@ export function DashboardPageClient() {
       </div>
 
       {showPaywall ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6">
-          <div className="w-full max-w-md rounded-xl border border-zinc-700 bg-zinc-900 p-6 text-center text-white">
-            <h3 className="text-2xl font-semibold">Free Limit Reached</h3>
-            <p className="mt-2 text-zinc-300">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 sm:p-6">
+          <div className="w-full max-w-md rounded-2xl border border-zinc-700 bg-zinc-900 p-5 text-center text-white sm:p-6">
+            <h3 className="text-xl font-semibold sm:text-2xl">Free Limit Reached</h3>
+            <p className="mt-2 text-sm text-zinc-300 sm:text-base">
               You have used all {freeLimit} free captions for today. Upgrade to Pro for unlimited usage.
             </p>
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-              <button
-                className="rounded-md border border-zinc-600 px-4 py-2 hover:bg-zinc-800"
-                onClick={() => setShowPaywall(false)}
-              >
-                Close
-              </button>
+            <div className="mt-5 flex flex-col gap-2 sm:gap-3">
               <button
                 type="button"
-                className="inline-flex min-w-[160px] items-center justify-center rounded-full bg-purple-600 px-6 py-3 text-base font-bold text-white disabled:opacity-50"
+                className="inline-flex min-h-[52px] w-full items-center justify-center rounded-full bg-purple-600 px-6 py-3 text-base font-bold text-white shadow-lg shadow-purple-600/30 transition hover:bg-purple-500 disabled:opacity-50"
                 disabled={checkoutLoading}
                 onClick={() => startCheckout("month")}
               >
-                {checkoutLoading ? "Opening Stripe…" : "Upgrade monthly"}
+                {checkoutLoading ? "Opening Stripe…" : "Upgrade monthly — $9"}
               </button>
               <button
                 type="button"
-                className="inline-flex min-w-[160px] items-center justify-center rounded-full border border-purple-400 px-6 py-3 text-base font-bold text-purple-100 disabled:opacity-50"
+                className="inline-flex min-h-[52px] w-full items-center justify-center rounded-full border border-purple-400 px-6 py-3 text-base font-bold text-purple-100 transition hover:bg-purple-900/30 disabled:opacity-50"
                 disabled={checkoutLoading}
                 onClick={() => startCheckout("year")}
               >
-                {checkoutLoading ? "…" : "$79/year"}
+                {checkoutLoading ? "…" : "Upgrade yearly — $79"}
+              </button>
+              <button
+                type="button"
+                className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full border border-zinc-600 px-4 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800"
+                onClick={() => setShowPaywall(false)}
+              >
+                Maybe later
               </button>
             </div>
           </div>

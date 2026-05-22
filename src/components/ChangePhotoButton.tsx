@@ -134,7 +134,7 @@ export function ChangePhotoButton({ hasImage }: Props) {
         onClick={openPicker}
         disabled={isUploading || !user}
         aria-busy={isUploading}
-        className="inline-flex items-center justify-center gap-2 rounded-lg border border-purple-500/40 bg-purple-50 px-4 py-2 text-sm font-medium text-purple-900 transition hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-purple-950/30 dark:text-purple-200 dark:hover:bg-purple-950/50"
+        className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg border border-purple-500/40 bg-purple-50 px-4 py-2 text-sm font-medium text-purple-900 transition hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto dark:bg-purple-950/30 dark:text-purple-200 dark:hover:bg-purple-950/50"
       >
         {isUploading ? (
           <svg
@@ -209,7 +209,7 @@ export function ChangePhotoButton({ hasImage }: Props) {
             <div className="flex flex-col gap-2">
               <button
                 type="button"
-                className="w-full rounded-xl border border-zinc-200 px-4 py-3 text-left text-sm font-medium text-zinc-900 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                className="block min-h-[48px] w-full rounded-xl border border-zinc-200 px-4 py-3 text-left text-base font-medium text-zinc-900 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800"
                 onClick={() => {
                   setShowOptions(false);
                   // Defer the click so the dialog has time to close on iOS.
@@ -220,7 +220,7 @@ export function ChangePhotoButton({ hasImage }: Props) {
               </button>
               <button
                 type="button"
-                className="w-full rounded-xl border border-zinc-200 px-4 py-3 text-left text-sm font-medium text-zinc-900 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                className="block min-h-[48px] w-full rounded-xl border border-zinc-200 px-4 py-3 text-left text-base font-medium text-zinc-900 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800"
                 onClick={() => {
                   setShowOptions(false);
                   setTimeout(() => libraryInputRef.current?.click(), 0);
@@ -230,7 +230,7 @@ export function ChangePhotoButton({ hasImage }: Props) {
               </button>
               <button
                 type="button"
-                className="mt-1 w-full rounded-xl px-4 py-3 text-sm font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                className="mt-1 block min-h-[48px] w-full rounded-xl px-4 py-3 text-base font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
                 onClick={() => setShowOptions(false)}
               >
                 Cancel

@@ -115,17 +115,17 @@ export default function SubscriptionPage() {
   const isAnnualPro = info?.plan === "pro" && info.interval === "year";
 
   return (
-    <main className="min-h-screen bg-zinc-50 px-4 py-10 text-zinc-900 dark:bg-gradient-to-b dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900 dark:text-white">
+    <main className="min-h-screen bg-zinc-50 px-4 py-6 text-zinc-900 sm:py-10 dark:bg-gradient-to-b dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900 dark:text-white">
       <div className="mx-auto max-w-lg">
         <Link
           href="/profile"
-          className="mb-6 inline-flex text-sm font-medium text-purple-600 hover:text-purple-500 dark:text-purple-400"
+          className="mb-4 inline-flex min-h-[40px] items-center text-sm font-medium text-purple-600 hover:text-purple-500 sm:mb-6 dark:text-purple-400"
         >
           ← Back to profile
         </Link>
 
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70">
-          <h1 className="text-2xl font-semibold">Subscription</h1>
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/70">
+          <h1 className="text-xl font-semibold sm:text-2xl">Subscription</h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             View your plan, billing, and manage your Pro subscription.
           </p>
@@ -194,7 +194,7 @@ export default function SubscriptionPage() {
                 type="button"
                 disabled={checkoutLoading}
                 onClick={() => startCheckout("month")}
-                className="rounded-xl bg-purple-600 px-4 py-3 text-sm font-semibold text-white hover:bg-purple-500 disabled:opacity-60"
+                className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-purple-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-purple-500 disabled:opacity-60"
               >
                 {checkoutLoading ? "Opening checkout…" : "Upgrade to Pro — $9/month"}
               </button>
@@ -205,7 +205,7 @@ export default function SubscriptionPage() {
                 type="button"
                 disabled={checkoutLoading}
                 onClick={() => startCheckout("year")}
-                className="rounded-xl border border-emerald-500/50 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900 hover:bg-emerald-100 disabled:opacity-60 dark:bg-emerald-950/30 dark:text-emerald-200 dark:hover:bg-emerald-950/50"
+                className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl border border-emerald-500/50 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900 transition hover:bg-emerald-100 disabled:opacity-60 dark:bg-emerald-950/30 dark:text-emerald-200 dark:hover:bg-emerald-950/50"
               >
                 {checkoutLoading ? "Opening checkout…" : "Switch to Annual plan — Save 27%"}
               </button>
@@ -221,7 +221,7 @@ export default function SubscriptionPage() {
               <button
                 type="button"
                 onClick={() => setShowCancelConfirm(true)}
-                className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800 hover:bg-red-100 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-200"
+                className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800 transition hover:bg-red-100 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-200"
               >
                 Cancel subscription
               </button>
@@ -237,7 +237,7 @@ export default function SubscriptionPage() {
           aria-modal="true"
           aria-labelledby="cancel-title"
         >
-          <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-5 shadow-xl sm:p-6 dark:border-zinc-700 dark:bg-zinc-900">
             <h2 id="cancel-title" className="text-lg font-semibold">
               Cancel subscription?
             </h2>
@@ -250,7 +250,7 @@ export default function SubscriptionPage() {
                 type="button"
                 onClick={() => setShowCancelConfirm(false)}
                 disabled={cancelLoading}
-                className="rounded-xl border border-zinc-300 px-4 py-2.5 text-sm font-medium dark:border-zinc-600"
+                className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl border border-zinc-300 px-4 py-2.5 text-sm font-medium transition hover:bg-zinc-100 sm:w-auto dark:border-zinc-600 dark:hover:bg-zinc-800"
               >
                 Keep Pro
               </button>
@@ -258,7 +258,7 @@ export default function SubscriptionPage() {
                 type="button"
                 onClick={confirmCancel}
                 disabled={cancelLoading}
-                className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-60"
+                className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-500 disabled:opacity-60 sm:w-auto"
               >
                 {cancelLoading ? "Canceling…" : "Yes, cancel"}
               </button>

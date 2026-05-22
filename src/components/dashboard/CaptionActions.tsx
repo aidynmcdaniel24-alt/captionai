@@ -18,17 +18,17 @@ export function CaptionActions({
   copyDisabledReason,
 }: CaptionActionsProps) {
   return (
-    <div className="flex shrink-0 flex-col items-stretch gap-2 sm:min-w-[7.5rem] sm:items-end">
+    <div className="flex w-full gap-2 sm:w-auto sm:min-w-[8.5rem] sm:flex-col sm:items-stretch">
       <button
         type="button"
         title={copyDisabledReason ?? "Copy caption"}
-        className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+        className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
         disabled={disabled}
         onClick={onCopy}
       >
         {copyLabel}
       </button>
-      <BufferScheduleButton caption={caption} disabled={disabled} />
+      <BufferScheduleButton caption={caption} disabled={disabled} className="flex-1 sm:flex-none" />
     </div>
   );
 }

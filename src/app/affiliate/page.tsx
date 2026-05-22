@@ -27,16 +27,16 @@ export default function AffiliatePage() {
           <li>When they subscribe to Pro, Stripe records the payment and your dashboard updates with commission (20% of the payment).</li>
           <li>You can also copy the full sign-up URL from the dashboard if you prefer not to use the short link.</li>
         </ul>
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <Link
             href="/sign-up"
-            className="inline-flex rounded-full bg-purple-600 px-6 py-3 text-sm font-semibold text-white hover:bg-purple-500"
+            className="inline-flex min-h-[48px] w-full items-center justify-center rounded-full bg-purple-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-purple-500 sm:w-auto"
           >
             Create an account
           </Link>
           <Link
             href="/support"
-            className="inline-flex rounded-full border border-zinc-600 px-6 py-3 text-sm font-semibold hover:bg-zinc-900"
+            className="inline-flex min-h-[48px] w-full items-center justify-center rounded-full border border-zinc-600 px-6 py-3 text-sm font-semibold transition hover:bg-zinc-900 sm:w-auto"
           >
             Contact support
           </Link>

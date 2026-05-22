@@ -17,8 +17,8 @@ const footerLinks = [
 
 export function FooterSection() {
   return (
-    <footer className="border-t border-zinc-200 bg-white px-4 py-14 dark:border-white/5 dark:bg-zinc-950 sm:px-6">
-      <div className="mx-auto flex max-w-6xl flex-col gap-10 sm:flex-row sm:items-start sm:justify-between">
+    <footer className="border-t border-zinc-200 bg-white px-4 py-10 sm:px-6 sm:py-14 dark:border-white/5 dark:bg-zinc-950">
+      <div className="mx-auto flex max-w-6xl flex-col gap-8 sm:flex-row sm:items-start sm:justify-between sm:gap-10">
         <div>
           <Link
             href="/"
@@ -29,11 +29,11 @@ export function FooterSection() {
             </span>
             CaptionAI
           </Link>
-          <p className="mt-4 max-w-xs text-sm leading-relaxed text-zinc-600 dark:text-zinc-500">
+          <p className="mt-3 max-w-xs text-sm leading-relaxed text-zinc-600 sm:mt-4 dark:text-zinc-500">
             AI captions for creators who would rather post than stare at a blank caption box.
           </p>
         </div>
-        <nav className="flex flex-wrap gap-x-10 gap-y-3">
+        <nav className="grid grid-cols-2 gap-x-6 gap-y-3 sm:flex sm:flex-wrap sm:gap-x-10">
           {footerLinks.map((l) => (
             <a
               key={l.href + l.label}
@@ -51,7 +51,7 @@ export function FooterSection() {
           </Link>
         </nav>
       </div>
-      <div className="mx-auto mt-12 max-w-6xl border-t border-zinc-200 pt-8 text-center text-xs text-zinc-500 dark:border-white/5 dark:text-zinc-600 sm:text-left">
+      <div className="mx-auto mt-10 max-w-6xl border-t border-zinc-200 pt-6 text-center text-xs text-zinc-500 sm:mt-12 sm:pt-8 sm:text-left dark:border-white/5 dark:text-zinc-600">
         <p>
           <a
             href={SUPPORT_MAILTO}

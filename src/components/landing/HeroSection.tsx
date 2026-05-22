@@ -7,26 +7,26 @@ import { motion } from "framer-motion";
 export function HeroSection() {
   const { isSignedIn, isLoaded } = useUser();
   return (
-    <section className="relative px-4 pb-20 pt-16 sm:px-6 sm:pb-28 sm:pt-24 lg:pt-32">
+    <section className="relative px-4 pb-16 pt-12 sm:px-6 sm:pb-28 sm:pt-24 lg:pt-32">
       <div className="mx-auto max-w-6xl text-center">
         <motion.p
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="mb-6 inline-flex items-center gap-2 rounded-full border border-purple-500/35 bg-purple-500/[0.08] px-4 py-1.5 text-sm text-purple-800 dark:border-purple-500/30 dark:bg-purple-500/10 dark:text-purple-200"
+          className="mb-5 inline-flex max-w-full items-center gap-2 rounded-full border border-purple-500/35 bg-purple-500/[0.08] px-3 py-1.5 text-xs text-purple-800 sm:mb-6 sm:px-4 sm:text-sm dark:border-purple-500/30 dark:bg-purple-500/10 dark:text-purple-200"
         >
-          <span className="relative flex h-2 w-2">
+          <span className="relative flex h-2 w-2 shrink-0">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-purple-400 opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-purple-500" />
           </span>
-          AI-powered captions for creators & brands
+          <span className="truncate">AI-powered captions for creators &amp; brands</span>
         </motion.p>
 
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, delay: 0.05 }}
-          className="mx-auto max-w-4xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl lg:leading-[1.08]"
+          className="mx-auto max-w-4xl text-[2rem] font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl lg:leading-[1.08]"
         >
           <span className="text-zinc-900 dark:text-white">Captions that sound </span>
           <span className="bg-gradient-to-r from-purple-600 via-fuchsia-600 to-violet-600 bg-clip-text text-transparent dark:from-purple-400 dark:via-fuchsia-400 dark:to-violet-400">
@@ -43,7 +43,7 @@ export function HeroSection() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.12 }}
-          className="mx-auto mt-6 max-w-2xl text-lg text-zinc-600 sm:text-xl dark:text-zinc-400"
+          className="mx-auto mt-5 max-w-2xl text-base text-zinc-600 sm:mt-6 sm:text-xl dark:text-zinc-400"
         >
           Describe your photo or idea—get scroll-stopping captions for Instagram, TikTok, LinkedIn, and X in your
           brand voice. Try a live demo below, no account required.
@@ -53,21 +53,21 @@ export function HeroSection() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="mt-10 flex min-h-[52px] flex-col flex-wrap items-center justify-center gap-4 sm:flex-row"
+          className="mx-auto mt-8 flex w-full max-w-md flex-col items-stretch justify-center gap-3 sm:mt-10 sm:max-w-none sm:flex-row sm:flex-wrap sm:items-center sm:gap-4"
         >
           {!isLoaded ? (
-            <div className="h-12 w-56 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" aria-hidden />
+            <div className="h-12 w-full animate-pulse rounded-full bg-zinc-200 sm:w-56 dark:bg-zinc-800" aria-hidden />
           ) : isSignedIn ? (
             <>
               <Link
                 href="/dashboard"
-                className="inline-flex min-h-[48px] min-w-[220px] items-center justify-center rounded-full bg-purple-600 px-8 py-3 text-base font-semibold text-white shadow-xl shadow-purple-600/30 transition hover:bg-purple-500"
+                className="inline-flex min-h-[52px] w-full items-center justify-center rounded-full bg-purple-600 px-8 py-3 text-base font-semibold text-white shadow-xl shadow-purple-600/30 transition hover:bg-purple-500 sm:w-auto sm:min-w-[220px]"
               >
                 Open dashboard
               </Link>
               <a
                 href="#demo"
-                className="inline-flex min-h-[48px] items-center justify-center rounded-full border border-zinc-300 px-8 py-3 text-base font-medium text-zinc-800 transition hover:border-purple-400 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:border-purple-500/50 dark:hover:bg-white/5"
+                className="inline-flex min-h-[52px] w-full items-center justify-center rounded-full border border-zinc-300 px-8 py-3 text-base font-medium text-zinc-800 transition hover:border-purple-400 hover:bg-zinc-100 sm:w-auto dark:border-zinc-600 dark:text-zinc-200 dark:hover:border-purple-500/50 dark:hover:bg-white/5"
               >
                 See live demo
               </a>
@@ -76,19 +76,19 @@ export function HeroSection() {
             <>
               <Link
                 href="/sign-up"
-                className="inline-flex min-h-[48px] min-w-[200px] items-center justify-center rounded-full bg-purple-600 px-8 py-3 text-base font-semibold text-white shadow-xl shadow-purple-600/30 transition hover:bg-purple-500 hover:shadow-purple-500/40"
+                className="inline-flex min-h-[52px] w-full items-center justify-center rounded-full bg-purple-600 px-8 py-3 text-base font-semibold text-white shadow-xl shadow-purple-600/30 transition hover:bg-purple-500 hover:shadow-purple-500/40 sm:w-auto sm:min-w-[200px]"
               >
                 Create account
               </Link>
               <Link
                 href="/sign-in"
-                className="inline-flex min-h-[48px] min-w-[200px] items-center justify-center rounded-full border border-purple-400/50 bg-purple-50 px-8 py-3 text-base font-semibold text-purple-900 transition hover:border-purple-500 hover:bg-purple-100 dark:border-purple-500/50 dark:bg-purple-500/5 dark:text-purple-100 dark:hover:border-purple-400 dark:hover:bg-purple-500/15"
+                className="inline-flex min-h-[52px] w-full items-center justify-center rounded-full border border-purple-400/50 bg-purple-50 px-8 py-3 text-base font-semibold text-purple-900 transition hover:border-purple-500 hover:bg-purple-100 sm:w-auto sm:min-w-[200px] dark:border-purple-500/50 dark:bg-purple-500/5 dark:text-purple-100 dark:hover:border-purple-400 dark:hover:bg-purple-500/15"
               >
                 Sign in
               </Link>
               <a
                 href="#demo"
-                className="inline-flex min-h-[48px] items-center justify-center rounded-full border border-zinc-300 px-8 py-3 text-base font-medium text-zinc-800 transition hover:border-purple-400 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:border-purple-500/50 dark:hover:bg-white/5"
+                className="inline-flex min-h-[52px] w-full items-center justify-center rounded-full border border-zinc-300 px-8 py-3 text-base font-medium text-zinc-800 transition hover:border-purple-400 hover:bg-zinc-100 sm:w-auto dark:border-zinc-600 dark:text-zinc-200 dark:hover:border-purple-500/50 dark:hover:bg-white/5"
               >
                 Try live demo
               </a>

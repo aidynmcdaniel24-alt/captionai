@@ -37,7 +37,7 @@ export function BufferScheduleButton({ caption, disabled, className = "" }: Buff
       title="Schedule with Buffer"
       disabled={disabled}
       onClick={() => openBufferSchedule(caption)}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 transition hover:border-[#168EEA]/50 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-[#168EEA]/40 dark:hover:bg-sky-950/30 ${className}`}
+      className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-800 transition hover:border-[#168EEA]/50 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-[#168EEA]/40 dark:hover:bg-sky-950/30 ${className}`}
     >
       <CalendarIcon className="h-4 w-4 shrink-0 text-zinc-500 dark:text-zinc-400" />
       <span>Schedule</span>

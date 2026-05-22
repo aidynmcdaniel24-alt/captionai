@@ -23,6 +23,8 @@ html[data-theme="dark"] {
 
 html {
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -35,4 +37,59 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Use overflow-x: clip on the root so accidental horizontal overflow on mobile is
+   suppressed without creating a scrolling container — that way `position: sticky`
+   on the landing/marketing headers keeps working. */
+html,
+body {
+  overflow-x: clip;
+}
+
+/* Stop iOS Safari from zooming the viewport when a small font-size input is focused.
+   Tailwind sets text-sm (14px) on many inputs; we force the rendered font on form
+   controls to at least 16px on phones to suppress the automatic zoom. */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Slim, theme-aware scrollbar for the horizontal scroll regions we use on mobile
+   (tab bar, template chips, etc.) so they look intentional instead of OS-default. */
+.scrollbar-thin-x {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(168, 85, 247, 0.45) transparent;
+}
+.scrollbar-thin-x::-webkit-scrollbar {
+  height: 4px;
+}
+.scrollbar-thin-x::-webkit-scrollbar-thumb {
+  background-color: rgba(168, 85, 247, 0.35);
+  border-radius: 999px;
+}
+.scrollbar-thin-x::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Container that scrolls horizontally on small screens but still allows
+   normal wrapping/visible content on larger screens via the no-scroll class. */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Honor safe-area insets on iOS notched devices for fixed/sticky elements. */
+.safe-pt {
+  padding-top: max(env(safe-area-inset-top), 0px);
+}
+.safe-pb {
+  padding-bottom: max(env(safe-area-inset-bottom), 0px);
 }

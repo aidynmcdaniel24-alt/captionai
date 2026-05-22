@@ -87,14 +87,14 @@ export function AffiliatePageClient() {
 
   if (!isSignedIn) {
     return (
-      <div className="rounded-2xl border border-zinc-200 bg-white p-8 dark:border-zinc-800 dark:bg-zinc-900/80">
+      <div className="rounded-2xl border border-zinc-200 bg-white p-6 sm:p-8 dark:border-zinc-800 dark:bg-zinc-900/80">
         <p className="text-zinc-700 dark:text-zinc-200">
           Sign in to enroll in the affiliate program and get your tracking link.
         </p>
         <SignInButton mode="modal">
           <button
             type="button"
-            className="mt-4 inline-flex rounded-full bg-purple-600 px-6 py-3 text-sm font-semibold text-white hover:bg-purple-500"
+            className="mt-4 inline-flex min-h-[48px] w-full items-center justify-center rounded-full bg-purple-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-purple-500 sm:w-auto"
           >
             Sign in to enroll
           </button>
@@ -134,8 +134,8 @@ export function AffiliatePageClient() {
       : null;
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+    <div className="space-y-6 sm:space-y-8">
+      <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/80">
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Your tracking link</h2>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
           Share the short URL below. Clicks are counted when someone opens it; sign-ups are attributed when they create
@@ -144,12 +144,12 @@ export function AffiliatePageClient() {
         </p>
         {track ? (
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <code className="block flex-1 break-all rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950">
+            <code className="block min-w-0 flex-1 break-all rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950">
               {track}
             </code>
             <button
               type="button"
-              className="rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800"
+              className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium transition hover:bg-zinc-50 sm:w-auto dark:border-zinc-600 dark:hover:bg-zinc-800"
               onClick={() => copyToClipboard(track, "track")}
             >
               {copied === "track" ? "Copied" : "Copy"}
@@ -170,9 +170,9 @@ export function AffiliatePageClient() {
         ) : null}
       </section>
 
-      <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+      <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/80">
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Performance</h2>
-        <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <dl className="mt-4 grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
           <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950/50">
             <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">Link clicks</dt>
             <dd className="mt-1 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-white">
@@ -224,7 +224,7 @@ export function AffiliatePageClient() {
         </dl>
         <button
           type="button"
-          className="mt-4 text-sm text-purple-600 hover:text-purple-500 dark:text-purple-400"
+          className="mt-4 inline-flex min-h-[40px] items-center text-sm font-medium text-purple-600 transition hover:text-purple-500 dark:text-purple-400"
           onClick={() => void load()}
         >
           Refresh stats

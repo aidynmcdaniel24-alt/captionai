@@ -82,7 +82,7 @@ const item = {
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="scroll-mt-24 px-4 py-20 sm:px-6 sm:py-28">
+    <section id="features" className="scroll-mt-24 px-4 py-16 sm:px-6 sm:py-28">
       <div className="mx-auto max-w-6xl">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -91,10 +91,10 @@ export function FeaturesSection() {
           transition={{ duration: 0.5 }}
           className="mx-auto max-w-2xl text-center"
         >
-          <h2 className="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl dark:text-white">
+          <h2 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-4xl dark:text-white">
             Built for busy creators
           </h2>
-          <p className="mt-4 text-lg text-zinc-600 dark:text-zinc-400">
+          <p className="mt-3 text-base text-zinc-600 sm:mt-4 sm:text-lg dark:text-zinc-400">
             Everything you need to ship captions that fit your brand—without starting from scratch every time.
           </p>
         </motion.div>
@@ -104,19 +104,19 @@ export function FeaturesSection() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, margin: "-60px" }}
-          className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+          className="mt-10 grid gap-4 sm:mt-16 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3"
         >
           {features.map((f) => (
             <motion.li
               key={f.title}
               variants={item}
-              className="group rounded-2xl border border-zinc-200 bg-white/70 p-6 shadow-lg shadow-zinc-900/5 backdrop-blur-sm transition hover:border-purple-300 hover:bg-white dark:border-white/5 dark:bg-zinc-900/40 dark:shadow-black/20 dark:hover:border-purple-500/20 dark:hover:bg-zinc-900/70"
+              className="group rounded-2xl border border-zinc-200 bg-white/70 p-5 shadow-lg shadow-zinc-900/5 backdrop-blur-sm transition hover:border-purple-300 hover:bg-white sm:p-6 dark:border-white/5 dark:bg-zinc-900/40 dark:shadow-black/20 dark:hover:border-purple-500/20 dark:hover:bg-zinc-900/70"
             >
-              <div className="mb-4 inline-flex rounded-xl bg-purple-100 p-3 text-purple-600 transition group-hover:bg-purple-200 group-hover:text-purple-700 dark:bg-purple-500/10 dark:text-purple-400 dark:group-hover:bg-purple-500/15 dark:group-hover:text-purple-300">
+              <div className="mb-3 inline-flex rounded-xl bg-purple-100 p-3 text-purple-600 transition group-hover:bg-purple-200 group-hover:text-purple-700 sm:mb-4 dark:bg-purple-500/10 dark:text-purple-400 dark:group-hover:bg-purple-500/15 dark:group-hover:text-purple-300">
                 {f.icon}
               </div>
-              <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">{f.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{f.description}</p>
+              <h3 className="text-base font-semibold text-zinc-900 sm:text-lg dark:text-white">{f.title}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-zinc-600 sm:mt-2 dark:text-zinc-400">{f.description}</p>
             </motion.li>
           ))}
         </motion.ul>

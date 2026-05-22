@@ -46,8 +46,8 @@ function UpgradeCheckout() {
   }, [searchParams]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 px-6 py-16 text-white">
-      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/80 p-8 text-center">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 px-4 py-12 text-white sm:px-6 sm:py-16">
+      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900/80 p-6 text-center sm:p-8">
         {pending && !error ? (
           <>
             <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-purple-500 border-t-transparent" />
@@ -62,7 +62,7 @@ function UpgradeCheckout() {
             <p className="mt-3 text-zinc-300">{error}</p>
             <Link
               href="/dashboard"
-              className="mt-8 inline-flex rounded-xl bg-zinc-800 px-5 py-3 font-medium hover:bg-zinc-700"
+              className="mt-8 inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-zinc-800 px-5 py-3 font-medium transition hover:bg-zinc-700 sm:w-auto"
             >
               Return to dashboard
             </Link>
@@ -77,7 +77,7 @@ export default function UpgradePage() {
   return (
     <Suspense
       fallback={
-        <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 px-6 py-16 text-white">
+        <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 px-4 py-12 text-white sm:px-6 sm:py-16">
           <div className="h-10 w-10 animate-spin rounded-full border-2 border-purple-500 border-t-transparent" />
         </main>
       }

@@ -24,13 +24,13 @@ export function LandingHeader() {
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
       className="sticky top-0 z-50 border-b border-zinc-200/80 bg-white/80 backdrop-blur-xl dark:border-white/5 dark:bg-zinc-950/80"
     >
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
         <Link
           href="/"
-          className="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-zinc-900 dark:text-white"
+          className="flex min-w-0 items-center gap-2.5 text-lg font-semibold tracking-tight text-zinc-900 dark:text-white"
         >
           <BrandLogo priority className="h-8 w-8 shrink-0" />
-          <span>CaptionAI</span>
+          <span className="truncate">CaptionAI</span>
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
@@ -74,60 +74,73 @@ export function LandingHeader() {
           )}
         </div>
 
-        <button
-          type="button"
-          className="rounded-lg border border-zinc-300 p-2 text-zinc-800 dark:border-zinc-700 dark:text-white md:hidden"
-          aria-expanded={open}
-          aria-label="Open menu"
-          onClick={() => setOpen((v) => !v)}
-        >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            {open ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            )}
-          </svg>
-        </button>
+        <div className="flex items-center gap-2 md:hidden">
+          <ThemeToggle />
+          <button
+            type="button"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-zinc-300 text-zinc-800 dark:border-zinc-700 dark:text-white"
+            aria-expanded={open}
+            aria-controls="landing-mobile-menu"
+            aria-label={open ? "Close menu" : "Open menu"}
+            onClick={() => setOpen((v) => !v)}
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              {open ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
+        </div>
       </div>
 
       {open ? (
-        <div className="border-t border-zinc-200 bg-white/95 px-4 py-4 dark:border-white/5 dark:bg-zinc-950/95 md:hidden">
-          <div className="flex flex-col gap-3">
+        <div
+          id="landing-mobile-menu"
+          className="border-t border-zinc-200 bg-white/95 px-4 pb-5 pt-3 dark:border-white/5 dark:bg-zinc-950/95 md:hidden"
+        >
+          <div className="flex flex-col gap-1">
             {nav.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
-                className="rounded-lg py-2 text-zinc-700 dark:text-zinc-300"
+                className="flex min-h-[48px] items-center rounded-lg px-3 text-base font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800/60"
                 onClick={() => setOpen(false)}
               >
                 {item.label}
               </a>
             ))}
-            {!isLoaded ? (
-              <div className="h-11 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" aria-hidden />
-            ) : isSignedIn ? (
-              <Link
-                href="/dashboard"
-                className="rounded-full bg-purple-600 py-3 text-center font-medium text-white"
-                onClick={() => setOpen(false)}
-              >
-                Dashboard
-              </Link>
-            ) : (
-              <>
-                <Link href="/sign-in" className="py-2 text-zinc-700 dark:text-zinc-300" onClick={() => setOpen(false)}>
-                  Sign in
-                </Link>
+            <div className="mt-2 flex flex-col gap-2">
+              {!isLoaded ? (
+                <div className="h-12 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" aria-hidden />
+              ) : isSignedIn ? (
                 <Link
-                  href="/sign-up"
-                  className="rounded-full bg-purple-600 py-3 text-center font-medium text-white"
+                  href="/dashboard"
+                  className="inline-flex min-h-[48px] w-full items-center justify-center rounded-full bg-purple-600 px-5 text-base font-semibold text-white shadow-lg shadow-purple-600/25"
                   onClick={() => setOpen(false)}
                 >
-                  Get started
+                  Open dashboard
                 </Link>
-              </>
-            )}
+              ) : (
+                <>
+                  <Link
+                    href="/sign-in"
+                    className="inline-flex min-h-[48px] w-full items-center justify-center rounded-full border border-zinc-300 px-5 text-base font-medium text-zinc-800 dark:border-zinc-600 dark:text-zinc-200"
+                    onClick={() => setOpen(false)}
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/sign-up"
+                    className="inline-flex min-h-[48px] w-full items-center justify-center rounded-full bg-purple-600 px-5 text-base font-semibold text-white shadow-lg shadow-purple-600/25"
+                    onClick={() => setOpen(false)}
+                  >
+                    Get started
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
         </div>
       ) : null}

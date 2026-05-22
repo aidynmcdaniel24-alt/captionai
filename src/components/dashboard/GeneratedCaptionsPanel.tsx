@@ -68,10 +68,12 @@ export function GeneratedCaptionsPanel({
   const showProUpsell = plan === "free" && !isProBoost;
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/80">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-white">Your captions</h2>
+          <h2 className="text-lg font-semibold tracking-tight text-zinc-900 sm:text-xl dark:text-white">
+            Your captions
+          </h2>
           {isProBoost ? (
             <span
               title="Generated with the Pro AI caption boost — viral hooks, deeper storytelling, advanced copywriting."
@@ -85,14 +87,14 @@ export function GeneratedCaptionsPanel({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium transition hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+            className="inline-flex min-h-[40px] flex-1 items-center justify-center rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium transition hover:bg-zinc-50 sm:flex-none dark:border-zinc-600 dark:bg-zinc-900 dark:hover:bg-zinc-800"
             onClick={onCopyAll}
           >
             Copy all
           </button>
           <button
             type="button"
-            className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium transition hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+            className="inline-flex min-h-[40px] flex-1 items-center justify-center rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium transition hover:bg-zinc-50 sm:flex-none dark:border-zinc-600 dark:bg-zinc-900 dark:hover:bg-zinc-800"
             onClick={onDownloadTxt}
           >
             Download .txt
@@ -126,18 +128,31 @@ export function GeneratedCaptionsPanel({
           return (
             <li
               key={historyId ? `${historyId}-${index}` : `cap-${index}`}
-              className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-700 dark:bg-zinc-950/60"
+              className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-3 sm:p-4 dark:border-zinc-700 dark:bg-zinc-950/60"
             >
-              {captionRatings[index] ? (
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">AI score:</span>
-                  <span
-                    className={`rounded-lg border px-2 py-1 text-xs font-medium ${CAPTION_RATING_ACTIVE[captionRatings[index]!]}`}
-                  >
-                    {CAPTION_RATING_LABELS[captionRatings[index]!]}
-                  </span>
-                </div>
-              ) : null}
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                {captionRatings[index] ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">AI score:</span>
+                    <span
+                      className={`rounded-lg border px-2 py-1 text-xs font-medium ${CAPTION_RATING_ACTIVE[captionRatings[index]!]}`}
+                    >
+                      {CAPTION_RATING_LABELS[captionRatings[index]!]}
+                    </span>
+                  </div>
+                ) : (
+                  <span />
+                )}
+                <button
+                  type="button"
+                  title={fav[index] ? "Remove favorite" : "Add favorite"}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-xl leading-none text-zinc-500 transition hover:bg-zinc-200/80 hover:text-amber-500 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  onClick={() => onToggleFavorite(index)}
+                  aria-label={fav[index] ? "Remove favorite" : "Add favorite"}
+                >
+                  {fav[index] ? "★" : "☆"}
+                </button>
+              </div>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 flex-1">
                   {locked ? (
@@ -166,7 +181,7 @@ export function GeneratedCaptionsPanel({
                         </p>
                         <button
                           type="button"
-                          className="shrink-0 rounded-full bg-purple-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-purple-500 disabled:opacity-50"
+                          className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-full bg-purple-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-500 disabled:opacity-50"
                           disabled={checkoutLoading}
                           onClick={() => onStartCheckout("month")}
                         >
@@ -175,7 +190,9 @@ export function GeneratedCaptionsPanel({
                       </div>
                     </div>
                   ) : (
-                    <p className="leading-7 text-zinc-800 dark:text-zinc-200">{caption}</p>
+                    <p className="whitespace-pre-wrap break-words leading-7 text-zinc-800 dark:text-zinc-200">
+                      {caption}
+                    </p>
                   )}
                   {!locked ? (
                     <>
@@ -193,7 +210,7 @@ export function GeneratedCaptionsPanel({
                     </>
                   ) : null}
                 </div>
-                <div className="flex items-start justify-between gap-3 sm:flex-col sm:items-end">
+                <div className="sm:shrink-0">
                   <CaptionActions
                     caption={caption}
                     copyLabel={copiedIndex === index ? "Copied!" : "Copy"}
@@ -201,15 +218,6 @@ export function GeneratedCaptionsPanel({
                     copyDisabledReason={locked ? "Upgrade to Pro to copy your Best-rated caption" : undefined}
                     onCopy={() => onCopy(caption, index)}
                   />
-                  <button
-                    type="button"
-                    title="Favorite"
-                    className="rounded-lg p-1.5 text-lg leading-none text-zinc-500 transition hover:bg-zinc-200/80 hover:text-amber-500 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                    onClick={() => onToggleFavorite(index)}
-                    aria-label={fav[index] ? "Remove favorite" : "Add favorite"}
-                  >
-                    {fav[index] ? "★" : "☆"}
-                  </button>
                 </div>
               </div>
             </li>
