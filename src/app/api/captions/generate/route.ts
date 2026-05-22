@@ -70,10 +70,10 @@ const PLATFORM_PROFILES: Record<string, PlatformProfile> = {
     hashtags:
       "8-12 hashtags total. ABSOLUTE RULE: hashtags MUST appear on a completely separate new line at the very end of the caption, with one fully blank line between the body copy and the hashtag line. NEVER inline a hashtag inside a sentence. NEVER put a hashtag on the same line as body copy. NEVER mix hashtags into the paragraph. Format: <body copy>\\n\\n#tag1 #tag2 #tag3 ... Mix 2-3 broader reach tags with 6-9 niche tags that genuinely match the content. All lowercase, no spaces inside a tag, no banned or generic spam tags.",
     notes:
-      "Open with a hook that creates a feeling or paints a scene in the first 5 words. Build a small lifestyle/storytelling moment across 3-5 sentences using specific sensory details. ALWAYS end with a soft, genuine question that invites people to share their own version in the comments. No corporate buzzwords, no influencer cliches. The body copy itself must contain ZERO hashtags — hashtags only live in the dedicated final hashtag line described above.",
+      "Open with a sensory or emotional hook that creates a feeling or paints a scene in the first 5 words. Build a small lifestyle/storytelling moment across 3-5 sentences using specific sensory details. ALWAYS end with a soft, genuine question that invites people to share their own version in the comments. No corporate buzzwords, no influencer cliches. STRICTLY FORBIDDEN openers on Instagram (these are TikTok hooks, not Instagram hooks): \"POV:\", \"Tell me why\", \"Not me\", \"This is your sign\", \"Stop scrolling\", \"no one talks about\", \"wait for it\", \"the way I…\", \"I was today years old\". If any of those phrases appear in the first 5 words, REWRITE. The body copy itself must contain ZERO hashtags — hashtags only live in the dedicated final hashtag line described above.",
     examples: [
       "Some days you just need to slow down and remember why you started. This moment reminded me that the little things are actually the big things. The light hit the window just right and I forgot what I was rushing toward. What's been your reminder lately? \u2728\n\n#lifestyle #mindset #inspiration #grateful #contentcreator #slowliving #intentionalliving #selfcare #morningroutine #goodvibes",
-      "POV: you ordered the cortado but stayed for the playlist. We didn't plan a vibe \u2014 we just played the records we love and somehow strangers ended up staying for hours. The best moments aren't the ones you schedule. They're the ones you let happen. What's a place that surprised you like that?\n\n#coffeeshopvibes #cortado #independentcoffee #vinylcommunity #localfinds #slowmornings #cafeculture #thirdwavecoffee #morningritual #neworleans",
+      "The cortado was good. The playlist was better. We didn't plan a vibe \u2014 we just played the records we love and somehow strangers ended up staying for hours. The best moments aren't the ones you schedule. They're the ones you let happen. What's a place that surprised you like that?\n\n#coffeeshopvibes #cortado #independentcoffee #vinylcommunity #localfinds #slowmornings #cafeculture #thirdwavecoffee #morningritual #neworleans",
     ],
   },
   tiktok: {
@@ -95,7 +95,7 @@ const PLATFORM_PROFILES: Record<string, PlatformProfile> = {
     voice:
       "Professional but distinctly human. Thought leadership through a specific story or lesson learned \u2014 NEVER jargon. First-person. Speaks to other operators, builders, and founders like an equal. ABSOLUTELY PLAIN TEXT ONLY: LinkedIn does NOT render markdown, so NEVER use **bold**, *italic*, _underscores_, `backticks`, ###headers, or any other markdown formatting characters. NEVER use bullet symbols like \"- \" or \"* \" as list markers; if you need a list, use short standalone paragraphs instead.",
     length:
-      "EXACTLY 3-5 SHORT paragraphs of 1-2 sentences each, separated by a blank line between paragraphs. The first paragraph is one short standalone line that doubles as the LinkedIn preview hook. No markdown, no bolding, no asterisks \u2014 just plain sentences separated by line breaks.",
+      "EXACTLY 3-5 SHORT paragraphs of 1-2 sentences MAXIMUM each, separated by a LITERAL BLANK LINE (a \\n\\n line break) between every paragraph. The first paragraph is one short standalone line that doubles as the LinkedIn preview hook. ABSOLUTELY FORBIDDEN: one long block of text, a single wall-of-text paragraph, or paragraphs longer than 2 sentences. If your draft is one big paragraph, BREAK IT INTO 3-5 short paragraphs separated by blank lines before returning. No markdown, no bolding, no asterisks \u2014 just plain sentences separated by line breaks.",
     hashtags:
       "MAXIMUM 2 hashtags. Industry-relevant, CamelCase or lowercase. Often best to skip hashtags entirely. NEVER more than 2. Hashtags go on the final line, plain text, no markdown around them.",
     notes:
@@ -226,8 +226,9 @@ function formatPlatformBriefing(profile: PlatformProfile): string {
 }
 
 const CAPTION_ARCHETYPES = `Caption 1 — PUNCHY HOOK: open with a scroll-stopping, PLATFORM-NATIVE hook in the first 5 words. The opener MUST match the platform's voice:
-  • TikTok / Instagram / Threads / Bluesky / Twitter/X / Facebook: short-form openers are welcome — "POV:", "Tell me why", "Not me", "This is your sign", a bold claim, or a curiosity gap.
-  • LinkedIn: NEVER use TikTok-style openers. The "punchy hook" on LinkedIn is a contrarian truth, a specific number, or a one-line confession — e.g. "I used to spend 30 minutes on a caption.", "Three years ago I quit a six-figure job.", "Most operators get this backwards.". NEVER write "POV:" or any short-form opener on LinkedIn.
+  • TikTok / Threads / Bluesky / Twitter/X / Facebook: short-form openers are welcome — "POV:", "Tell me why", "Not me", "This is your sign", a bold claim, or a curiosity gap.
+  • Instagram: NEVER use TikTok-style openers. The Instagram "punchy hook" is a sensory or emotional opener that paints a scene or feeling in the first line — e.g. "Some days you just need to slow down.", "Caught the light hitting the window just right today.", "Three months in and this still doesn't feel real.". STRICTLY FORBIDDEN openers on Instagram: "POV:", "Tell me why", "Not me", "This is your sign", "Stop scrolling", "no one talks about", "wait for it", "the way I…", "I was today years old". NEVER write "POV:" or any other TikTok-style short-form opener on Instagram.
+  • LinkedIn: NEVER use TikTok-style openers. The "punchy hook" on LinkedIn is a contrarian truth, a specific number, or a one-line confession — e.g. "I used to spend 30 minutes on a caption.", "Three years ago I quit a six-figure job.", "Most operators get this backwards.". STRICTLY FORBIDDEN openers on LinkedIn: "POV:", "Tell me why", "Not me", "This is your sign", "Stop scrolling", "no one talks about", "wait for it", "the way I…", "I was today years old". NEVER write "POV:" or any short-form opener on LinkedIn.
   • YouTube / Pinterest: lead with a searchable, keyword-rich claim instead of a slang opener.
 Energy is direct and punchy. Short and snappy where the platform allows it.
 
@@ -336,8 +337,8 @@ ${isPro ? `\n${PRO_AMPLIFIERS}\n` : "\nSTANDARD MODE: write good, clean captions
 BEFORE YOU RETURN, SELF-CHECK each caption against this checklist:
   1. Does it strictly match the ${platform} LENGTH rule above? (TikTok: 1-3 lines. Instagram: 3-5 sentences + hashtags on a new line. LinkedIn: 3-5 short paragraphs. Twitter/X: \u2264 280 characters total. Facebook: 2-3 sentences.)
   2. Does it strictly match the ${platform} HASHTAG count and placement rule? (TikTok 3-5, Instagram 8-12 on a NEW LINE with a blank line before them and ZERO hashtags inside the body copy, LinkedIn \u2264 2, Twitter/X 0-1, Facebook 0-3.)
-  3. INSTAGRAM SPECIFIC: every hashtag MUST sit on the final line after a blank line. NO hashtag may appear inside any body sentence. The body and the hashtag block MUST be separated by \\n\\n. If even one hashtag is mixed into the prose, REWRITE.
-  4. LINKEDIN SPECIFIC: contains ZERO markdown characters (no **, no *, no _, no \`, no ###) and ZERO TikTok-style openers ("POV:", "Tell me why", "Not me", "This is your sign", "Stop scrolling", "no one talks about", "wait for it", "I was today years old"). It MUST read as plain professional paragraphs only. If markdown or a TikTok opener is present, REWRITE.
+  3. INSTAGRAM SPECIFIC: every hashtag MUST sit on the final line after a blank line. NO hashtag may appear inside any body sentence. The body and the hashtag block MUST be separated by \\n\\n. If even one hashtag is mixed into the prose, REWRITE. ALSO: the caption MUST NOT open with a TikTok-style opener. STRICTLY FORBIDDEN openers on Instagram: "POV:", "Tell me why", "Not me", "This is your sign", "Stop scrolling", "no one talks about", "wait for it", "the way I…", "I was today years old". If ANY of those phrases appear in the first 5 words, REWRITE the opener as a sensory or emotional scene-setter instead.
+  4. LINKEDIN SPECIFIC: (a) contains ZERO markdown characters (no **, no *, no _, no \`, no ###); (b) contains ZERO TikTok-style openers ("POV:", "Tell me why", "Not me", "This is your sign", "Stop scrolling", "no one talks about", "wait for it", "the way I…", "I was today years old"); AND (c) is laid out as EXACTLY 3-5 SHORT paragraphs of 1-2 sentences MAXIMUM each, with a LITERAL BLANK LINE (a \\n\\n line break) between every paragraph. The caption MUST NOT be one long paragraph or a wall of text. If the draft is a single block, BREAK IT into 3-5 short paragraphs separated by blank lines. If markdown, a TikTok opener, OR a single-block / wall-of-text layout is present, REWRITE.
   5. Does it end with a platform-appropriate question or CTA (where the platform calls for one)?
   6. Does it sound like a real human wrote it from their phone \u2014 not an AI? No "in a world where...", no "let's dive in", no "buckle up", no generic hype.
   7. Are the three captions MEANINGFULLY DIFFERENT from each other in style, rhythm, opener, and vocabulary?
@@ -376,6 +377,71 @@ function stripLinkedInMarkdown(caption: string): string {
   text = text.replace(/^\s*#{1,6}\s+/gm, "");
   text = text.replace(/^\s*[-*]\s+/gm, "");
   return text;
+}
+
+// LinkedIn captions must read as 3-5 short paragraphs of 1-2 sentences each,
+// separated by blank lines. If the model returns a wall of text or a couple of
+// long paragraphs, rebuild it from sentences so the rendered post breathes.
+function splitLinkedInIntoParagraphs(caption: string): string {
+  const trimmed = caption.trim();
+  if (!trimmed) return caption;
+
+  // If it already has 3+ blank-line-separated paragraphs, just normalize spacing.
+  const existing = trimmed
+    .split(/\n\s*\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (existing.length >= 3) {
+    return existing.join("\n\n");
+  }
+
+  // Pull off any trailing hashtag block (LinkedIn allows up to 2) so we can
+  // reattach it on its own final line after we rebuild the body.
+  let body = trimmed;
+  let hashtagLine = "";
+  const trailingHashtags = body.match(
+    /(?:^|\s)((?:#[\p{L}\p{N}_]+(?:[ \t]+|$))+)\s*$/u
+  );
+  if (trailingHashtags && typeof trailingHashtags.index === "number") {
+    const tags = trailingHashtags[1].trim().split(/\s+/).filter(Boolean);
+    hashtagLine = tags.join(" ");
+    body = body.slice(0, trailingHashtags.index).trim();
+  }
+
+  const flatBody = body.replace(/\s+/g, " ").trim();
+  if (!flatBody) {
+    return hashtagLine || caption;
+  }
+
+  const sentences = flatBody
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (sentences.length < 2) {
+    return hashtagLine ? `${flatBody}\n\n${hashtagLine}` : flatBody;
+  }
+
+  const paragraphs: string[] = [];
+  if (sentences.length <= 5) {
+    // 2-5 sentences: one sentence per paragraph for maximum breathing room.
+    for (const s of sentences) paragraphs.push(s);
+  } else {
+    // 6+ sentences: keep the first sentence as a standalone hook, then pair
+    // remaining sentences 1-2 per paragraph.
+    paragraphs.push(sentences[0]);
+    for (let i = 1; i < sentences.length; i += 2) {
+      paragraphs.push(sentences.slice(i, i + 2).join(" "));
+    }
+    // Cap at 5 paragraphs by merging extras into the last one.
+    while (paragraphs.length > 5) {
+      const last = paragraphs.pop()!;
+      paragraphs[paragraphs.length - 1] = `${paragraphs[paragraphs.length - 1]} ${last}`;
+    }
+  }
+
+  const rebuilt = paragraphs.join("\n\n");
+  return hashtagLine ? `${rebuilt}\n\n${hashtagLine}` : rebuilt;
 }
 
 function normalizeInstagramHashtagPlacement(caption: string): string {
@@ -418,6 +484,7 @@ function postProcessCaptions(captions: string[], platform: string): string[] {
     let next = cap;
     if (onLinkedIn) {
       next = stripLinkedInMarkdown(next);
+      next = splitLinkedInIntoParagraphs(next);
     }
     if (onInstagram) {
       next = normalizeInstagramHashtagPlacement(next);
