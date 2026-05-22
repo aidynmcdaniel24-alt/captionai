@@ -93,13 +93,13 @@ const PLATFORM_PROFILES: Record<string, PlatformProfile> = {
   },
   linkedin: {
     voice:
-      "Professional but distinctly human. Thought leadership through a specific story or lesson learned \u2014 NEVER jargon. First-person. Speaks to other operators, builders, and founders like an equal.",
+      "Professional but distinctly human. Thought leadership through a specific story or lesson learned \u2014 NEVER jargon. First-person. Speaks to other operators, builders, and founders like an equal. ABSOLUTELY PLAIN TEXT ONLY: LinkedIn does NOT render markdown, so NEVER use **bold**, *italic*, _underscores_, `backticks`, ###headers, or any other markdown formatting characters. NEVER use bullet symbols like \"- \" or \"* \" as list markers; if you need a list, use short standalone paragraphs instead.",
     length:
-      "EXACTLY 3-5 SHORT paragraphs of 1-2 sentences each, separated by generous line breaks. The first paragraph is one bold standalone line that doubles as the LinkedIn preview hook.",
+      "EXACTLY 3-5 SHORT paragraphs of 1-2 sentences each, separated by a blank line between paragraphs. The first paragraph is one short standalone line that doubles as the LinkedIn preview hook. No markdown, no bolding, no asterisks \u2014 just plain sentences separated by line breaks.",
     hashtags:
-      "MAXIMUM 2 hashtags. Industry-relevant, CamelCase or lowercase. Often best to skip hashtags entirely. NEVER more than 2.",
+      "MAXIMUM 2 hashtags. Industry-relevant, CamelCase or lowercase. Often best to skip hashtags entirely. NEVER more than 2. Hashtags go on the final line, plain text, no markdown around them.",
     notes:
-      "Open with a contrarian truth, a specific number, or a vulnerable moment. Build a tiny narrative across the paragraphs. Land on a clear, useful lesson or insight other operators can take away. ALWAYS end with a thought-provoking question for the reader.",
+      "Open with a contrarian truth, a specific number, or a vulnerable moment \u2014 NEVER a TikTok / short-form opener. STRICTLY FORBIDDEN openers on LinkedIn: \"POV:\", \"Tell me why\", \"Not me\", \"This is your sign\", \"no one talks about\", \"wait for it\", \"the way I\u2026\", \"stop scrolling\", \"I was today years old\". Build a tiny narrative across professional paragraphs. Land on a clear, useful lesson or insight other operators can take away. ALWAYS end with a thought-provoking question for the reader. Output must be plain prose paragraphs only \u2014 no markdown characters anywhere.",
     examples: [
       "I used to spend 30 minutes writing one caption.\n\nNow it takes 10 seconds.\n\nThe lesson? Work smarter, not harder. The tools changed, but more importantly, the way I think about my time changed.\n\nWe romanticize the grind. We rarely audit what the grind is actually for.\n\nWhat tools have changed how you work?",
       "Three years ago I quit a six-figure engineering job to open a coffee shop.\n\nLast Tuesday a customer cried at the bar because the espresso reminded her of her father.\n\nThe spreadsheet measures revenue. The relationships measure why we're really here.\n\nMost businesses get this backwards.\n\nWhat's the most unexpected metric your work actually changes?",
@@ -225,7 +225,11 @@ function formatPlatformBriefing(profile: PlatformProfile): string {
   return parts.join("\n");
 }
 
-const CAPTION_ARCHETYPES = `Caption 1 — PUNCHY HOOK / POV: open with a scroll-stopping, platform-native hook in the first 5 words (e.g. "POV:", "Tell me why", "Not me", "This is your sign", a bold claim, or a curiosity gap). Energy is direct and punchy. Short and snappy.
+const CAPTION_ARCHETYPES = `Caption 1 — PUNCHY HOOK: open with a scroll-stopping, PLATFORM-NATIVE hook in the first 5 words. The opener MUST match the platform's voice:
+  • TikTok / Instagram / Threads / Bluesky / Twitter/X / Facebook: short-form openers are welcome — "POV:", "Tell me why", "Not me", "This is your sign", a bold claim, or a curiosity gap.
+  • LinkedIn: NEVER use TikTok-style openers. The "punchy hook" on LinkedIn is a contrarian truth, a specific number, or a one-line confession — e.g. "I used to spend 30 minutes on a caption.", "Three years ago I quit a six-figure job.", "Most operators get this backwards.". NEVER write "POV:" or any short-form opener on LinkedIn.
+  • YouTube / Pinterest: lead with a searchable, keyword-rich claim instead of a slang opener.
+Energy is direct and punchy. Short and snappy where the platform allows it.
 
 Caption 2 — STORY / LIFESTYLE MOMENT: open with a specific small moment or sensory detail. Build a tiny human story with concrete imagery, then end with a genuine question that invites the reader to share their own version. Warmer, more grounded, more emotional than Caption 1.
 
@@ -251,15 +255,33 @@ const QUALITY_RULES = `WHAT MAKES A GREAT CAPTION (apply to all three):
     \u2022 Facebook: 0-3 hashtags maximum.
   Never exceed the platform's hashtag count. Never use banned or generic spam tags (#love, #instagood without context, #followforfollow, etc.).`;
 
-const RATING_RUBRIC = `RATING RUBRIC (you must apply this honestly):
+const RATING_RUBRIC = `RATING RUBRIC — read carefully, this is where most AIs get it wrong.
+
+The single question you are answering is:
+  "Which caption is a real human in this niche most likely to actually engage with — save it, screenshot it, send it to a friend, comment on it, or stop and re-read it?"
+
+That caption is "best". The one a real human would scroll past with the least reaction is "worst". The remaining one is "medium".
+
 Score each caption internally on:
-  • Scroll-stopping power of the FIRST line (40%)
-  • Emotional engagement / relatability (20%)
-  • Call-to-action strength (15%)
-  • Platform fit — length, voice, format (15%)
-  • Hashtag quality — count, niche-fit, casing (10%)
-Then assign labels: the highest-scoring caption gets "best", the lowest gets "worst", and the remaining one gets "medium". You MUST use each of "best", "medium", and "worst" exactly once.
-Do NOT default the order. Genuinely judge.`;
+  • Genuine resonance & relatability — does it make the reader feel "that's literally me" or laugh out loud? (35%)
+  • Emotional truth & specificity — does it feel like a real moment, a real lesson, or a real joke, not a marketing template? (25%)
+  • Memorability / screenshot-worthiness — is there a line, image, or observation a creator would actually screenshot or quote? (20%)
+  • Platform fit — length, voice, format, and hashtag rules followed exactly (15%)
+  • CTA naturalness — does it invite engagement like a real human, not a desperate brand? (5%)
+
+CRITICAL ANTI-BIAS RULES — you MUST obey all of these:
+  1. Do NOT automatically rate the caption with the LOUDEST opener ("POV:", "Stop scrolling.", "Tell me why", etc.) as "best". A quiet, specific, emotionally true line very often beats a loud one.
+  2. Do NOT automatically rate the most POLISHED or most "marketing-template" caption as "best". Polish is not engagement. Templated polish is often the LEAST engaging.
+  3. The genuinely FUNNIEST caption — if it is actually funny (specific, unexpected, self-aware), not corny — is almost always the most engaging. Reward real humor by raising it toward "best", not lowering it.
+  4. The most RELATABLE caption — the one that makes a real person in the niche feel seen — is usually the one people actually save and share. Reward real relatability.
+  5. Do NOT default to rating the "story / lifestyle moment" caption (Caption 2 archetype) as "worst" just because it is softer or quieter than the punchy hook. Stories very often win.
+  6. Do NOT default to rating Caption 1 as "best", Caption 2 as "medium", and Caption 3 as "worst" (or any other fixed positional order). Genuinely judge based on the rubric.
+  7. If two captions are genuinely close, prefer the one that sounds MORE human and LESS like a brand. "Sounds AI-written" is a strong negative signal.
+  8. The "best" rating is earned by what a reader would actually do, not by which caption looks the most aggressive on the page.
+
+Then assign labels: the highest-scoring caption gets "best", the lowest gets "worst", and the remaining one gets "medium". You MUST use each of "best", "medium", and "worst" EXACTLY once across the three captions.
+
+Before you finalize the ratings, ask yourself one more time: "If I were a real person scrolling this platform, which of these three would actually stop me?" That one is "best".`;
 
 const PRO_AMPLIFIERS = `PRO BOOST — ELITE COPYWRITING MODE:
 You are now operating at the level of a top-tier social copywriter who has shipped viral content for major creators.
@@ -313,11 +335,14 @@ ${RATING_RUBRIC}
 ${isPro ? `\n${PRO_AMPLIFIERS}\n` : "\nSTANDARD MODE: write good, clean captions. Keep them grounded and natural. Use one strong technique per caption rather than stacking many.\n"}
 BEFORE YOU RETURN, SELF-CHECK each caption against this checklist:
   1. Does it strictly match the ${platform} LENGTH rule above? (TikTok: 1-3 lines. Instagram: 3-5 sentences + hashtags on a new line. LinkedIn: 3-5 short paragraphs. Twitter/X: \u2264 280 characters total. Facebook: 2-3 sentences.)
-  2. Does it strictly match the ${platform} HASHTAG count and placement rule? (TikTok 3-5, Instagram 8-12 on new line, LinkedIn \u2264 2, Twitter/X 0-1, Facebook 0-3.)
-  3. Does it end with a platform-appropriate question or CTA (where the platform calls for one)?
-  4. Does it sound like a real human wrote it from their phone \u2014 not an AI? No "in a world where...", no "let's dive in", no "buckle up", no generic hype.
-  5. Are the three captions MEANINGFULLY DIFFERENT from each other in style, rhythm, opener, and vocabulary?
-If any answer is no, rewrite that caption before returning.
+  2. Does it strictly match the ${platform} HASHTAG count and placement rule? (TikTok 3-5, Instagram 8-12 on a NEW LINE with a blank line before them and ZERO hashtags inside the body copy, LinkedIn \u2264 2, Twitter/X 0-1, Facebook 0-3.)
+  3. INSTAGRAM SPECIFIC: every hashtag MUST sit on the final line after a blank line. NO hashtag may appear inside any body sentence. The body and the hashtag block MUST be separated by \\n\\n. If even one hashtag is mixed into the prose, REWRITE.
+  4. LINKEDIN SPECIFIC: contains ZERO markdown characters (no **, no *, no _, no \`, no ###) and ZERO TikTok-style openers ("POV:", "Tell me why", "Not me", "This is your sign", "Stop scrolling", "no one talks about", "wait for it", "I was today years old"). It MUST read as plain professional paragraphs only. If markdown or a TikTok opener is present, REWRITE.
+  5. Does it end with a platform-appropriate question or CTA (where the platform calls for one)?
+  6. Does it sound like a real human wrote it from their phone \u2014 not an AI? No "in a world where...", no "let's dive in", no "buckle up", no generic hype.
+  7. Are the three captions MEANINGFULLY DIFFERENT from each other in style, rhythm, opener, and vocabulary?
+  8. Did you apply the RATING RUBRIC honestly \u2014 NOT defaulting to "Caption 1 = best", NOT defaulting to "loudest opener = best", and genuinely picking the most engaging caption as "best"?
+If any answer is no, rewrite that caption (or re-rate) before returning.
 
 FINAL OUTPUT \u2014 return STRICT JSON ONLY, no markdown fences, no commentary, with this exact shape:
 {
@@ -331,6 +356,74 @@ Requirements:
 - captionRatings[i] rates captions[i]. Use "best", "medium", "worst" exactly once each across the three.
 - emojiPerCaption has exactly 3 arrays of 2-4 single emoji characters (not words, not text) that fit each caption.
 - Write all caption text in ${language}.`;
+}
+
+function isInstagramPlatform(platform: string): boolean {
+  return platform.trim().toLowerCase().includes("insta");
+}
+
+function isLinkedInPlatform(platform: string): boolean {
+  return platform.trim().toLowerCase().includes("linkedin");
+}
+
+function stripLinkedInMarkdown(caption: string): string {
+  let text = caption;
+  text = text.replace(/\*\*\*(.+?)\*\*\*/g, "$1");
+  text = text.replace(/\*\*(.+?)\*\*/g, "$1");
+  text = text.replace(/(^|\s)\*(?!\s)([^*\n]+?)(?<!\s)\*(?!\w)/g, "$1$2");
+  text = text.replace(/(^|\s)_([^_\n]+?)_(?!\w)/g, "$1$2");
+  text = text.replace(/`([^`\n]+?)`/g, "$1");
+  text = text.replace(/^\s*#{1,6}\s+/gm, "");
+  text = text.replace(/^\s*[-*]\s+/gm, "");
+  return text;
+}
+
+function normalizeInstagramHashtagPlacement(caption: string): string {
+  const trimmed = caption.trim();
+  if (!trimmed) return caption;
+
+  const firstHashIndex = trimmed.search(/#[\p{L}\p{N}_]+/u);
+  if (firstHashIndex < 0) {
+    return caption;
+  }
+
+  const tailFromFirstHash = trimmed.slice(firstHashIndex);
+  const isOnlyTrailingHashtagBlock = /^(?:#[\p{L}\p{N}_]+[ \t]*)+$/u.test(tailFromFirstHash);
+
+  if (isOnlyTrailingHashtagBlock) {
+    const hashtags = (tailFromFirstHash.match(/#[\p{L}\p{N}_]+/gu) ?? []).join(" ");
+    const body = trimmed.slice(0, firstHashIndex).replace(/[ \t\r\n]+$/g, "");
+    if (!body) return hashtags;
+    return `${body}\n\n${hashtags}`;
+  }
+
+  const allHashtags = (trimmed.match(/#[\p{L}\p{N}_]+/gu) ?? []).join(" ");
+  const bodyOnly = trimmed
+    .replace(/#[\p{L}\p{N}_]+/gu, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  if (!bodyOnly) return allHashtags;
+  return `${bodyOnly}\n\n${allHashtags}`;
+}
+
+function postProcessCaptions(captions: string[], platform: string): string[] {
+  const onInstagram = isInstagramPlatform(platform);
+  const onLinkedIn = isLinkedInPlatform(platform);
+  if (!onInstagram && !onLinkedIn) return captions;
+
+  return captions.map((cap) => {
+    let next = cap;
+    if (onLinkedIn) {
+      next = stripLinkedInMarkdown(next);
+    }
+    if (onInstagram) {
+      next = normalizeInstagramHashtagPlacement(next);
+    }
+    return next;
+  });
 }
 
 const PARSE_RETRY_ATTEMPTS = 3;
@@ -523,7 +616,7 @@ export async function POST(req: Request) {
       );
     }
 
-    captions = parsed.captions;
+    captions = postProcessCaptions(parsed.captions, platform);
     emojiPerCaption = parsed.emojiPerCaption;
     captionRatings = parsed.captionRatings;
 
