@@ -7,12 +7,20 @@ create table if not exists public.affiliate_lead_conversion_credited (
   created_at timestamptz not null default now()
 );
 
+alter table public.affiliate_lead_conversion_credited
+  add column if not exists affiliate_user_id text,
+  add column if not exists commission_cents int,
+  add column if not exists is_test boolean not null default false;
+
 create unique index if not exists affiliate_signup_attributions_lead_user_id_key
   on public.affiliate_signup_attributions (lead_user_id);
 
+drop function if exists public.record_affiliate_first_conversion (text, int);
+
 create or replace function public.record_affiliate_first_conversion (
   p_lead_user_id text,
-  p_commission_cents int
+  p_commission_cents int,
+  p_is_test boolean default false
 )
 returns boolean
 language plpgsql
@@ -23,6 +31,10 @@ declare
   v_affiliate_user_id text;
   v_inserted int;
 begin
+  if p_is_test or coalesce(p_commission_cents, 0) <= 0 then
+    return false;
+  end if;
+
   select a.affiliate_user_id
     into v_affiliate_user_id
     from public.affiliate_signup_attributions a
@@ -32,8 +44,13 @@ begin
     return false;
   end if;
 
-  insert into public.affiliate_lead_conversion_credited (lead_user_id)
-  values (p_lead_user_id)
+  insert into public.affiliate_lead_conversion_credited (
+    lead_user_id,
+    affiliate_user_id,
+    commission_cents,
+    is_test
+  )
+  values (p_lead_user_id, v_affiliate_user_id, p_commission_cents, false)
   on conflict (lead_user_id) do nothing;
 
   get diagnostics v_inserted = row_count;

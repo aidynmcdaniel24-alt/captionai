@@ -8,8 +8,7 @@ import {
   WelcomeOnboardingModal,
 } from "@/components/dashboard/WelcomeOnboardingModal";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { UserAvatar } from "@/components/UserAvatar";
-import { UserButton, useUser } from "@clerk/nextjs";
+import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
@@ -46,7 +45,18 @@ const CAPTION_TEMPLATES: CaptionTemplate[] = [
   { icon: "🎮", label: "Gaming", prompt: "gaming setup highlights" },
 ];
 
-type Tab = "captions" | "hashtags" | "bio" | "trending" | "ab";
+type Tab = "captions" | "hashtags" | "bio" | "trending" | "ab" | "favorites";
+
+type FavoriteHistoryItem = {
+  id: string;
+  topic: string;
+  platform: string;
+  tone: string;
+  language?: string;
+  captions: string[];
+  created_at: string;
+  favoriteIndexes: number[];
+};
 
 type ApiResult = {
   captions?: string[];
@@ -68,7 +78,6 @@ type ApiResult = {
 };
 
 export function DashboardPageClient() {
-  const { user } = useUser();
   const [tab, setTab] = useState<Tab>("captions");
   const [topic, setTopic] = useState("");
   const [platform, setPlatform] = useState("");
@@ -105,6 +114,9 @@ export function DashboardPageClient() {
   const [abExpId, setAbExpId] = useState<string | null>(null);
   const [abLoading, setAbLoading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [favorites, setFavorites] = useState<FavoriteHistoryItem[]>([]);
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
+  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
 
   const shell =
     "min-h-screen bg-zinc-50 text-zinc-900 dark:bg-gradient-to-b dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900 dark:text-white";
@@ -142,6 +154,7 @@ export function DashboardPageClient() {
 
   useEffect(() => {
     if (!hasSeenOnboarding()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reveal modal once localStorage available on mount
       setShowOnboarding(true);
     }
   }, []);
@@ -434,20 +447,6 @@ export function DashboardPageClient() {
         }),
       });
       const data = (await res.json()) as { id?: string; error?: string };
-      // #region agent log
-      fetch("http://127.0.0.1:7679/ingest/774c81b3-4974-4a96-b8a5-09735d7f7aaa", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f63b09" },
-        body: JSON.stringify({
-          sessionId: "f63b09",
-          hypothesisId: "A",
-          location: "DashboardPageClient.tsx:saveAbExperiment",
-          message: "ab-test create response",
-          data: { ok: res.ok, status: res.status, hasId: Boolean(data.id) },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       if (res.ok && data.id) {
         setAbExpId(data.id);
         return;
@@ -478,16 +477,67 @@ export function DashboardPageClient() {
     }
   }
 
-  const showFreeWarning = plan === "free" && usageToday !== null && usageToday >= 3 && usageToday < freeLimit;
+  const loadFavorites = useCallback(async () => {
+    setFavoritesLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/captions/history");
+      const data = (await res.json()) as { items?: FavoriteHistoryItem[]; error?: string };
+      if (!res.ok) {
+        setFavorites([]);
+        setError(data.error || "Could not load favorites.");
+        return;
+      }
+      const onlyFavorites = (data.items ?? []).filter(
+        (item) => Array.isArray(item.favoriteIndexes) && item.favoriteIndexes.length > 0
+      );
+      setFavorites(onlyFavorites);
+    } catch {
+      setFavorites([]);
+      setError("Could not load favorites.");
+    } finally {
+      setFavoritesLoading(false);
+      setFavoritesLoaded(true);
+    }
+  }, []);
 
-  const displayName =
-    user?.firstName ||
-    user?.fullName ||
-    user?.username ||
-    user?.primaryEmailAddress?.emailAddress?.split("@")[0] ||
-    "";
-  const userImageUrl = user?.imageUrl ?? null;
-  const userEmail = user?.primaryEmailAddress?.emailAddress ?? null;
+  useEffect(() => {
+    if (tab === "favorites" && !favoritesLoaded && !favoritesLoading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- load favorites when tab opens
+      void loadFavorites();
+    }
+  }, [tab, favoritesLoaded, favoritesLoading, loadFavorites]);
+
+  async function unfavoriteSaved(historyId: string, captionIndex: number) {
+    setError("");
+    const previous = favorites;
+    setFavorites((prev) =>
+      prev
+        .map((item) =>
+          item.id === historyId
+            ? { ...item, favoriteIndexes: item.favoriteIndexes.filter((i) => i !== captionIndex) }
+            : item
+        )
+        .filter((item) => item.favoriteIndexes.length > 0)
+    );
+    try {
+      const res = await fetch("/api/captions/favorite", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ historyId, captionIndex }),
+      });
+      if (!res.ok) {
+        setFavorites(previous);
+        const data = (await res.json()) as { error?: string };
+        setError(data.error || "Could not remove favorite.");
+      }
+    } catch {
+      setFavorites(previous);
+      setError("Could not remove favorite.");
+    }
+  }
+
+  const showFreeWarning = plan === "free" && usageToday !== null && usageToday >= 3 && usageToday < freeLimit;
 
   return (
     <main className={`${shell} px-6 py-8`}>
@@ -556,6 +606,7 @@ export function DashboardPageClient() {
               ["bio", "Bio"],
               ["trending", "Trending"],
               ["ab", "A/B test"],
+              ["favorites", "Favorites"],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -589,7 +640,7 @@ export function DashboardPageClient() {
                 <p className="mb-2 text-sm text-zinc-600 dark:text-zinc-300">Start from a template</p>
                 <div
                   className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2 [scrollbar-width:thin]"
-                  role="list"
+                  role="group"
                   aria-label="Caption templates"
                 >
                   {CAPTION_TEMPLATES.map((tpl) => {
@@ -598,7 +649,6 @@ export function DashboardPageClient() {
                       <button
                         key={tpl.label}
                         type="button"
-                        role="listitem"
                         onClick={() => setTopic(tpl.prompt)}
                         aria-pressed={active}
                         className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
@@ -972,6 +1022,89 @@ export function DashboardPageClient() {
                 ) : null}
               </div>
             ) : null}
+          </div>
+        ) : null}
+
+        {tab === "favorites" ? (
+          <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Saved favorites</h2>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  Captions you starred from past generations.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                onClick={() => {
+                  setFavoritesLoaded(false);
+                  void loadFavorites();
+                }}
+                disabled={favoritesLoading}
+              >
+                {favoritesLoading ? "Refreshing…" : "Refresh"}
+              </button>
+            </div>
+
+            {favoritesLoading && favorites.length === 0 ? (
+              <p className="text-sm text-zinc-500">Loading favorites…</p>
+            ) : favorites.length === 0 ? (
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                You haven&apos;t saved any favorites yet. Tap the ☆ on any generated caption to save it here.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-4">
+                {favorites.map((item) => (
+                  <li
+                    key={item.id}
+                    className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950/40"
+                  >
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                      <span className="truncate">
+                        <span className="font-medium text-zinc-700 dark:text-zinc-200">Topic:</span>{" "}
+                        {item.topic || "—"}
+                      </span>
+                      <span>
+                        {item.platform} · {item.tone}
+                      </span>
+                    </div>
+                    <ul className="flex flex-col gap-2">
+                      {item.favoriteIndexes.map((idx) => {
+                        const text = item.captions?.[idx];
+                        if (!text) return null;
+                        return (
+                          <li
+                            key={`${item.id}-${idx}`}
+                            className="flex items-start justify-between gap-3 rounded-lg border border-zinc-200 bg-white p-3 text-sm text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                          >
+                            <p className="whitespace-pre-wrap break-words">{text}</p>
+                            <div className="flex shrink-0 flex-col gap-1.5">
+                              <button
+                                type="button"
+                                className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                                onClick={async () => {
+                                  await navigator.clipboard.writeText(text);
+                                }}
+                              >
+                                Copy
+                              </button>
+                              <button
+                                type="button"
+                                className="rounded-md border border-red-200 px-2.5 py-1 text-xs font-medium text-red-700 transition hover:bg-red-50 dark:border-red-900/60 dark:text-red-300 dark:hover:bg-red-950/30"
+                                onClick={() => unfavoriteSaved(item.id, idx)}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         ) : null}
       </div>

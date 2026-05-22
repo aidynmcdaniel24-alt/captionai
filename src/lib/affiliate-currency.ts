@@ -36,7 +36,7 @@ export async function fetchExchangeRatesFromUsd(): Promise<ExchangeRatesFromUsd>
   const targets = PAYOUT_CURRENCIES.filter((c) => c !== "USD").join(",");
   try {
     const res = await fetch(`https://api.frankfurter.app/latest?from=USD&to=${targets}`, {
-      cache: "no-store",
+      next: { revalidate: 3600 },
     });
     if (!res.ok) {
       return { ...FALLBACK_RATES_FROM_USD };

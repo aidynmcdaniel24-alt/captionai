@@ -2,6 +2,32 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 
+const CLICK_WINDOW_MS = 60_000;
+const CLICK_MAX_PER_WINDOW = 10;
+const clickHits = new Map<string, { count: number; resetAt: number }>();
+
+function rateLimitClick(ip: string): boolean {
+  const now = Date.now();
+  const entry = clickHits.get(ip);
+  if (!entry || entry.resetAt <= now) {
+    clickHits.set(ip, { count: 1, resetAt: now + CLICK_WINDOW_MS });
+    if (clickHits.size > 5000) {
+      for (const [key, value] of clickHits) {
+        if (value.resetAt <= now) clickHits.delete(key);
+      }
+    }
+    return true;
+  }
+  entry.count += 1;
+  return entry.count <= CLICK_MAX_PER_WINDOW;
+}
+
+function clientIp(req: Request): string {
+  const fwd = req.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0]?.trim() || "unknown";
+  return req.headers.get("x-real-ip") ?? "unknown";
+}
+
 async function resolveAffiliateUserId(
   supabase: SupabaseClient,
   lower: string
@@ -36,6 +62,10 @@ async function resolveAffiliateUserId(
 
 export async function POST(req: Request) {
   const supabase: SupabaseClient = supabaseServer;
+
+  if (!rateLimitClick(clientIp(req))) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
 
   let body: { affiliate_code?: string };
   try {
@@ -90,20 +120,7 @@ export async function POST(req: Request) {
           updated_at: now,
         });
     if (manualErr) {
-      // #region agent log
-      fetch("http://127.0.0.1:7679/ingest/774c81b3-4974-4a96-b8a5-09735d7f7aaa", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f63b09" },
-        body: JSON.stringify({
-          sessionId: "f63b09",
-          hypothesisId: "C",
-          location: "track-click/route.ts:rpc-fallback",
-          message: "click increment failed",
-          data: { rpcError: rpcError.message, manualErr: manualErr.message },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
+      console.error("[track-click] manual increment:", manualErr.message);
       return NextResponse.json({ error: "Failed to increment" }, { status: 500 });
     }
   }
@@ -115,21 +132,6 @@ export async function POST(req: Request) {
   if (eventErr) {
     console.warn("[track-click] click event log skipped:", eventErr.message);
   }
-
-  // #region agent log
-  fetch("http://127.0.0.1:7679/ingest/774c81b3-4974-4a96-b8a5-09735d7f7aaa", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "f63b09" },
-    body: JSON.stringify({
-      sessionId: "f63b09",
-      hypothesisId: "C",
-      location: "track-click/route.ts:success",
-      message: "click tracked",
-      data: { ok: true },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
 
   return NextResponse.json({ success: true });
 }

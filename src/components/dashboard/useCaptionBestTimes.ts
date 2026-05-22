@@ -38,6 +38,7 @@ export function useCaptionBestTimes({
 
   useEffect(() => {
     if (!payloadKey) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- clear state when the payload becomes empty (deps change)
       setTimes([]);
       setLoading(false);
       return;

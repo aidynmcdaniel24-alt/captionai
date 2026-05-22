@@ -49,6 +49,7 @@ export function ChangePhotoButton({ hasImage }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- detect mobile once on mount (uses navigator/window)
     setIsMobile(detectIsMobile());
   }, []);
 

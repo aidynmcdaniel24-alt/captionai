@@ -100,27 +100,77 @@ export async function POST(req: Request) {
     }
   }
 
+  async function resolveUserIdFromSubscription(sub: Stripe.Subscription): Promise<string | undefined> {
+    if (sub.metadata?.clerk_user_id) {
+      return sub.metadata.clerk_user_id;
+    }
+    const cid =
+      typeof sub.customer === "string" ? sub.customer : sub.customer?.id ?? null;
+    if (!cid) {
+      return undefined;
+    }
+    const { data: row } = await supabaseServer
+      .from("subscriptions")
+      .select("user_id")
+      .eq("stripe_customer_id", cid)
+      .maybeSingle();
+    return row?.user_id ?? undefined;
+  }
+
   if (event.type === "customer.subscription.deleted") {
     const sub = event.data.object as Stripe.Subscription;
-    let userId = sub.metadata?.clerk_user_id;
-
-    if (!userId) {
-      const cid =
-        typeof sub.customer === "string" ? sub.customer : sub.customer?.id ?? null;
-      if (cid) {
-        const { data: row } = await supabaseServer
-          .from("subscriptions")
-          .select("user_id")
-          .eq("stripe_customer_id", cid)
-          .maybeSingle();
-        userId = row?.user_id ?? undefined;
-      }
-    }
-
+    const userId = await resolveUserIdFromSubscription(sub);
     if (userId) {
       const errRes = await setPlanFree(userId);
       if (errRes) {
         return errRes;
+      }
+    }
+  }
+
+  if (event.type === "customer.subscription.updated") {
+    const sub = event.data.object as Stripe.Subscription;
+    const userId = await resolveUserIdFromSubscription(sub);
+    if (userId) {
+      const cid = typeof sub.customer === "string" ? sub.customer : sub.customer?.id ?? null;
+      const isActive = sub.status === "active" || sub.status === "trialing";
+      const isCanceledOrUnpaid =
+        sub.status === "canceled" || sub.status === "unpaid" || sub.status === "incomplete_expired";
+
+      if (isActive && !sub.cancel_at_period_end) {
+        const errRes = await setPlanPro(userId, cid);
+        if (errRes) {
+          return errRes;
+        }
+      } else if (isCanceledOrUnpaid) {
+        const errRes = await setPlanFree(userId);
+        if (errRes) {
+          return errRes;
+        }
+      }
+    }
+  }
+
+  if (event.type === "invoice.paid") {
+    const invoice = event.data.object as Stripe.Invoice & {
+      subscription?: string | Stripe.Subscription | null;
+    };
+    const subRef = invoice.subscription;
+    const subId = typeof subRef === "string" ? subRef : subRef?.id ?? null;
+    if (subId) {
+      try {
+        const sub = await stripe.subscriptions.retrieve(subId);
+        const userId = await resolveUserIdFromSubscription(sub);
+        if (userId && (sub.status === "active" || sub.status === "trialing")) {
+          const cid = typeof sub.customer === "string" ? sub.customer : sub.customer?.id ?? null;
+          const errRes = await setPlanPro(userId, cid);
+          if (errRes) {
+            return errRes;
+          }
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "unknown";
+        console.warn("[stripe webhook] invoice.paid retrieve:", msg);
       }
     }
   }

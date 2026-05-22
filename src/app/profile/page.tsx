@@ -227,7 +227,7 @@ export default function ProfilePage() {
             ) : null}
             {referralsCount !== null ? (
               <div>
-                <dt className="text-xs uppercase tracking-wide text-zinc-500">Referrals joined</dt>
+                <dt className="text-xs uppercase tracking-wide text-zinc-500">People you referred</dt>
                 <dd className="mt-1 font-mono text-lg text-zinc-900 dark:text-zinc-100">{referralsCount}</dd>
               </div>
             ) : null}

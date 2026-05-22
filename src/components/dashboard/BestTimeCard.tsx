@@ -102,8 +102,8 @@ export function BestTimeCard({ platform, topic = "" }: { platform: string; topic
     : "Heuristic guide — pair with your analytics for best results.";
 
   return (
-    <div className="rounded-2xl border border-purple-500/25 bg-purple-950/20 p-4 dark:border-purple-500/25 dark:bg-purple-950/20">
-      <p className="text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-300">
+    <div className="rounded-2xl border border-purple-200 bg-purple-50 p-4 dark:border-purple-500/25 dark:bg-purple-950/20">
+      <p className="text-xs font-semibold uppercase tracking-wider text-purple-700 dark:text-purple-300">
         Best time to post
       </p>
       <p
@@ -111,7 +111,7 @@ export function BestTimeCard({ platform, topic = "" }: { platform: string; topic
       >
         {text}
       </p>
-      <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-500">{footnote}</p>
+      <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-500">{footnote}</p>
     </div>
   );
 }

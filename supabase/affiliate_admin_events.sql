@@ -19,6 +19,8 @@ alter table public.affiliate_lead_conversion_credited
   add column if not exists commission_cents int,
   add column if not exists is_test boolean not null default false;
 
+drop function if exists public.record_affiliate_first_conversion (text, int);
+
 create or replace function public.record_affiliate_first_conversion (
   p_lead_user_id text,
   p_commission_cents int,

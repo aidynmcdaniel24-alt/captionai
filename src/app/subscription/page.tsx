@@ -55,6 +55,7 @@ export default function SubscriptionPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate billing details on mount
     void loadBilling();
   }, [loadBilling]);
 

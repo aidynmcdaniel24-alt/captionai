@@ -1,9 +1,6 @@
 import "server-only";
 import { currentUser } from "@clerk/nextjs/server";
 
-/** Fallback when CLERK_ADMIN_USER_ID is unset (local dev). Set env on production. */
-export const DEFAULT_CLERK_ADMIN_USER_ID = "user_3DBTV0OWOZNmbg6byLG465ZHpEe";
-
 /** Strip quotes / whitespace from Vercel env values (e.g. `"user_abc"`). */
 function normalizeClerkUserId(raw: string): string {
   return raw.trim().replace(/^["']|["']$/g, "").trim();
@@ -22,26 +19,10 @@ function parseAdminIdsFromEnv(raw: string | undefined): string[] {
 /**
  * Clerk user IDs allowed to access /admin and admin APIs.
  * CLERK_ADMIN_USER_ID: one id or comma-separated list.
- * Falls back to DEFAULT_CLERK_ADMIN_USER_ID only when env is unset/empty.
+ * Returns [] when unset — admin access is then controlled only by CLERK_ADMIN_EMAIL.
  */
 export function resolveClerkAdminUserIds(): string[] {
-  const fromEnv = parseAdminIdsFromEnv(process.env.CLERK_ADMIN_USER_ID);
-  if (fromEnv.length > 0) {
-    return fromEnv;
-  }
-  const emailAllowlist = process.env.CLERK_ADMIN_EMAIL?.trim();
-  if (process.env.NODE_ENV === "production") {
-    if (emailAllowlist) {
-      return [];
-    }
-    return [];
-  }
-  return [DEFAULT_CLERK_ADMIN_USER_ID];
-}
-
-/** @deprecated Use resolveClerkAdminUserIds — first configured admin id. */
-export function resolveClerkAdminUserId(): string {
-  return resolveClerkAdminUserIds()[0]!;
+  return parseAdminIdsFromEnv(process.env.CLERK_ADMIN_USER_ID);
 }
 
 export function isClerkAdminUser(userId: string | undefined): boolean {
@@ -49,7 +30,11 @@ export function isClerkAdminUser(userId: string | undefined): boolean {
     return false;
   }
   const normalized = normalizeClerkUserId(userId);
-  return resolveClerkAdminUserIds().some((adminId) => adminId === normalized);
+  const ids = resolveClerkAdminUserIds();
+  if (ids.length === 0) {
+    return false;
+  }
+  return ids.some((adminId) => adminId === normalized);
 }
 
 /** Optional email allowlist (CLERK_ADMIN_EMAIL), case-insensitive. */

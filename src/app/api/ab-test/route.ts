@@ -47,6 +47,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid pick." }, { status: 400 });
     }
 
+    const { data: rpcData, error: rpcError } = await supabaseServer.rpc("increment_ab_pick", {
+      p_id: id,
+      p_user_id: userId,
+      p_pick: pick,
+    });
+
+    if (!rpcError && Array.isArray(rpcData) && rpcData.length > 0) {
+      const row = rpcData[0] as { picks_a: number | null; picks_b: number | null };
+      return NextResponse.json({
+        ok: true,
+        picks_a: row.picks_a ?? 0,
+        picks_b: row.picks_b ?? 0,
+      });
+    }
+    if (!rpcError && Array.isArray(rpcData) && rpcData.length === 0) {
+      return NextResponse.json({ error: "Not found." }, { status: 404 });
+    }
+
     const { data: exp } = await supabaseServer
       .from("ab_experiments")
       .select("id, user_id, picks_a, picks_b")
