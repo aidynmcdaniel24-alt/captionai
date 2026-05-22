@@ -13,19 +13,8 @@ import { UserButton, useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-const PLATFORM_OPTIONS = [
-  "Instagram",
-  "TikTok",
-  "LinkedIn",
-  "Twitter/X",
-  "Facebook",
-  "YouTube",
-  "Pinterest",
-  "Threads",
-  "Bluesky",
-  "Custom",
-] as const;
-const TONE_OPTIONS = ["funny", "professional", "hype", "inspirational", "Custom"] as const;
+const PLATFORM_PLACEHOLDER = 'e.g. "Instagram, TikTok, LinkedIn, YouTube Shorts..."';
+const TONE_PLACEHOLDER = 'e.g. "funny, professional, hype, inspirational, sarcastic..."';
 
 const LANGUAGES = [
   "English",
@@ -82,10 +71,8 @@ export function DashboardPageClient() {
   const { user } = useUser();
   const [tab, setTab] = useState<Tab>("captions");
   const [topic, setTopic] = useState("");
-  const [platform, setPlatform] = useState<(typeof PLATFORM_OPTIONS)[number]>("Instagram");
-  const [platformCustom, setPlatformCustom] = useState("");
-  const [tone, setTone] = useState<(typeof TONE_OPTIONS)[number]>("inspirational");
-  const [toneCustom, setToneCustom] = useState("");
+  const [platform, setPlatform] = useState("Instagram");
+  const [tone, setTone] = useState("inspirational");
   const [language, setLanguage] = useState("English");
   const [captions, setCaptions] = useState<string[]>([]);
   const [emojiPerCaption, setEmojiPerCaption] = useState<string[][]>([]);
@@ -122,9 +109,8 @@ export function DashboardPageClient() {
   const shell =
     "min-h-screen bg-zinc-50 text-zinc-900 dark:bg-gradient-to-b dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900 dark:text-white";
 
-  const resolvedTone = tone === "Custom" ? toneCustom.trim().slice(0, 80) || "casual" : tone;
-  const resolvedPlatform =
-    platform === "Custom" ? platformCustom.trim().slice(0, 80) || "Instagram" : platform;
+  const resolvedTone = tone.trim().slice(0, 80) || "inspirational";
+  const resolvedPlatform = platform.trim().slice(0, 80) || "Instagram";
 
   const refreshPlan = useCallback(async () => {
     try {
@@ -207,10 +193,8 @@ export function DashboardPageClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           topic,
-          platform,
-          platformCustom,
-          tone,
-          toneCustom,
+          platform: resolvedPlatform,
+          tone: resolvedTone,
           language,
         }),
       });
@@ -642,49 +626,25 @@ export function DashboardPageClient() {
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Platform</label>
-                  <select
-                    className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  <input
+                    type="text"
+                    className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                    placeholder={PLATFORM_PLACEHOLDER}
                     value={platform}
-                    onChange={(e) => setPlatform(e.target.value as (typeof PLATFORM_OPTIONS)[number])}
-                  >
-                    {PLATFORM_OPTIONS.map((p) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
-                  </select>
-                  {platform === "Custom" ? (
-                    <input
-                      className="mt-2 w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-                      placeholder='e.g. "YouTube Shorts", "Discord", "Newsletter"'
-                      value={platformCustom}
-                      onChange={(e) => setPlatformCustom(e.target.value)}
-                      maxLength={80}
-                    />
-                  ) : null}
+                    onChange={(e) => setPlatform(e.target.value)}
+                    maxLength={80}
+                  />
                 </div>
                 <div>
                   <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Tone</label>
-                  <select
-                    className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  <input
+                    type="text"
+                    className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                    placeholder={TONE_PLACEHOLDER}
                     value={tone}
-                    onChange={(e) => setTone(e.target.value as (typeof TONE_OPTIONS)[number])}
-                  >
-                    {TONE_OPTIONS.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                  {tone === "Custom" ? (
-                    <input
-                      className="mt-2 w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-                      placeholder='e.g. "sarcastic Gen Z", "luxury brand", "dad jokes"'
-                      value={toneCustom}
-                      onChange={(e) => setToneCustom(e.target.value)}
-                      maxLength={80}
-                    />
-                  ) : null}
+                    onChange={(e) => setTone(e.target.value)}
+                    maxLength={80}
+                  />
                 </div>
                 <div className="sm:col-span-2">
                   <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Language</label>
@@ -754,26 +714,14 @@ export function DashboardPageClient() {
 
             <div className="mt-4">
               <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Platform</label>
-              <select
-                className="w-full max-w-md rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+              <input
+                type="text"
+                className="w-full max-w-md rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                placeholder={PLATFORM_PLACEHOLDER}
                 value={platform}
-                onChange={(e) => setPlatform(e.target.value as (typeof PLATFORM_OPTIONS)[number])}
-              >
-                {PLATFORM_OPTIONS.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
-              {platform === "Custom" ? (
-                <input
-                  className="mt-2 w-full max-w-md rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-                  placeholder='e.g. "YouTube Shorts", "Discord", "Newsletter"'
-                  value={platformCustom}
-                  onChange={(e) => setPlatformCustom(e.target.value)}
-                  maxLength={80}
-                />
-              ) : null}
+                onChange={(e) => setPlatform(e.target.value)}
+                maxLength={80}
+              />
             </div>
 
             <button
@@ -833,49 +781,25 @@ export function DashboardPageClient() {
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
                 <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Platform</label>
-                <select
-                  className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                <input
+                  type="text"
+                  className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  placeholder={PLATFORM_PLACEHOLDER}
                   value={platform}
-                  onChange={(e) => setPlatform(e.target.value as (typeof PLATFORM_OPTIONS)[number])}
-                >
-                  {PLATFORM_OPTIONS.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-                {platform === "Custom" ? (
-                  <input
-                    className="mt-2 w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-                    placeholder='e.g. "YouTube Shorts", "Discord", "Newsletter"'
-                    value={platformCustom}
-                    onChange={(e) => setPlatformCustom(e.target.value)}
-                    maxLength={80}
-                  />
-                ) : null}
+                  onChange={(e) => setPlatform(e.target.value)}
+                  maxLength={80}
+                />
               </div>
               <div>
                 <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Tone</label>
-                <select
-                  className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                <input
+                  type="text"
+                  className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  placeholder={TONE_PLACEHOLDER}
                   value={tone}
-                  onChange={(e) => setTone(e.target.value as (typeof TONE_OPTIONS)[number])}
-                >
-                  {TONE_OPTIONS.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-                {tone === "Custom" ? (
-                  <input
-                    className="mt-2 w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-                    placeholder='e.g. "sarcastic Gen Z", "luxury brand", "dad jokes"'
-                    value={toneCustom}
-                    onChange={(e) => setToneCustom(e.target.value)}
-                    maxLength={80}
-                  />
-                ) : null}
+                  onChange={(e) => setTone(e.target.value)}
+                  maxLength={80}
+                />
               </div>
             </div>
 
@@ -953,49 +877,25 @@ export function DashboardPageClient() {
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
                 <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Platform</label>
-                <select
-                  className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                <input
+                  type="text"
+                  className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  placeholder={PLATFORM_PLACEHOLDER}
                   value={platform}
-                  onChange={(e) => setPlatform(e.target.value as (typeof PLATFORM_OPTIONS)[number])}
-                >
-                  {PLATFORM_OPTIONS.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-                {platform === "Custom" ? (
-                  <input
-                    className="mt-2 w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-                    placeholder='e.g. "YouTube Shorts", "Discord", "Newsletter"'
-                    value={platformCustom}
-                    onChange={(e) => setPlatformCustom(e.target.value)}
-                    maxLength={80}
-                  />
-                ) : null}
+                  onChange={(e) => setPlatform(e.target.value)}
+                  maxLength={80}
+                />
               </div>
               <div>
                 <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Tone</label>
-                <select
-                  className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                <input
+                  type="text"
+                  className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  placeholder={TONE_PLACEHOLDER}
                   value={tone}
-                  onChange={(e) => setTone(e.target.value as (typeof TONE_OPTIONS)[number])}
-                >
-                  {TONE_OPTIONS.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-                {tone === "Custom" ? (
-                  <input
-                    className="mt-2 w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
-                    placeholder='e.g. "sarcastic Gen Z", "luxury brand", "dad jokes"'
-                    value={toneCustom}
-                    onChange={(e) => setToneCustom(e.target.value)}
-                    maxLength={80}
-                  />
-                ) : null}
+                  onChange={(e) => setTone(e.target.value)}
+                  maxLength={80}
+                />
               </div>
             </div>
 
