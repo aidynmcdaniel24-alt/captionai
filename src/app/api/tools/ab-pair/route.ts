@@ -51,11 +51,16 @@ export async function POST(req: Request) {
         model: "llama-3.3-70b-versatile",
         temperature: 0.95,
         max_tokens: 500,
+        response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: "Return strict JSON only." },
+          {
+            role: "system",
+            content:
+              "You write social media captions for A/B testing. Output must be a single JSON object only — no markdown fences, no commentary, no text before or after the JSON.",
+          },
           {
             role: "user",
-            content: `Two different caption variants for the SAME post (A/B test). Platform ${platform}, tone ${tone}. Topic: "${topic}". JSON: {"a":"variant A","b":"variant B"} — both must differ in hook or structure.`,
+            content: `Write TWO clearly different caption variants for the SAME post for A/B testing. Platform: ${platform}. Tone: ${tone}. Topic: "${topic}". The two variants MUST differ in hook, structure, or angle (not just word choice). Return JSON exactly in this shape: {"a":"variant A caption","b":"variant B caption"}`,
           },
         ],
       })

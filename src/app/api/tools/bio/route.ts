@@ -48,13 +48,18 @@ export async function POST(req: Request) {
         model: "llama-3.3-70b-versatile",
         temperature: 0.8,
         max_tokens: 500,
+        response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: "You write social bios and return strict JSON." },
+          {
+            role: "system",
+            content:
+              "You write social media profile bios. Output must be a single JSON object only — no markdown fences, no commentary, no text before or after the JSON.",
+          },
           {
             role: "user",
             content: `Write ONE concise profile bio for ${platform} with tone: ${tone}.
 About: "${about}"
-Max ~160 characters where appropriate for the platform. JSON: {"bio":"..."}`,
+Keep within the platform's typical bio length (around 150-160 characters where appropriate). Return JSON exactly in this shape: {"bio":"the bio text"}`,
           },
         ],
       })

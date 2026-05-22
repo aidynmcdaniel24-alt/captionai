@@ -50,11 +50,16 @@ export async function POST(req: Request) {
         model: "llama-3.3-70b-versatile",
         temperature: 0.85,
         max_tokens: 500,
+        response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: "Return strict JSON only." },
+          {
+            role: "system",
+            content:
+              "You generate social media hashtag sets. Output must be a single JSON object only — no markdown fences, no commentary, no text before or after the JSON.",
+          },
           {
             role: "user",
-            content: `Generate ${count} relevant hashtags (with #) for: "${topic}" on ${platform}. Mix reach and niche tags. JSON: {"hashtags":["#.."]}`,
+            content: `Generate ${count} relevant hashtags (with #) for the topic: "${topic}" on ${platform}. Mix broad-reach and niche tags. Return JSON exactly in this shape: {"hashtags":["#tag1","#tag2"]}`,
           },
         ],
       })
