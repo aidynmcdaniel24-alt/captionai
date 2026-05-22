@@ -18,6 +18,7 @@ type GeneratedCaptionsPanelProps = {
   tone: string;
   topic: string;
   plan: "free" | "pro" | null;
+  proBoost?: boolean;
   copiedIndex: number | null;
   fav: Record<number, boolean>;
   checkoutLoading: boolean;
@@ -37,6 +38,7 @@ export function GeneratedCaptionsPanel({
   tone,
   topic,
   plan,
+  proBoost,
   copiedIndex,
   fav,
   checkoutLoading,
@@ -62,10 +64,24 @@ export function GeneratedCaptionsPanel({
     return plan !== "pro" && captionRatings[index] === "best";
   }
 
+  const isProBoost = Boolean(proBoost);
+  const showProUpsell = plan === "free" && !isProBoost;
+
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-white">Your captions</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-white">Your captions</h2>
+          {isProBoost ? (
+            <span
+              title="Generated with the Pro AI caption boost — viral hooks, deeper storytelling, advanced copywriting."
+              className="inline-flex items-center gap-1 rounded-full border border-purple-400/70 bg-gradient-to-r from-purple-100 to-fuchsia-100 px-2.5 py-1 text-xs font-semibold text-purple-800 shadow-sm dark:border-purple-500/50 dark:from-purple-950/60 dark:to-fuchsia-950/60 dark:text-purple-200"
+            >
+              <span aria-hidden>✨</span>
+              Pro captions
+            </span>
+          ) : null}
+        </div>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -83,6 +99,25 @@ export function GeneratedCaptionsPanel({
           </button>
         </div>
       </div>
+
+      {showProUpsell ? (
+        <button
+          type="button"
+          onClick={() => onStartCheckout("month")}
+          disabled={checkoutLoading}
+          className="mb-4 flex w-full items-center justify-between gap-3 rounded-xl border border-purple-300/70 bg-gradient-to-r from-purple-50 to-fuchsia-50 px-4 py-2.5 text-left text-sm transition hover:from-purple-100 hover:to-fuchsia-100 disabled:opacity-60 dark:border-purple-500/30 dark:from-purple-950/40 dark:to-fuchsia-950/40 dark:hover:from-purple-950/60 dark:hover:to-fuchsia-950/60"
+        >
+          <span className="flex items-center gap-2 text-purple-900 dark:text-purple-100">
+            <span aria-hidden>✨</span>
+            <span>
+              <span className="font-semibold">Upgrade to Pro</span> for AI-boosted viral captions
+            </span>
+          </span>
+          <span className="shrink-0 rounded-full bg-purple-600 px-3 py-1 text-xs font-semibold text-white">
+            Try Pro
+          </span>
+        </button>
+      ) : null}
       <ul className="space-y-4">
         {captions.map((caption, index) => {
           const locked = isBestLockedForFree(index);

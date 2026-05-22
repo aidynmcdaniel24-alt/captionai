@@ -64,6 +64,7 @@ type ApiResult = {
   captionRatings?: CaptionRatingKey[];
   historyId?: string;
   plan?: "free" | "pro";
+  proBoost?: boolean;
   usage?: {
     count: number;
     limit: number | null;
@@ -96,6 +97,7 @@ export function DashboardPageClient() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [captionRatings, setCaptionRatings] = useState<CaptionRatingKey[]>([]);
+  const [proBoost, setProBoost] = useState(false);
   const [fav, setFav] = useState<Record<number, boolean>>({});
 
   // Hashtags tab
@@ -198,6 +200,7 @@ export function DashboardPageClient() {
     setError("");
     setIsLoading(true);
     setCaptionRatings([]);
+    setProBoost(false);
     setFav({});
 
     try {
@@ -237,6 +240,7 @@ export function DashboardPageClient() {
       setEmojiPerCaption(data.emojiPerCaption ?? []);
       setCaptionRatings(data.captionRatings ?? []);
       setHistoryId(data.historyId ?? null);
+      setProBoost(Boolean(data.proBoost));
       if (data.plan === "pro" || data.plan === "free") {
         setPlan(data.plan);
       }
@@ -734,6 +738,7 @@ export function DashboardPageClient() {
                 tone={resolvedTone}
                 topic={topic}
                 plan={plan}
+                proBoost={proBoost}
                 copiedIndex={copiedIndex}
                 fav={fav}
                 checkoutLoading={checkoutLoading}
