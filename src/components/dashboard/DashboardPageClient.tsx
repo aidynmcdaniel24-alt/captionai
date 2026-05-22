@@ -521,16 +521,6 @@ export function DashboardPageClient() {
               <p className="text-xs uppercase tracking-widest text-purple-600 dark:text-purple-300">CaptionAI</p>
               <h1 className="text-3xl font-semibold">AI Caption Studio</h1>
             </div>
-            {displayName ? (
-              <Link
-                href="/profile"
-                className="ml-2 hidden items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 py-1 pl-1 pr-3 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800 sm:inline-flex"
-                aria-label="View your profile"
-              >
-                <UserAvatar imageUrl={userImageUrl} name={displayName} email={userEmail} size="sm" />
-                <span className="max-w-[10rem] truncate">Hi, {displayName}</span>
-              </Link>
-            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <ThemeToggle />
@@ -749,47 +739,173 @@ export function DashboardPageClient() {
         ) : null}
 
         {tab === "hashtags" ? (
-          <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900/80">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
             <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
-              Generate hashtag sets from your topic (uses your platform when not Custom).
+              Generate a mix of reach and niche hashtags tailored to your topic and platform.
             </p>
+
+            <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Topic</label>
+            <textarea
+              className="min-h-24 w-full rounded-xl border border-zinc-300 bg-white p-3 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+              placeholder="Example: my coffee shop in New Orleans"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+            />
+
+            <div className="mt-4">
+              <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Platform</label>
+              <select
+                className="w-full max-w-md rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                value={platform}
+                onChange={(e) => setPlatform(e.target.value as (typeof PLATFORM_OPTIONS)[number])}
+              >
+                {PLATFORM_OPTIONS.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+              {platform === "Custom" ? (
+                <input
+                  className="mt-2 w-full max-w-md rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  placeholder='e.g. "YouTube Shorts", "Discord", "Newsletter"'
+                  value={platformCustom}
+                  onChange={(e) => setPlatformCustom(e.target.value)}
+                  maxLength={80}
+                />
+              ) : null}
+            </div>
+
             <button
               type="button"
-              className="rounded-xl bg-purple-600 px-5 py-2.5 font-medium text-white disabled:opacity-50"
+              className="mt-4 rounded-xl bg-purple-600 px-5 py-2.5 font-medium text-white hover:bg-purple-500 disabled:opacity-50"
               disabled={htLoading || !topic.trim()}
               onClick={runHashtags}
             >
               {htLoading ? "Generating…" : "Generate hashtags"}
             </button>
+
             {htags.length > 0 ? (
-              <ul className="mt-4 flex flex-wrap gap-2">
-                {htags.map((h) => (
-                  <li key={h} className="rounded-full bg-zinc-100 px-3 py-1 text-sm dark:bg-zinc-800">
-                    {h}
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-6">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200">
+                    {htags.length} hashtags
+                  </p>
+                  <button
+                    type="button"
+                    className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(htags.join(" "));
+                    }}
+                  >
+                    Copy all
+                  </button>
+                </div>
+                <ul className="flex flex-wrap gap-2">
+                  {htags.map((h) => (
+                    <li
+                      key={h}
+                      className="rounded-full bg-purple-50 px-3 py-1 text-sm text-purple-800 dark:bg-purple-950/40 dark:text-purple-200"
+                    >
+                      {h}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ) : null}
           </div>
         ) : null}
 
         {tab === "bio" ? (
-          <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900/80">
-            <p className="mb-2 text-sm text-zinc-600 dark:text-zinc-400">
-              Describe yourself or your brand in the topic field above, then generate a profile bio.
+          <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+            <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
+              Describe yourself or your brand, pick a platform and tone, and we will write a profile bio.
             </p>
+
+            <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">About you / your brand</label>
+            <textarea
+              className="min-h-24 w-full rounded-xl border border-zinc-300 bg-white p-3 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+              placeholder="Example: indie game developer, makes cozy pixel-art puzzle games"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+            />
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Platform</label>
+                <select
+                  className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  value={platform}
+                  onChange={(e) => setPlatform(e.target.value as (typeof PLATFORM_OPTIONS)[number])}
+                >
+                  {PLATFORM_OPTIONS.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+                {platform === "Custom" ? (
+                  <input
+                    className="mt-2 w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                    placeholder='e.g. "YouTube Shorts", "Discord", "Newsletter"'
+                    value={platformCustom}
+                    onChange={(e) => setPlatformCustom(e.target.value)}
+                    maxLength={80}
+                  />
+                ) : null}
+              </div>
+              <div>
+                <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Tone</label>
+                <select
+                  className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  value={tone}
+                  onChange={(e) => setTone(e.target.value as (typeof TONE_OPTIONS)[number])}
+                >
+                  {TONE_OPTIONS.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+                {tone === "Custom" ? (
+                  <input
+                    className="mt-2 w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                    placeholder='e.g. "sarcastic Gen Z", "luxury brand", "dad jokes"'
+                    value={toneCustom}
+                    onChange={(e) => setToneCustom(e.target.value)}
+                    maxLength={80}
+                  />
+                ) : null}
+              </div>
+            </div>
+
             <button
               type="button"
-              className="rounded-xl bg-purple-600 px-5 py-2.5 font-medium text-white disabled:opacity-50"
+              className="mt-4 rounded-xl bg-purple-600 px-5 py-2.5 font-medium text-white hover:bg-purple-500 disabled:opacity-50"
               disabled={bioLoading || !topic.trim()}
               onClick={runBio}
             >
               {bioLoading ? "Writing…" : "Generate bio"}
             </button>
+
             {bio ? (
-              <p className="mt-4 whitespace-pre-wrap rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
-                {bio}
-              </p>
+              <div className="mt-6">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200">Your bio</p>
+                  <button
+                    type="button"
+                    className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(bio);
+                    }}
+                  >
+                    Copy
+                  </button>
+                </div>
+                <p className="whitespace-pre-wrap rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
+                  {bio}
+                </p>
+              </div>
             ) : null}
           </div>
         ) : null}
@@ -821,47 +937,133 @@ export function DashboardPageClient() {
         ) : null}
 
         {tab === "ab" ? (
-          <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900/80">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
             <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
-              Generate two variants, track which one you posted for learning over time.
+              Generate two caption variants for the same post and track which one performs better.
             </p>
+
+            <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Topic</label>
+            <textarea
+              className="min-h-24 w-full rounded-xl border border-zinc-300 bg-white p-3 text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+              placeholder="Example: launching a new fitness app for beginners"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+            />
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Platform</label>
+                <select
+                  className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  value={platform}
+                  onChange={(e) => setPlatform(e.target.value as (typeof PLATFORM_OPTIONS)[number])}
+                >
+                  {PLATFORM_OPTIONS.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+                {platform === "Custom" ? (
+                  <input
+                    className="mt-2 w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                    placeholder='e.g. "YouTube Shorts", "Discord", "Newsletter"'
+                    value={platformCustom}
+                    onChange={(e) => setPlatformCustom(e.target.value)}
+                    maxLength={80}
+                  />
+                ) : null}
+              </div>
+              <div>
+                <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Tone</label>
+                <select
+                  className="w-full rounded-xl border border-zinc-300 bg-white p-2.5 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  value={tone}
+                  onChange={(e) => setTone(e.target.value as (typeof TONE_OPTIONS)[number])}
+                >
+                  {TONE_OPTIONS.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+                {tone === "Custom" ? (
+                  <input
+                    className="mt-2 w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                    placeholder='e.g. "sarcastic Gen Z", "luxury brand", "dad jokes"'
+                    value={toneCustom}
+                    onChange={(e) => setToneCustom(e.target.value)}
+                    maxLength={80}
+                  />
+                ) : null}
+              </div>
+            </div>
+
             <button
               type="button"
-              className="rounded-xl bg-purple-600 px-5 py-2.5 font-medium text-white disabled:opacity-50"
+              className="mt-4 rounded-xl bg-purple-600 px-5 py-2.5 font-medium text-white hover:bg-purple-500 disabled:opacity-50"
               disabled={abLoading || !topic.trim()}
               onClick={generateAbPair}
             >
               {abLoading ? "Generating…" : "Generate A/B pair"}
             </button>
+
             {abA && abB ? (
               <div className="mt-6 space-y-4">
                 <div className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
-                  <p className="text-xs font-semibold text-purple-600 dark:text-purple-400">Variant A</p>
-                  <p className="mt-2 text-zinc-800 dark:text-zinc-200">{abA}</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+                      Variant A
+                    </p>
+                    <button
+                      type="button"
+                      className="rounded-lg border border-zinc-300 px-2.5 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(abA);
+                      }}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <p className="mt-2 whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">{abA}</p>
                 </div>
                 <div className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
-                  <p className="text-xs font-semibold text-purple-600 dark:text-purple-400">Variant B</p>
-                  <p className="mt-2 text-zinc-800 dark:text-zinc-200">{abB}</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400">
+                      Variant B
+                    </p>
+                    <button
+                      type="button"
+                      className="rounded-lg border border-zinc-300 px-2.5 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(abB);
+                      }}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <p className="mt-2 whitespace-pre-wrap text-zinc-800 dark:text-zinc-200">{abB}</p>
                 </div>
                 <button
                   type="button"
-                  className="rounded-xl border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-600"
+                  className="rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
                   onClick={saveAbExperiment}
+                  disabled={Boolean(abExpId)}
                 >
-                  Save experiment
+                  {abExpId ? "Experiment saved" : "Save experiment"}
                 </button>
                 {abExpId ? (
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      className="rounded-xl bg-zinc-800 px-4 py-2 text-sm text-white dark:bg-zinc-700"
+                      className="rounded-xl bg-zinc-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600"
                       onClick={() => pickAb("a")}
                     >
                       A performed better
                     </button>
                     <button
                       type="button"
-                      className="rounded-xl bg-zinc-800 px-4 py-2 text-sm text-white dark:bg-zinc-700"
+                      className="rounded-xl bg-zinc-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600"
                       onClick={() => pickAb("b")}
                     >
                       B performed better
