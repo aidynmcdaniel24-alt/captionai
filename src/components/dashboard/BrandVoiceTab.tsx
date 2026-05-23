@@ -22,6 +22,34 @@ type BrandVoiceTabProps = {
   onChange?: (active: boolean) => void;
 };
 
+type BrandVoiceResponse = {
+  brandVoice?: BrandVoice | null;
+  error?: string;
+};
+
+function normalizeVoice(voice: BrandVoice | null | undefined): BrandVoice {
+  if (!voice) return EMPTY_VOICE;
+  return {
+    brandName: voice.brandName ?? "",
+    description: voice.description ?? "",
+    personality: Array.isArray(voice.personality) ? voice.personality : [],
+    wordsToUse: voice.wordsToUse ?? "",
+    wordsToAvoid: voice.wordsToAvoid ?? "",
+    exampleCaption: voice.exampleCaption ?? "",
+  };
+}
+
+function hasActiveBrandVoice(voice: BrandVoice): boolean {
+  return Boolean(
+    voice.brandName.trim() ||
+      voice.description.trim() ||
+      voice.personality.length > 0 ||
+      voice.wordsToUse.trim() ||
+      voice.wordsToAvoid.trim() ||
+      voice.exampleCaption.trim()
+  );
+}
+
 export function BrandVoiceTab({ onChange }: BrandVoiceTabProps) {
   const [voice, setVoice] = useState<BrandVoice>(EMPTY_VOICE);
   const [status, setStatus] = useState<Status>("loading");
@@ -33,29 +61,19 @@ export function BrandVoiceTab({ onChange }: BrandVoiceTabProps) {
     setError("");
     try {
       const res = await fetch("/api/brand-voice");
-      const data = (await res.json()) as { brandVoice?: BrandVoice | null; error?: string };
+      const data = (await res.json()) as BrandVoiceResponse;
       if (!res.ok) {
         setError(data.error || "Could not load brand voice.");
         setStatus("error");
         return;
       }
-      const loaded = data.brandVoice ?? EMPTY_VOICE;
-      setVoice({
-        brandName: loaded.brandName ?? "",
-        description: loaded.description ?? "",
-        personality: Array.isArray(loaded.personality) ? loaded.personality : [],
-        wordsToUse: loaded.wordsToUse ?? "",
-        wordsToAvoid: loaded.wordsToAvoid ?? "",
-        exampleCaption: loaded.exampleCaption ?? "",
-      });
-      const active = Boolean(
-        loaded.brandName?.trim() ||
-          loaded.description?.trim() ||
-          (loaded.personality ?? []).length > 0 ||
-          loaded.wordsToUse?.trim() ||
-          loaded.wordsToAvoid?.trim() ||
-          loaded.exampleCaption?.trim()
-      );
+
+      // A null brandVoice is the normal "nothing saved yet" state.
+      // Hydrate the empty form and make sure no stale error is shown.
+      const loaded = normalizeVoice(data.brandVoice ?? null);
+      const active = hasActiveBrandVoice(loaded);
+      setError("");
+      setVoice(loaded);
       setHasSaved(active);
       onChange?.(active);
       setStatus("idle");
@@ -91,29 +109,16 @@ export function BrandVoiceTab({ onChange }: BrandVoiceTabProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(voice),
       });
-      const data = (await res.json()) as { brandVoice?: BrandVoice; error?: string };
+      const data = (await res.json()) as BrandVoiceResponse;
       if (!res.ok) {
         setError(data.error || "Could not save brand voice.");
         setStatus("error");
         return;
       }
-      const next = data.brandVoice ?? voice;
-      setVoice({
-        brandName: next.brandName ?? "",
-        description: next.description ?? "",
-        personality: Array.isArray(next.personality) ? next.personality : [],
-        wordsToUse: next.wordsToUse ?? "",
-        wordsToAvoid: next.wordsToAvoid ?? "",
-        exampleCaption: next.exampleCaption ?? "",
-      });
-      const active = Boolean(
-        next.brandName?.trim() ||
-          next.description?.trim() ||
-          (next.personality ?? []).length > 0 ||
-          next.wordsToUse?.trim() ||
-          next.wordsToAvoid?.trim() ||
-          next.exampleCaption?.trim()
-      );
+      const next = normalizeVoice(data.brandVoice ?? voice);
+      const active = hasActiveBrandVoice(next);
+      setError("");
+      setVoice(next);
       setHasSaved(active);
       onChange?.(active);
       setStatus("saved");
@@ -170,7 +175,7 @@ export function BrandVoiceTab({ onChange }: BrandVoiceTabProps) {
         ) : null}
       </div>
 
-      {error ? (
+      {status === "error" && error ? (
         <p
           className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300"
           role="alert"
