@@ -20,6 +20,13 @@ const FIELD_LIMITS = {
   exampleCaption: 1200,
 } as const;
 
+type SupabaseLikeError = {
+  code?: string;
+  message?: string;
+  details?: string;
+  hint?: string;
+};
+
 function trimToLimit(value: unknown, limit: number): string {
   return String(value ?? "").trim().slice(0, limit);
 }
@@ -44,6 +51,54 @@ function isEmptyResultError(error: { code?: string; message?: string; details?: 
   );
 }
 
+function isPermissionOrRlsError(error: SupabaseLikeError | null) {
+  if (!error) return false;
+  const text = `${error.code ?? ""} ${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`.toLowerCase();
+  return (
+    error.code === "42501" ||
+    text.includes("row-level security") ||
+    text.includes("violates row-level security") ||
+    text.includes("permission denied") ||
+    text.includes("not authorized")
+  );
+}
+
+function brandVoiceDbErrorResponse(action: "load" | "save", error: SupabaseLikeError) {
+  const permissionIssue = isPermissionOrRlsError(error);
+  const missingTable = error.code === "42P01";
+  const missingColumn = error.code === "42703";
+  const conflictIssue = error.code === "42P10";
+
+  let hint =
+    "Verify the brand_voice table exists with columns: user_id, brand_name, description, personality, words_to_use, words_to_avoid, example_caption, updated_at.";
+
+  if (permissionIssue) {
+    hint =
+      "Supabase permissions/RLS blocked this request. Server routes should use SUPABASE_SERVICE_ROLE_KEY, or add RLS policies that allow this user's insert/update/select on public.brand_voice.";
+  } else if (missingTable) {
+    hint = "Supabase cannot find public.brand_voice. Run supabase/brand_voice.sql in the same Supabase project used by NEXT_PUBLIC_SUPABASE_URL.";
+  } else if (missingColumn) {
+    hint =
+      "The public.brand_voice table is missing one of the selected/upserted columns. Confirm the column names exactly match the CaptionAI schema.";
+  } else if (conflictIssue) {
+    hint = "The upsert conflict target failed. Confirm user_id is the primary key or has a unique constraint on public.brand_voice.";
+  }
+
+  return NextResponse.json(
+    {
+      error:
+        action === "save"
+          ? "Could not save brand voice."
+          : "Could not load brand voice.",
+      details: error.message ?? "Unknown Supabase error.",
+      code: error.code,
+      hint,
+      rlsOrPermissionIssue: permissionIssue,
+    },
+    { status: permissionIssue ? 403 : 500 }
+  );
+}
+
 export async function GET() {
   try {
     const { userId } = await auth();
@@ -65,14 +120,7 @@ export async function GET() {
     }
 
     if (error) {
-      return NextResponse.json(
-        {
-          error: "Could not load brand voice.",
-          details: error.message,
-          code: error.code,
-        },
-        { status: 500 }
-      );
+      return brandVoiceDbErrorResponse("load", error);
     }
 
     const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
@@ -97,49 +145,51 @@ export async function GET() {
 }
 
 export async function PUT(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  let body: Record<string, unknown> = {};
   try {
-    body = (await req.json()) as Record<string, unknown>;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
-  }
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const personality: BrandPersonality[] = normalizePersonality(body.personality);
-  const row: BrandVoiceRow = {
-    user_id: userId,
-    brand_name: trimToLimit(body.brandName, FIELD_LIMITS.brandName),
-    description: trimToLimit(body.description, FIELD_LIMITS.description),
-    personality,
-    words_to_use: trimToLimit(body.wordsToUse, FIELD_LIMITS.wordsToUse),
-    words_to_avoid: trimToLimit(body.wordsToAvoid, FIELD_LIMITS.wordsToAvoid),
-    example_caption: trimToLimit(body.exampleCaption, FIELD_LIMITS.exampleCaption),
-    updated_at: new Date().toISOString(),
-  };
+    let body: Record<string, unknown> = {};
+    try {
+      body = (await req.json()) as Record<string, unknown>;
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+    }
 
-  const { data, error } = await supabaseServer
-    .from("brand_voice")
-    .upsert(row, { onConflict: "user_id" })
-    .select(
-      "user_id, brand_name, description, personality, words_to_use, words_to_avoid, example_caption, updated_at"
-    )
-    .single();
+    const personality: BrandPersonality[] = normalizePersonality(body.personality);
+    const row: BrandVoiceRow = {
+      user_id: userId,
+      brand_name: trimToLimit(body.brandName, FIELD_LIMITS.brandName),
+      description: trimToLimit(body.description, FIELD_LIMITS.description),
+      personality,
+      words_to_use: trimToLimit(body.wordsToUse, FIELD_LIMITS.wordsToUse),
+      words_to_avoid: trimToLimit(body.wordsToAvoid, FIELD_LIMITS.wordsToAvoid),
+      example_caption: trimToLimit(body.exampleCaption, FIELD_LIMITS.exampleCaption),
+      updated_at: new Date().toISOString(),
+    };
 
-  if (error) {
+    const { error } = await supabaseServer
+      .from("brand_voice")
+      .upsert(row, { onConflict: "user_id" });
+
+    if (error) {
+      return brandVoiceDbErrorResponse("save", error);
+    }
+
+    return NextResponse.json({ brandVoice: rowToBrandVoice(row) });
+  } catch (error) {
+    const details = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
       {
-        error: "Could not save brand voice. Run supabase/brand_voice.sql in Supabase.",
-        details: error.message,
+        error: "Could not save brand voice.",
+        details,
+        hint: "Unexpected server error before Supabase returned a response. Check server logs and environment variables.",
       },
       { status: 500 }
     );
   }
-
-  return NextResponse.json({ brandVoice: rowToBrandVoice(data as BrandVoiceRow) });
 }
 
 export async function DELETE() {
