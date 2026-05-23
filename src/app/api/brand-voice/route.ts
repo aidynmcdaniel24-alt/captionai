@@ -36,7 +36,7 @@ export async function GET() {
       "user_id, brand_name, description, personality, words_to_use, words_to_avoid, example_caption, updated_at"
     )
     .eq("user_id", userId)
-    .maybeSingle();
+    .limit(1);
 
   if (error) {
     return NextResponse.json(
@@ -48,8 +48,10 @@ export async function GET() {
     );
   }
 
+  const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
+
   return NextResponse.json({
-    brandVoice: rowToBrandVoice(data as BrandVoiceRow | null),
+    brandVoice: rowToBrandVoice(row as BrandVoiceRow | null),
     allPersonalities: BRAND_PERSONALITIES,
   });
 }
