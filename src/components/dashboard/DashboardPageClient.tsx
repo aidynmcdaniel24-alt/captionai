@@ -1,7 +1,6 @@
 "use client";
 
 import { BrandLogo } from "@/components/BrandLogo";
-import { BrandVoiceTab } from "@/components/dashboard/BrandVoiceTab";
 import { GeneratedCaptionsPanel } from "@/components/dashboard/GeneratedCaptionsPanel";
 import { HookLibraryTab } from "@/components/dashboard/HookLibraryTab";
 import type { CaptionRatingKey } from "@/lib/caption-rating-styles";
@@ -55,7 +54,6 @@ type Tab =
   | "trending"
   | "ab"
   | "favorites"
-  | "brandVoice"
   | "hookLibrary";
 
 type FavoriteHistoryItem = {
@@ -77,7 +75,6 @@ type ApiResult = {
   historyId?: string;
   plan?: "free" | "pro";
   proBoost?: boolean;
-  brandVoiceActive?: boolean;
   usage?: {
     count: number;
     limit: number | null;
@@ -112,8 +109,6 @@ export function DashboardPageClient() {
   const [captionRatings, setCaptionRatings] = useState<CaptionRatingKey[]>([]);
   const [captionScores, setCaptionScores] = useState<CaptionScore[]>([]);
   const [proBoost, setProBoost] = useState(false);
-  const [brandVoiceActive, setBrandVoiceActive] = useState(false);
-  const [generatedWithBrandVoice, setGeneratedWithBrandVoice] = useState(false);
   const [fav, setFav] = useState<Record<number, boolean>>({});
 
   // Hashtags tab
@@ -169,43 +164,6 @@ export function DashboardPageClient() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate plan/usage on mount
     void refreshPlan();
   }, [refreshPlan]);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/brand-voice");
-        if (!res.ok || cancelled) return;
-        const data = (await res.json()) as {
-          brandVoice?: {
-            brandName?: string;
-            description?: string;
-            personality?: string[];
-            wordsToUse?: string;
-            wordsToAvoid?: string;
-            exampleCaption?: string;
-          } | null;
-        };
-        const v = data.brandVoice ?? null;
-        const active = Boolean(
-          v?.brandName?.trim() ||
-            v?.description?.trim() ||
-            (v?.personality ?? []).length > 0 ||
-            v?.wordsToUse?.trim() ||
-            v?.wordsToAvoid?.trim() ||
-            v?.exampleCaption?.trim()
-        );
-        if (!cancelled) {
-          setBrandVoiceActive(active);
-        }
-      } catch {
-        /* ignore */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     if (!hasSeenOnboarding()) {
@@ -296,10 +254,6 @@ export function DashboardPageClient() {
       setCaptionScores(data.captionScores ?? []);
       setHistoryId(data.historyId ?? null);
       setProBoost(Boolean(data.proBoost));
-      setGeneratedWithBrandVoice(Boolean(data.brandVoiceActive));
-      if (typeof data.brandVoiceActive === "boolean") {
-        setBrandVoiceActive(data.brandVoiceActive);
-      }
       if (data.plan === "pro" || data.plan === "free") {
         setPlan(data.plan);
       }
@@ -705,7 +659,6 @@ export function DashboardPageClient() {
                 ["trending", "Trending"],
                 ["ab", "A/B test"],
                 ["favorites", "Favorites"],
-                ["brandVoice", "Brand Voice"],
                 ["hookLibrary", "Hook Library"],
               ] as const
             ).map(([id, label]) => (
@@ -823,13 +776,6 @@ export function DashboardPageClient() {
                 {isLoading ? "Generating..." : "Generate captions"}
               </button>
 
-              {brandVoiceActive ? (
-                <p className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-200">
-                  <span aria-hidden>●</span>
-                  Brand Voice active
-                </p>
-              ) : null}
-
               {usageText ? <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-300">{usageText}</p> : null}
 
             </div>
@@ -846,7 +792,6 @@ export function DashboardPageClient() {
                 topic={topic}
                 plan={plan}
                 proBoost={proBoost}
-                brandVoiceActive={generatedWithBrandVoice}
                 copiedIndex={copiedIndex}
                 fav={fav}
                 checkoutLoading={checkoutLoading}
@@ -1219,10 +1164,6 @@ export function DashboardPageClient() {
               </ul>
             )}
           </div>
-        ) : null}
-
-        {tab === "brandVoice" ? (
-          <BrandVoiceTab onChange={setBrandVoiceActive} />
         ) : null}
 
         {tab === "hookLibrary" ? (

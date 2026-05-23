@@ -2,13 +2,6 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { logAdminEvent } from "@/lib/admin-log";
 import { containsBlockedWord, getBlockedWordList } from "@/lib/blocked-words";
-import {
-  brandVoicePromptSection,
-  isBrandVoiceConfigured,
-  rowToBrandVoice,
-  type BrandVoice,
-  type BrandVoiceRow,
-} from "@/lib/brand-voice";
 import { polishCaptions } from "@/lib/caption-formatter";
 import { computeCaptionScores, type CaptionScore } from "@/lib/caption-score";
 import { getGroqClient } from "@/lib/groq-client";
@@ -333,19 +326,16 @@ function buildPrompt({
   tone,
   language,
   plan,
-  brandVoice,
 }: {
   topic: string;
   platform: string;
   tone: string;
   language: string;
   plan: Plan;
-  brandVoice: BrandVoice | null;
 }): string {
   const profile = profileForPlatform(platform);
   const briefing = formatPlatformBriefing(profile);
   const isPro = plan === "pro";
-  const brandSection = brandVoicePromptSection(brandVoice);
 
   return `You are a top 1% social media copywriter who writes captions that real creators screenshot, save, and study. Your captions sound HUMAN, never AI-generated.
 
@@ -359,7 +349,7 @@ PLATFORM BRIEFING for ${platform} (these constraints are non-negotiable)
 ${briefing}
 
 ${FORMATTING_RULES}
-${brandSection ? `\n${brandSection}\n` : ""}
+
 ${QUALITY_RULES}
 
 THREE DISTINCT CAPTIONS
@@ -552,7 +542,6 @@ async function fetchCaptionsFromGroq(
   tone: string,
   language: string,
   plan: Plan,
-  brandVoice: BrandVoice | null,
   attempt: number
 ): Promise<string> {
   const strict = attempt > 0;
@@ -570,7 +559,7 @@ async function fetchCaptionsFromGroq(
         },
         {
           role: "user",
-          content: buildPrompt({ topic, platform, tone, language, plan, brandVoice }),
+          content: buildPrompt({ topic, platform, tone, language, plan }),
         },
       ],
     })
@@ -585,7 +574,6 @@ async function generateParsedCaptions(
   tone: string,
   language: string,
   plan: Plan,
-  brandVoice: BrandVoice | null,
   userId: string
 ): Promise<ParsedCaptionResponse | null> {
   for (let attempt = 0; attempt < PARSE_RETRY_ATTEMPTS; attempt++) {
@@ -596,7 +584,6 @@ async function generateParsedCaptions(
       tone,
       language,
       plan,
-      brandVoice,
       attempt
     );
     const parsed = parseCaptionModelJson(content);
@@ -723,22 +710,6 @@ export async function POST(req: Request) {
     );
   }
 
-  let brandVoice: BrandVoice | null = null;
-  try {
-    const { data: brandVoiceRow } = await supabaseServer
-      .from("brand_voice")
-      .select(
-        "user_id, brand_name, description, personality, words_to_use, words_to_avoid, example_caption"
-      )
-      .eq("user_id", userId)
-      .maybeSingle();
-    brandVoice = rowToBrandVoice(brandVoiceRow as BrandVoiceRow | null);
-  } catch {
-    // brand_voice table may not exist yet — fail open with no brand voice.
-    brandVoice = null;
-  }
-  const brandVoiceActive = isBrandVoiceConfigured(brandVoice);
-
   let captions: string[] = [];
   let emojiPerCaption: string[][] = [[], [], []];
   let captionRatings: CaptionRatingKey[] = defaultCaptionRatings();
@@ -752,7 +723,6 @@ export async function POST(req: Request) {
       tone,
       language,
       plan,
-      brandVoice,
       userId
     );
 
@@ -850,7 +820,6 @@ export async function POST(req: Request) {
       historyId,
       plan,
       proBoost,
-      brandVoiceActive,
       usage: {
         count: nextCount,
         limit: plan === "free" ? freeLimit : null,

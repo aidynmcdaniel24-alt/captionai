@@ -22,7 +22,6 @@ type GeneratedCaptionsPanelProps = {
   topic: string;
   plan: "free" | "pro" | null;
   proBoost?: boolean;
-  brandVoiceActive?: boolean;
   copiedIndex: number | null;
   fav: Record<number, boolean>;
   checkoutLoading: boolean;
@@ -44,7 +43,6 @@ export function GeneratedCaptionsPanel({
   topic,
   plan,
   proBoost,
-  brandVoiceActive,
   copiedIndex,
   fav,
   checkoutLoading,
@@ -87,15 +85,6 @@ export function GeneratedCaptionsPanel({
             >
               <span aria-hidden>✨</span>
               Pro captions
-            </span>
-          ) : null}
-          {brandVoiceActive ? (
-            <span
-              title="Generated using your saved Brand Voice — words, personality, and example caption applied."
-              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-200"
-            >
-              <span aria-hidden>●</span>
-              Brand Voice active
             </span>
           ) : null}
         </div>
