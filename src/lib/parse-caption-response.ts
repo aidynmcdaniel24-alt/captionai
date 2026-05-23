@@ -1,10 +1,20 @@
 import type { CaptionRatingKey } from "@/lib/caption-rating-styles";
 import { parseLenientJson } from "@/lib/groq-json";
 
+export type ParsedCaptionScore = {
+  hook?: number;
+  emotion?: number;
+  cta?: number;
+  platformFit?: number;
+  originality?: number;
+  explanation?: string;
+};
+
 export type ParsedCaptionResponse = {
   captions: string[];
   emojiPerCaption: string[][];
   captionRatings: CaptionRatingKey[];
+  captionScores: (ParsedCaptionScore | null)[];
 };
 
 const RATING_SET = new Set<CaptionRatingKey>(["worst", "medium", "best"]);
@@ -78,7 +88,40 @@ type CaptionJsonShape = {
   captions?: unknown;
   emojiPerCaption?: unknown;
   captionRatings?: unknown;
+  captionScores?: unknown;
 };
+
+function numberOrUndefined(v: unknown): number | undefined {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) {
+    return Number(v);
+  }
+  return undefined;
+}
+
+function normalizeCaptionScores(raw: unknown): (ParsedCaptionScore | null)[] {
+  if (!Array.isArray(raw)) return [null, null, null];
+  const rows = raw.slice(0, 3).map((row): ParsedCaptionScore | null => {
+    if (!row || typeof row !== "object") return null;
+    const r = row as Record<string, unknown>;
+    const out: ParsedCaptionScore = {
+      hook: numberOrUndefined(r.hook ?? r.hookStrength),
+      emotion: numberOrUndefined(r.emotion ?? r.emotionalEngagement ?? r.emotional),
+      cta: numberOrUndefined(r.cta ?? r.callToAction),
+      platformFit: numberOrUndefined(r.platformFit ?? r.platform),
+      originality: numberOrUndefined(r.originality ?? r.original),
+      explanation:
+        typeof r.explanation === "string"
+          ? r.explanation.trim().slice(0, 200)
+          : typeof r.reason === "string"
+            ? r.reason.trim().slice(0, 200)
+            : undefined,
+    };
+    return out;
+  });
+  while (rows.length < 3) rows.push(null);
+  return rows;
+}
 
 export function parseCaptionModelJson(raw: string): ParsedCaptionResponse | null {
   const parsed = parseLenientJson<CaptionJsonShape>(raw);
@@ -93,6 +136,7 @@ export function parseCaptionModelJson(raw: string): ParsedCaptionResponse | null
 
   const emojiPerCaption = normalizeEmojiPerCaption(parsed.emojiPerCaption);
   const captionRatings = normalizeCaptionRatings(parsed.captionRatings) ?? defaultCaptionRatings();
+  const captionScores = normalizeCaptionScores(parsed.captionScores);
 
-  return { captions, emojiPerCaption, captionRatings };
+  return { captions, emojiPerCaption, captionRatings, captionScores };
 }

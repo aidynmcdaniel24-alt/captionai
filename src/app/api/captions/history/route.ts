@@ -29,7 +29,7 @@ export async function GET() {
     .select("id, topic, platform, tone, language, captions, created_at, ai_ratings")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
-    .limit(10);
+    .limit(50);
 
   if (error) {
     return NextResponse.json(

@@ -2,7 +2,9 @@
 
 import { CaptionActions } from "@/components/dashboard/CaptionActions";
 import { CaptionBestTimeBadge } from "@/components/dashboard/CaptionBestTimeBadge";
+import { CaptionScoreBar } from "@/components/dashboard/CaptionScoreBar";
 import { useCaptionBestTimes } from "@/components/dashboard/useCaptionBestTimes";
+import type { CaptionScore } from "@/lib/caption-score";
 import {
   CAPTION_RATING_ACTIVE,
   CAPTION_RATING_LABELS,
@@ -12,6 +14,7 @@ import {
 type GeneratedCaptionsPanelProps = {
   captions: string[];
   captionRatings: CaptionRatingKey[];
+  captionScores?: CaptionScore[];
   emojiPerCaption: string[][];
   historyId: string | null;
   platform: string;
@@ -19,6 +22,7 @@ type GeneratedCaptionsPanelProps = {
   topic: string;
   plan: "free" | "pro" | null;
   proBoost?: boolean;
+  brandVoiceActive?: boolean;
   copiedIndex: number | null;
   fav: Record<number, boolean>;
   checkoutLoading: boolean;
@@ -32,6 +36,7 @@ type GeneratedCaptionsPanelProps = {
 export function GeneratedCaptionsPanel({
   captions,
   captionRatings,
+  captionScores,
   emojiPerCaption,
   historyId,
   platform,
@@ -39,6 +44,7 @@ export function GeneratedCaptionsPanel({
   topic,
   plan,
   proBoost,
+  brandVoiceActive,
   copiedIndex,
   fav,
   checkoutLoading,
@@ -81,6 +87,15 @@ export function GeneratedCaptionsPanel({
             >
               <span aria-hidden>✨</span>
               Pro captions
+            </span>
+          ) : null}
+          {brandVoiceActive ? (
+            <span
+              title="Generated using your saved Brand Voice — words, personality, and example caption applied."
+              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-200"
+            >
+              <span aria-hidden>●</span>
+              Brand Voice active
             </span>
           ) : null}
         </div>
@@ -196,6 +211,9 @@ export function GeneratedCaptionsPanel({
                   )}
                   {!locked ? (
                     <>
+                      {captionScores?.[index] ? (
+                        <CaptionScoreBar score={captionScores[index]!} />
+                      ) : null}
                       <CaptionBestTimeBadge time={times[index]} rating={rating} loading={timesLoading} />
                       <p className="mt-2 text-xs text-zinc-500">{caption.length} characters</p>
                       {emojiPerCaption[index]?.length ? (

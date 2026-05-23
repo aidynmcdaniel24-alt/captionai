@@ -321,6 +321,12 @@ export default function ProfilePage() {
 
           <div className="mt-8 flex flex-col gap-3 border-t border-zinc-200 pt-6 dark:border-zinc-800">
             <Link
+              href="/history"
+              className="rounded-xl border border-zinc-300 px-4 py-3 text-center text-sm font-medium text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              Caption history
+            </Link>
+            <Link
               href="/settings"
               className="rounded-xl border border-purple-500/40 bg-purple-50 px-4 py-3 text-center text-sm font-medium text-purple-900 hover:bg-purple-100 dark:bg-purple-950/30 dark:text-purple-200 dark:hover:bg-purple-950/50"
             >
