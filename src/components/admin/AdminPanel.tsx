@@ -69,6 +69,7 @@ type AdminTestimonial = {
   rating: number;
   helpful_count: number;
   approved: boolean;
+  rejection_reason: string | null;
   created_at: string;
 };
 
@@ -110,6 +111,7 @@ export function AdminPanel({
   const [payoutWarnings, setPayoutWarnings] = useState<string[]>([]);
   const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
   const [pendingTestimonials, setPendingTestimonials] = useState<AdminTestimonial[]>([]);
+  const [rejectedTestimonials, setRejectedTestimonials] = useState<AdminTestimonial[]>([]);
   const [approvedTestimonials, setApprovedTestimonials] = useState<AdminTestimonial[]>([]);
   const [testimonialsLoading, setTestimonialsLoading] = useState(false);
   const [testimonialsError, setTestimonialsError] = useState("");
@@ -205,20 +207,24 @@ export function AdminPanel({
       const res = await fetch("/api/admin/testimonials");
       const data = (await res.json()) as {
         pending?: AdminTestimonial[];
+        rejected?: AdminTestimonial[];
         approved?: AdminTestimonial[];
         error?: string;
       };
       if (!res.ok) {
         setTestimonialsError(data.error || "Could not load testimonials.");
         setPendingTestimonials([]);
+        setRejectedTestimonials([]);
         setApprovedTestimonials([]);
         return;
       }
       setPendingTestimonials(data.pending ?? []);
+      setRejectedTestimonials(data.rejected ?? []);
       setApprovedTestimonials(data.approved ?? []);
     } catch {
       setTestimonialsError("Could not load testimonials.");
       setPendingTestimonials([]);
+      setRejectedTestimonials([]);
       setApprovedTestimonials([]);
     } finally {
       setTestimonialsLoading(false);
@@ -394,6 +400,7 @@ export function AdminPanel({
           loading={testimonialsLoading}
           error={testimonialsError}
           pending={pendingTestimonials}
+          rejected={rejectedTestimonials}
           approved={approvedTestimonials}
           actionId={testimonialActionId}
           onApprove={(id) => actOnTestimonial(id, "approve")}
@@ -696,6 +703,7 @@ function TestimonialsSection({
   loading,
   error,
   pending,
+  rejected,
   approved,
   actionId,
   onApprove,
@@ -704,6 +712,7 @@ function TestimonialsSection({
   loading: boolean;
   error: string;
   pending: AdminTestimonial[];
+  rejected: AdminTestimonial[];
   approved: AdminTestimonial[];
   actionId: string | null;
   onApprove: (id: string) => void;
@@ -721,7 +730,8 @@ function TestimonialsSection({
           </span>
         </div>
         <p className="mt-1 text-sm text-zinc-500">
-          Approve to publish on the landing page, or reject to delete the submission.
+          Submissions where the AI moderator was unavailable. Approve to publish, or
+          reject to delete.
         </p>
 
         {error ? (
@@ -758,6 +768,64 @@ function TestimonialsSection({
                     className="rounded-lg bg-rose-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-600 disabled:opacity-50"
                   >
                     {actionId === t.id ? "Saving…" : "Reject"}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-semibold text-white">
+            Auto-rejected by AI
+          </h2>
+          <span className="text-xs text-zinc-500">
+            {rejected.length} rejected
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-zinc-500">
+          The AI moderator blocked these. Approve to override and publish, or remove
+          to delete.
+        </p>
+
+        {loading ? (
+          <p className="mt-4 text-zinc-500">Loading…</p>
+        ) : rejected.length === 0 ? (
+          <p className="mt-4 text-zinc-500">
+            No AI-rejected testimonials.
+          </p>
+        ) : (
+          <ul className="mt-4 max-h-[520px] space-y-3 overflow-y-auto">
+            {rejected.map((t) => (
+              <li
+                key={t.id}
+                className="rounded-lg border border-rose-900/40 bg-rose-950/20 p-4"
+              >
+                <TestimonialAdminRow row={t} />
+                {t.rejection_reason ? (
+                  <p className="mt-2 rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+                    <span className="font-semibold">AI reason:</span>{" "}
+                    {t.rejection_reason}
+                  </p>
+                ) : null}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onApprove(t.id)}
+                    disabled={actionId === t.id}
+                    className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-600 disabled:opacity-50"
+                  >
+                    {actionId === t.id ? "Saving…" : "Approve (override)"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onReject(t.id)}
+                    disabled={actionId === t.id}
+                    className="rounded-lg bg-rose-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-600 disabled:opacity-50"
+                  >
+                    {actionId === t.id ? "Saving…" : "Remove"}
                   </button>
                 </div>
               </li>

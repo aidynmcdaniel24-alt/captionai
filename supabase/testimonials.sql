@@ -10,14 +10,23 @@ create table if not exists public.testimonials (
   rating int not null check (rating between 1 and 5),
   helpful_count int not null default 0 check (helpful_count >= 0),
   approved boolean not null default false,
+  rejection_reason text,
   created_at timestamptz not null default now()
 );
+
+-- For projects created before AI auto-moderation existed.
+alter table public.testimonials
+  add column if not exists rejection_reason text;
 
 create index if not exists testimonials_approved_idx
   on public.testimonials (approved, created_at desc);
 
 create index if not exists testimonials_user_idx
   on public.testimonials (user_id, created_at desc);
+
+create index if not exists testimonials_rejected_idx
+  on public.testimonials (created_at desc)
+  where approved = false and rejection_reason is not null;
 
 comment on table public.testimonials is
   'User-submitted landing-page testimonials; require admin approval before they are publicly listed.';

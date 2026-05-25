@@ -42,7 +42,7 @@ export async function PATCH(
   if (body.action === "approve") {
     const { data, error } = await supabaseServer
       .from("testimonials")
-      .update({ approved: true })
+      .update({ approved: true, rejection_reason: null })
       .eq("id", id)
       .select("id, approved")
       .maybeSingle();

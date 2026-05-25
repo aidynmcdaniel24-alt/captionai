@@ -32,7 +32,14 @@ export function TestimonialSubmitModal({
   const [hoverRating, setHoverRating] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [result, setResult] = useState<
+    | null
+    | {
+        status: "approved" | "rejected" | "pending";
+        message: string;
+        rejection_reason?: string;
+      }
+  >(null);
   const [nameTouched, setNameTouched] = useState(false);
 
   const displayName = nameTouched ? name : name || defaultName;
@@ -85,13 +92,32 @@ export function TestimonialSubmitModal({
           rating,
         }),
       });
-      const data = (await res.json()) as { error?: string };
-      if (!res.ok) {
+      const data = (await res.json()) as {
+        error?: string;
+        ok?: boolean;
+        status?: "approved" | "rejected" | "pending";
+        message?: string;
+        rejection_reason?: string;
+      };
+      if (!res.ok || !data.ok) {
         setError(data.error || "Could not submit. Try again.");
         return;
       }
-      setSuccess(true);
-      onSubmitted();
+      const status = data.status ?? "pending";
+      setResult({
+        status,
+        message:
+          data.message ??
+          (status === "approved"
+            ? "Your testimonial was approved and is now live."
+            : status === "rejected"
+              ? "Your testimonial was not approved."
+              : "Your testimonial is awaiting review."),
+        rejection_reason: data.rejection_reason,
+      });
+      if (status === "approved") {
+        onSubmitted();
+      }
     } catch {
       setError("Could not submit. Try again.");
     } finally {
@@ -147,7 +173,8 @@ export function TestimonialSubmitModal({
             Share your experience
           </h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Tell other creators how CaptionAI helps you. We review submissions before they appear.
+            Tell other creators how CaptionAI helps you. Submissions are auto-moderated
+            and approved testimonials go live immediately.
           </p>
 
           {!isLoaded ? (
@@ -170,20 +197,69 @@ export function TestimonialSubmitModal({
                 </Link>
               </div>
             </div>
-          ) : success ? (
-            <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
-              <p className="font-medium">Thanks! Your testimonial was submitted.</p>
-              <p className="mt-1 text-emerald-800/80 dark:text-emerald-100/80">
-                It will appear on the landing page after our team approves it.
-              </p>
-              <button
-                type="button"
-                onClick={onClose}
-                className="mt-4 inline-flex items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
-              >
-                Done
-              </button>
-            </div>
+          ) : result ? (
+            result.status === "approved" ? (
+              <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
+                <p className="font-medium">Approved — thanks!</p>
+                <p className="mt-1 text-emerald-800/80 dark:text-emerald-100/80">
+                  {result.message}
+                </p>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="mt-4 inline-flex items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
+                >
+                  Done
+                </button>
+              </div>
+            ) : result.status === "rejected" ? (
+              <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100">
+                <p className="font-medium">Testimonial not approved</p>
+                <p className="mt-1 text-rose-800/80 dark:text-rose-100/80">
+                  Our automated moderator could not approve this submission.
+                </p>
+                {result.rejection_reason ? (
+                  <p className="mt-2 rounded-md border border-rose-300/60 bg-white/60 px-3 py-2 text-xs text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100">
+                    <span className="font-semibold">Reason:</span>{" "}
+                    {result.rejection_reason}
+                  </p>
+                ) : null}
+                <p className="mt-2 text-xs text-rose-800/70 dark:text-rose-100/70">
+                  You can edit your testimonial and try again, or contact support if
+                  you believe this was a mistake.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setResult(null)}
+                    className="inline-flex items-center justify-center rounded-full border border-rose-300 bg-white px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-500/40 dark:bg-transparent dark:text-rose-100 dark:hover:bg-rose-500/10"
+                  >
+                    Edit and try again
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="inline-flex items-center justify-center rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-500"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+                <p className="font-medium">Submitted — awaiting review</p>
+                <p className="mt-1 text-amber-800/80 dark:text-amber-100/80">
+                  {result.message}
+                </p>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="mt-4 inline-flex items-center justify-center rounded-full bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-500"
+                >
+                  Done
+                </button>
+              </div>
+            )
           ) : (
             <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
               <div>

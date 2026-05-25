@@ -15,6 +15,7 @@ export type AdminTestimonialRow = {
   rating: number;
   helpful_count: number;
   approved: boolean;
+  rejection_reason: string | null;
   created_at: string;
 };
 
@@ -27,7 +28,7 @@ export async function GET() {
   const { data, error } = await supabaseServer
     .from("testimonials")
     .select(
-      "id, user_id, name, title, message, rating, helpful_count, approved, created_at"
+      "id, user_id, name, title, message, rating, helpful_count, approved, rejection_reason, created_at"
     )
     .order("created_at", { ascending: false })
     .limit(500);
@@ -37,8 +38,9 @@ export async function GET() {
   }
 
   const rows = (data ?? []) as AdminTestimonialRow[];
-  const pending = rows.filter((r) => !r.approved);
   const approved = rows.filter((r) => r.approved);
+  const rejected = rows.filter((r) => !r.approved && r.rejection_reason);
+  const pending = rows.filter((r) => !r.approved && !r.rejection_reason);
 
-  return NextResponse.json({ pending, approved });
+  return NextResponse.json({ pending, rejected, approved });
 }
