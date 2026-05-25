@@ -1,5 +1,6 @@
 import "server-only";
 import { NextResponse } from "next/server";
+import { ADMIN_EVENTS, logAdminEventAsync } from "@/lib/admin-log";
 
 const KB = 1024;
 const MB = 1024 * 1024;
@@ -21,7 +22,24 @@ export type ReadJsonResult<T> =
   | { ok: true; data: T }
   | { ok: false; response: NextResponse };
 
-function tooLarge(maxBytes: number): { ok: false; response: NextResponse } {
+function routePathFromRequest(req: Request): string {
+  try {
+    return new URL(req.url).pathname;
+  } catch {
+    return "unknown";
+  }
+}
+
+function tooLarge(
+  req: Request,
+  maxBytes: number,
+  actualBytes: number
+): { ok: false; response: NextResponse } {
+  logAdminEventAsync("warn", ADMIN_EVENTS.REQUEST_TOO_LARGE, {
+    route: routePathFromRequest(req),
+    size: actualBytes,
+    maxBytes,
+  });
   return {
     ok: false,
     response: NextResponse.json(
@@ -57,7 +75,7 @@ export async function readJsonWithLimit<T = unknown>(
 ): Promise<ReadJsonResult<T>> {
   const contentLength = Number(req.headers.get("content-length") ?? 0);
   if (Number.isFinite(contentLength) && contentLength > maxBytes) {
-    return tooLarge(maxBytes);
+    return tooLarge(req, maxBytes, contentLength);
   }
 
   let text: string;
@@ -68,7 +86,7 @@ export async function readJsonWithLimit<T = unknown>(
   }
 
   if (text.length > maxBytes) {
-    return tooLarge(maxBytes);
+    return tooLarge(req, maxBytes, text.length);
   }
 
   if (!text.trim()) {
@@ -92,11 +110,11 @@ export async function readTextWithLimit(
 ): Promise<{ ok: true; data: string } | { ok: false; response: NextResponse }> {
   const contentLength = Number(req.headers.get("content-length") ?? 0);
   if (Number.isFinite(contentLength) && contentLength > maxBytes) {
-    return tooLarge(maxBytes);
+    return tooLarge(req, maxBytes, contentLength);
   }
   try {
     const text = await req.text();
-    if (text.length > maxBytes) return tooLarge(maxBytes);
+    if (text.length > maxBytes) return tooLarge(req, maxBytes, text.length);
     return { ok: true, data: text };
   } catch {
     return badJson();

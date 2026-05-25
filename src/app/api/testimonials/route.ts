@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ADMIN_EVENTS, logAdminEvent } from "@/lib/admin-log";
 import {
   RATE_LIMITS,
   rateLimitByIp,
@@ -165,7 +166,22 @@ export async function POST(req: Request) {
     );
   }
 
+  const messagePreview =
+    message.length > 80 ? `${message.slice(0, 77)}…` : message;
+
+  await logAdminEvent("info", ADMIN_EVENTS.TESTIMONIAL_SUBMITTED, {
+    user_id: userId,
+    testimonial_id: data.id,
+    rating,
+    message_preview: messagePreview,
+    moderation: moderation.status,
+  });
+
   if (moderation.status === "approved") {
+    await logAdminEvent("info", ADMIN_EVENTS.TESTIMONIAL_APPROVED, {
+      testimonial_id: data.id,
+      source: "ai_auto_approve",
+    });
     const payload: SubmitTestimonialResponse = {
       ok: true,
       id: data.id,
@@ -176,6 +192,11 @@ export async function POST(req: Request) {
   }
 
   if (moderation.status === "rejected") {
+    await logAdminEvent("warn", ADMIN_EVENTS.TESTIMONIAL_REJECTED_AI, {
+      testimonial_id: data.id,
+      user_id: userId,
+      reason: moderation.reason,
+    });
     const payload: SubmitTestimonialResponse = {
       ok: true,
       id: data.id,

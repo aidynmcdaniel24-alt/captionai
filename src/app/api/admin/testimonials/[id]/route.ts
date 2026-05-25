@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ADMIN_EVENTS, logAdminEvent } from "@/lib/admin-log";
 import { resolveIsClerkAdmin } from "@/lib/admin";
 import {
   RATE_LIMITS,
@@ -65,6 +66,11 @@ export async function PATCH(
         { status: 500 }
       );
     if (!data) return NextResponse.json({ error: "Not found." }, { status: 404 });
+    await logAdminEvent("info", ADMIN_EVENTS.TESTIMONIAL_APPROVED, {
+      testimonial_id: data.id,
+      source: "admin_override",
+      admin_user_id: userId,
+    });
     return NextResponse.json({ ok: true, id: data.id, approved: data.approved });
   }
 
@@ -82,6 +88,11 @@ export async function PATCH(
       { status: 500 }
     );
   if (!data) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  await logAdminEvent("info", ADMIN_EVENTS.TESTIMONIAL_DELETED, {
+    testimonial_id: data.id,
+    source: "admin_reject",
+    admin_user_id: userId,
+  });
   return NextResponse.json({ ok: true, id: data.id, deleted: true });
 }
 
@@ -118,5 +129,10 @@ export async function DELETE(
       { status: 500 }
     );
   if (!data) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  await logAdminEvent("info", ADMIN_EVENTS.TESTIMONIAL_DELETED, {
+    testimonial_id: data.id,
+    source: "admin_delete",
+    admin_user_id: userId,
+  });
   return NextResponse.json({ ok: true, id: data.id, deleted: true });
 }

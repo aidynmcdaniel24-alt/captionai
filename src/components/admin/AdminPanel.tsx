@@ -73,6 +73,13 @@ type AdminTestimonial = {
   created_at: string;
 };
 
+type SecurityTotals = {
+  disposable_email_blocked: number;
+  rate_limit_hit: number;
+  auth_failure: number;
+  request_too_large: number;
+};
+
 export function AdminPanel({
   totalUsers,
   proCount,
@@ -93,11 +100,22 @@ export function AdminPanel({
   recent: RecentUser[];
 }) {
   const [tab, setTab] = useState<
-    "overview" | "errors" | "logs" | "affiliate" | "payouts" | "testimonials"
+    | "overview"
+    | "errors"
+    | "logs"
+    | "affiliate"
+    | "payouts"
+    | "testimonials"
+    | "security"
   >("overview");
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [logLoading, setLogLoading] = useState(false);
   const [logError, setLogError] = useState("");
+  const [securityLogs, setSecurityLogs] = useState<LogRow[]>([]);
+  const [securityTotals, setSecurityTotals] = useState<SecurityTotals | null>(null);
+  const [securityLoading, setSecurityLoading] = useState(false);
+  const [securityError, setSecurityError] = useState("");
+  const [securityWarnings, setSecurityWarnings] = useState<string[]>([]);
   const [affiliateEvents, setAffiliateEvents] = useState<AffiliateEvent[]>([]);
   const [affiliateTotals, setAffiliateTotals] = useState<AffiliateTotals | null>(null);
   const [affiliateWarnings, setAffiliateWarnings] = useState<string[]>([]);
@@ -116,6 +134,37 @@ export function AdminPanel({
   const [testimonialsLoading, setTestimonialsLoading] = useState(false);
   const [testimonialsError, setTestimonialsError] = useState("");
   const [testimonialActionId, setTestimonialActionId] = useState<string | null>(null);
+
+  const loadSecurity = useCallback(async () => {
+    setSecurityLoading(true);
+    setSecurityError("");
+    try {
+      const res = await fetch("/api/admin/security");
+      const data = (await res.json()) as {
+        items?: LogRow[];
+        totals?: SecurityTotals;
+        warnings?: string[];
+        error?: string;
+      };
+      if (!res.ok) {
+        setSecurityError(data.error || "Could not load security events.");
+        setSecurityLogs([]);
+        setSecurityTotals(null);
+        setSecurityWarnings([]);
+        return;
+      }
+      setSecurityLogs(data.items ?? []);
+      setSecurityTotals(data.totals ?? null);
+      setSecurityWarnings(data.warnings ?? []);
+    } catch {
+      setSecurityError("Could not load security events.");
+      setSecurityLogs([]);
+      setSecurityTotals(null);
+      setSecurityWarnings([]);
+    } finally {
+      setSecurityLoading(false);
+    }
+  }, []);
 
   const loadLogs = useCallback(async (level?: string) => {
     setLogLoading(true);
@@ -319,6 +368,7 @@ export function AdminPanel({
             ["affiliate", "Affiliate"],
             ["payouts", "Payouts"],
             ["testimonials", "Testimonials"],
+            ["security", "Security"],
             ["errors", "Error logs"],
             ["logs", "All logs"],
           ] as const
@@ -342,6 +392,9 @@ export function AdminPanel({
               }
               if (id === "testimonials") {
                 void loadTestimonials();
+              }
+              if (id === "security") {
+                void loadSecurity();
               }
             }}
             className={`rounded-lg px-4 py-2 text-sm font-medium ${
@@ -434,6 +487,16 @@ export function AdminPanel({
           actionId={testimonialActionId}
           onApprove={(id) => actOnTestimonial(id, "approve")}
           onDelete={(id) => deleteTestimonial(id)}
+        />
+      ) : null}
+
+      {tab === "security" ? (
+        <SecuritySection
+          loading={securityLoading}
+          error={securityError}
+          warnings={securityWarnings}
+          totals={securityTotals}
+          logs={securityLogs}
         />
       ) : null}
 
@@ -936,6 +999,104 @@ function TestimonialAdminRow({
         ) : null}
       </p>
     </>
+  );
+}
+
+function SecuritySection({
+  loading,
+  error,
+  warnings,
+  totals,
+  logs,
+}: {
+  loading: boolean;
+  error: string;
+  warnings: string[];
+  totals: SecurityTotals | null;
+  logs: LogRow[];
+}) {
+  const SECURITY_LABELS: Record<string, { label: string; accent: string }> = {
+    disposable_email_blocked: {
+      label: "Disposable email blocked",
+      accent: "text-amber-300",
+    },
+    rate_limit_hit: { label: "Rate limit hit", accent: "text-sky-400" },
+    auth_failure: { label: "Auth failure", accent: "text-rose-400" },
+    request_too_large: {
+      label: "Request too large",
+      accent: "text-fuchsia-300",
+    },
+  };
+
+  return (
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+      <h2 className="text-lg font-semibold text-white">Security events</h2>
+      <p className="mt-1 text-sm text-zinc-500">
+        Disposable email blocks, rate-limit hits, auth failures, and oversized
+        requests. Showing the 100 most recent events, newest first.
+      </p>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard
+          label="Total blocked emails"
+          value={totals ? totals.disposable_email_blocked : "—"}
+        />
+        <StatCard
+          label="Total rate-limit hits"
+          value={totals ? totals.rate_limit_hit : "—"}
+        />
+        <StatCard
+          label="Total auth failures"
+          value={totals ? totals.auth_failure : "—"}
+        />
+      </div>
+
+      {warnings.length > 0 ? (
+        <ul className="mt-4 space-y-1 text-xs text-amber-200/90">
+          {warnings.map((w) => (
+            <li key={w}>{w}</li>
+          ))}
+        </ul>
+      ) : null}
+
+      {loading ? (
+        <p className="mt-4 text-zinc-500">Loading…</p>
+      ) : error ? (
+        <p className="mt-4 text-amber-200/90">{error}</p>
+      ) : (
+        <ul className="mt-4 max-h-[520px] space-y-3 overflow-y-auto text-sm">
+          {logs.length === 0 ? (
+            <li className="text-zinc-500">No security events recorded.</li>
+          ) : (
+            logs.map((row) => {
+              const info = SECURITY_LABELS[row.message] ?? {
+                label: row.message,
+                accent: "text-zinc-300",
+              };
+              return (
+                <li
+                  key={row.id}
+                  className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500">
+                    <span className={info.accent}>{info.label}</span>
+                    <span>{new Date(row.created_at).toLocaleString()}</span>
+                  </div>
+                  <p className="mt-1 font-mono text-xs text-zinc-400">
+                    {row.message}
+                  </p>
+                  {row.meta != null ? (
+                    <pre className="mt-2 max-h-32 overflow-auto rounded bg-black/30 p-2 text-xs text-zinc-400">
+                      {JSON.stringify(row.meta, null, 2)}
+                    </pre>
+                  ) : null}
+                </li>
+              );
+            })
+          )}
+        </ul>
+      )}
+    </div>
   );
 }
 

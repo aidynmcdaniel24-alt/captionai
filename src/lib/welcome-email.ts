@@ -1,5 +1,6 @@
 import "server-only";
 import { clerkClient } from "@clerk/nextjs/server";
+import { ADMIN_EVENTS, logAdminEvent } from "@/lib/admin-log";
 import { sendWelcomeEmail } from "@/lib/emails";
 import { supabaseServer } from "@/lib/supabase/server";
 
@@ -57,6 +58,10 @@ export async function ensureWelcomeEmail(userId: string): Promise<void> {
       // Don't mark it sent if SMTP wasn't configured/failed — we'll retry next visit.
       return;
     }
+
+    await logAdminEvent("info", ADMIN_EVENTS.WELCOME_EMAIL_SENT, {
+      user_id: userId,
+    });
 
     const { error: markErr } = await supabaseServer
       .from("subscriptions")

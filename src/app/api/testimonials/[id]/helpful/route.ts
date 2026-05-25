@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ADMIN_EVENTS, logAdminEventAsync } from "@/lib/admin-log";
 import {
   RATE_LIMITS,
   rateLimitByIp,
@@ -45,6 +46,12 @@ export async function POST(
   const rpc = await supabaseServer.rpc(rpcName, { testimonial_id: id });
 
   if (!rpc.error && typeof rpc.data === "number") {
+    if (action === "increment") {
+      logAdminEventAsync("info", ADMIN_EVENTS.TESTIMONIAL_HELPFUL, {
+        testimonial_id: id,
+        helpful_count: rpc.data,
+      });
+    }
     return NextResponse.json({ ok: true, helpful_count: rpc.data });
   }
 
@@ -84,6 +91,13 @@ export async function POST(
       { error: safeErrorMessage(updateErr, "Could not update helpful count.") },
       { status: 500 }
     );
+  }
+
+  if (action === "increment") {
+    logAdminEventAsync("info", ADMIN_EVENTS.TESTIMONIAL_HELPFUL, {
+      testimonial_id: id,
+      helpful_count: updated.helpful_count,
+    });
   }
 
   return NextResponse.json({ ok: true, helpful_count: updated.helpful_count });

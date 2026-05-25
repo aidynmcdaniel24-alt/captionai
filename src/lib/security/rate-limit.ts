@@ -1,5 +1,6 @@
 import "server-only";
 import { NextResponse } from "next/server";
+import { ADMIN_EVENTS, logAdminEventAsync } from "@/lib/admin-log";
 
 /**
  * In-memory sliding-window rate limiter.
@@ -121,6 +122,13 @@ export function enforceRateLimit(
   message?: string
 ): NextResponse | null {
   const result = checkRateLimit(`${scope}:${identifier}`, options);
-  if (!result.ok) return rateLimitResponse(result, message);
+  if (!result.ok) {
+    logAdminEventAsync("warn", ADMIN_EVENTS.RATE_LIMIT_HIT, {
+      route: scope,
+      identifier,
+      retryAfter: result.retryAfter,
+    });
+    return rateLimitResponse(result, message);
+  }
   return null;
 }

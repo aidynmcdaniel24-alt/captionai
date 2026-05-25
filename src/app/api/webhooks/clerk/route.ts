@@ -1,7 +1,7 @@
 import { clerkClient } from "@clerk/nextjs/server";
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
-import { logAdminEvent } from "@/lib/admin-log";
+import { ADMIN_EVENTS, logAdminEvent } from "@/lib/admin-log";
 import {
   DISPOSABLE_EMAIL_ERROR_MESSAGE,
   isDisposableEmail,
@@ -129,12 +129,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ received: true, allowed: true });
   }
 
+  const emailDomain = email.split("@").pop()?.toLowerCase() ?? null;
+
   try {
     const client = await clerkClient();
     await client.users.deleteUser(userId);
-    await logAdminEvent("warn", "disposable-email-blocked", {
+    await logAdminEvent("warn", ADMIN_EVENTS.DISPOSABLE_EMAIL_BLOCKED, {
       userId,
       email,
+      domain: emailDomain,
     });
     return NextResponse.json({
       received: true,

@@ -1,7 +1,7 @@
 import "server-only";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { logAdminEvent } from "@/lib/admin-log";
+import { ADMIN_EVENTS, logAdminEvent } from "@/lib/admin-log";
 import {
   clientIp,
   enforceRateLimit,
@@ -32,9 +32,9 @@ export async function requireUser(
     } catch {
       /* ignore malformed URL */
     }
-    await logAdminEvent("warn", "auth-failed", {
+    await logAdminEvent("warn", ADMIN_EVENTS.AUTH_FAILURE, {
+      route: path || scope,
       scope,
-      path,
       ip: clientIp(req),
       userAgent: req.headers.get("user-agent")?.slice(0, 200) ?? null,
     });

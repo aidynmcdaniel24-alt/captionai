@@ -1,6 +1,7 @@
 import { clerkClient } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
+import { ADMIN_EVENTS, logAdminEvent } from "@/lib/admin-log";
 import { commissionCentsFromPayment } from "@/lib/affiliate-commission";
 import { sendProUpgradeEmail } from "@/lib/emails";
 import { readTextWithLimit } from "@/lib/security/request-size";
@@ -75,14 +76,20 @@ async function sendProUpgradeEmailForUser(
       return;
     }
 
+    const interval = await intervalFromCheckoutSession(stripe, session);
     const result = await sendProUpgradeEmail(email, {
-      interval: await intervalFromCheckoutSession(stripe, session),
+      interval,
       firstName,
     });
 
     if (!result.ok) {
       return;
     }
+
+    await logAdminEvent("info", ADMIN_EVENTS.PRO_EMAIL_SENT, {
+      user_id: userId,
+      interval,
+    });
 
     const { error } = await supabaseServer
       .from("subscriptions")
