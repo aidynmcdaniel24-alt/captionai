@@ -1,26 +1,42 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getAppUrl } from "@/lib/get-app-url";
+import {
+  RATE_LIMITS,
+  rateLimitByUser,
+  requireUser,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
+import {
+  readJsonWithLimit,
+  REQUEST_SIZE_LIMITS,
+} from "@/lib/security/request-size";
 import { getStripe } from "@/lib/stripe";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type CheckoutBody = {
+  interval?: unknown;
+  billing?: unknown;
+};
+
 export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authResult = await requireUser(req, "checkout:create");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
+
+  const rateLimited = rateLimitByUser(userId, "checkout:create", RATE_LIMITS.generalApi);
+  if (rateLimited) return rateLimited;
 
   let interval: "month" | "year" = "month";
-  try {
-    const body = await req.json();
-    if (body?.interval === "year" || body?.billing === "annual") {
+  const bodyResult = await readJsonWithLimit<CheckoutBody>(req, REQUEST_SIZE_LIMITS.default);
+  if (bodyResult.ok) {
+    const body = bodyResult.data;
+    if (body.interval === "year" || body.billing === "annual") {
       interval = "year";
     }
-  } catch {
-    /* no body */
   }
 
   const stripe = getStripe();
@@ -61,7 +77,10 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (subReadError) {
-    return NextResponse.json({ error: subReadError.message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(subReadError, "Could not look up billing customer.") },
+      { status: 500 }
+    );
   }
 
   const existingCustomerId = subRow?.stripe_customer_id?.trim();
@@ -93,7 +112,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ url: session.url, interval });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Stripe checkout failed.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(error, "Stripe checkout failed.") },
+      { status: 500 }
+    );
   }
 }

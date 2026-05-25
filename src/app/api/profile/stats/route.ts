@@ -1,6 +1,10 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { resolveIsClerkAdmin } from "@/lib/admin";
+import {
+  RATE_LIMITS,
+  rateLimitByUser,
+  requireUser,
+} from "@/lib/security/api-guard";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -10,11 +14,13 @@ function todayUtc() {
   return new Date().toISOString().split("T")[0]!;
 }
 
-export async function GET() {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export async function GET(req: Request) {
+  const authResult = await requireUser(req, "profile:stats");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
+
+  const rateLimited = rateLimitByUser(userId, "profile:stats", RATE_LIMITS.generalApi);
+  if (rateLimited) return rateLimited;
 
   const { data: sub } = await supabaseServer
     .from("subscriptions")

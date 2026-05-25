@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { commissionCentsFromPayment } from "@/lib/affiliate-commission";
 import { sendProUpgradeEmail } from "@/lib/emails";
+import { readTextWithLimit } from "@/lib/security/request-size";
 import { shouldCreditAffiliateCommission } from "@/lib/stripe-mode";
 import {
   checkoutSessionIsPaidSubscription,
@@ -12,6 +13,8 @@ import {
 import { getStripe } from "@/lib/stripe";
 import { upsertProSubscription } from "@/lib/subscription-db";
 import { supabaseServer } from "@/lib/supabase/server";
+
+const MAX_STRIPE_WEBHOOK_BYTES = 256 * 1024;
 
 async function intervalFromCheckoutSession(
   stripe: Stripe,
@@ -135,7 +138,9 @@ export async function POST(req: Request) {
     );
   }
 
-  const body = await req.text();
+  const bodyResult = await readTextWithLimit(req, MAX_STRIPE_WEBHOOK_BYTES);
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
   const sig = req.headers.get("stripe-signature");
   if (!sig) {
     return NextResponse.json({ error: "Missing Stripe-Signature header." }, { status: 400 });

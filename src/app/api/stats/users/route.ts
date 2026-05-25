@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { clerkClient } from "@clerk/nextjs/server";
+import { RATE_LIMITS, rateLimitByIp } from "@/lib/security/api-guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 // Cache for 60s so we don't hammer Clerk from the homepage.
 export const revalidate = 60;
 
-export async function GET() {
+export async function GET(req: Request) {
+  const rateLimited = rateLimitByIp(req, "stats:users", RATE_LIMITS.publicRead);
+  if (rateLimited) return rateLimited;
+
   try {
     const client = await clerkClient();
     const count = await client.users.getCount();

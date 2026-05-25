@@ -1,16 +1,24 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getSubscriptionBillingInfo } from "@/lib/billing-details";
+import {
+  RATE_LIMITS,
+  rateLimitByUser,
+  requireUser,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
 import { getStripe } from "@/lib/stripe";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST() {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export async function POST(req: Request) {
+  const authResult = await requireUser(req, "billing:cancel");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
+
+  const rateLimited = rateLimitByUser(userId, "billing:cancel", RATE_LIMITS.generalApi);
+  if (rateLimited) return rateLimited;
 
   const stripe = getStripe();
   if (!stripe) {
@@ -55,7 +63,9 @@ export async function POST() {
       nextBillingDate: info.nextBillingDate,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Could not cancel subscription.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(error, "Could not cancel subscription.") },
+      { status: 500 }
+    );
   }
 }

@@ -1,4 +1,3 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import {
   convertUsdCentsToCurrency,
@@ -9,6 +8,17 @@ import {
 } from "@/lib/affiliate-currency";
 import { getAffiliatePayoutSummary, isValidPaypalEmail, isValidVenmoUsername } from "@/lib/affiliate-payout";
 import { getGmailMailer, verifyGmailMailer } from "@/lib/gmail-mailer";
+import {
+  RATE_LIMITS,
+  rateLimitByUser,
+  requireUser,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
+import {
+  readJsonWithLimit,
+  REQUEST_SIZE_LIMITS,
+} from "@/lib/security/request-size";
+import { escapeHtml, sanitizeText } from "@/lib/security/sanitize";
 import { supabaseServer } from "@/lib/supabase/server";
 import { SUPPORT_EMAIL } from "@/lib/support-contact";
 
@@ -16,37 +26,30 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type Body = {
-  paymentMethod?: string;
-  paymentHandle?: string;
-  preferredCurrency?: string;
-  note?: string;
+  paymentMethod?: unknown;
+  paymentHandle?: unknown;
+  preferredCurrency?: unknown;
+  note?: unknown;
 };
 
-function escapeHtml(text: string) {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
 export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authResult = await requireUser(req, "affiliate:request-payout");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
 
-  let body: Body;
-  try {
-    body = (await req.json()) as Body;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON." }, { status: 400 });
-  }
+  const rateLimited = rateLimitByUser(userId, "affiliate:request-payout", RATE_LIMITS.generalApi);
+  if (rateLimited) return rateLimited;
 
-  const paymentMethod = (body.paymentMethod ?? "").toString().trim().toLowerCase();
-  const paymentHandle = (body.paymentHandle ?? "").toString().trim();
-  const preferredCurrency = (body.preferredCurrency ?? "USD").toString().trim().toUpperCase();
-  const note = (body.note ?? "").toString().trim().slice(0, 2000);
+  const bodyResult = await readJsonWithLimit<Body>(req, REQUEST_SIZE_LIMITS.affiliate);
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
+
+  const paymentMethod = sanitizeText(body.paymentMethod, { maxLength: 32 }).toLowerCase();
+  const paymentHandle = sanitizeText(body.paymentHandle, { maxLength: 200 });
+  const preferredCurrency = sanitizeText(body.preferredCurrency ?? "USD", {
+    maxLength: 8,
+  }).toUpperCase();
+  const note = sanitizeText(body.note, { maxLength: 2000, allowLineBreaks: true });
 
   if (paymentMethod !== "paypal" && paymentMethod !== "venmo") {
     return NextResponse.json({ error: "Choose PayPal or Venmo as your payment method." }, { status: 400 });
@@ -78,7 +81,10 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (statsErr) {
-    return NextResponse.json({ error: statsErr.message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(statsErr, "Could not load affiliate stats.") },
+      { status: 500 }
+    );
   }
 
   const earningsCents = statsRow?.earnings_cents ?? 0;
@@ -127,7 +133,10 @@ export async function POST(req: Request) {
         { status: 500 }
       );
     }
-    return NextResponse.json({ error: insertErr.message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(insertErr, "Could not create payout request.") },
+      { status: 500 }
+    );
   }
 
   const usdFormatted = `$${(amountCents / 100).toFixed(2)}`;

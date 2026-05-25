@@ -1,5 +1,11 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import {
+  RATE_LIMITS,
+  rateLimitByUser,
+  requireUser,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
+import { sanitizeText } from "@/lib/security/sanitize";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -18,11 +24,13 @@ type HistoryRow = {
   ratings?: Record<string, "worst" | "medium" | "best">;
 };
 
-export async function GET() {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export async function GET(req: Request) {
+  const authResult = await requireUser(req, "captions:history");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
+
+  const rateLimited = rateLimitByUser(userId, "captions:history", RATE_LIMITS.generalApi);
+  if (rateLimited) return rateLimited;
 
   const { data, error } = await supabaseServer
     .from("caption_history")
@@ -33,7 +41,10 @@ export async function GET() {
 
   if (error) {
     return NextResponse.json(
-      { error: "Could not load caption history.", details: error.message },
+      {
+        error: "Could not load caption history.",
+        details: safeErrorMessage(error, "Database error."),
+      },
       { status: 500 }
     );
   }
@@ -97,13 +108,15 @@ export async function GET() {
 }
 
 export async function DELETE(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authResult = await requireUser(req, "captions:history:delete");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
+
+  const rateLimited = rateLimitByUser(userId, "captions:history:delete", RATE_LIMITS.generalApi);
+  if (rateLimited) return rateLimited;
 
   const { searchParams } = new URL(req.url);
-  const id = searchParams.get("id")?.trim();
+  const id = sanitizeText(searchParams.get("id"), { maxLength: 64 });
   if (!id) {
     return NextResponse.json({ error: "Missing id." }, { status: 400 });
   }
@@ -115,7 +128,10 @@ export async function DELETE(req: Request) {
     .eq("user_id", userId);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(error, "Could not delete entry.") },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ ok: true });

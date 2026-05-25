@@ -1,24 +1,41 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import {
+  RATE_LIMITS,
+  rateLimitByUser,
+  requireUser,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
+import {
+  readJsonWithLimit,
+  REQUEST_SIZE_LIMITS,
+} from "@/lib/security/request-size";
+import { sanitizeText } from "@/lib/security/sanitize";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authResult = await requireUser(req, "ab-test");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
 
-  const body = await req.json();
-  const action = (body.action ?? "").toString();
+  const rateLimited = rateLimitByUser(userId, "ab-test", RATE_LIMITS.generalApi);
+  if (rateLimited) return rateLimited;
+
+  const bodyResult = await readJsonWithLimit<Record<string, unknown>>(
+    req,
+    REQUEST_SIZE_LIMITS.captionGenerate
+  );
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
+  const action = sanitizeText(body.action, { maxLength: 16 });
 
   if (action === "create") {
-    const variantA = (body.variantA ?? "").toString().trim();
-    const variantB = (body.variantB ?? "").toString().trim();
-    const label = (body.label ?? "").toString().trim() || null;
-    const platform = (body.platform ?? "").toString().trim() || null;
+    const variantA = sanitizeText(body.variantA, { maxLength: 2000, allowLineBreaks: true });
+    const variantB = sanitizeText(body.variantB, { maxLength: 2000, allowLineBreaks: true });
+    const label = sanitizeText(body.label, { maxLength: 120 }) || null;
+    const platform = sanitizeText(body.platform, { maxLength: 80 }) || null;
     if (!variantA || !variantB) {
       return NextResponse.json({ error: "Both variants required." }, { status: 400 });
     }
@@ -35,14 +52,17 @@ export async function POST(req: Request) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: safeErrorMessage(error, "Could not create experiment.") },
+        { status: 500 }
+      );
     }
     return NextResponse.json({ id: data?.id });
   }
 
   if (action === "pick") {
-    const id = (body.id ?? "").toString().trim();
-    const pick = (body.pick ?? "").toString().toLowerCase();
+    const id = sanitizeText(body.id, { maxLength: 64 });
+    const pick = sanitizeText(body.pick, { maxLength: 4 }).toLowerCase();
     if (!id || (pick !== "a" && pick !== "b")) {
       return NextResponse.json({ error: "Invalid pick." }, { status: 400 });
     }
@@ -85,7 +105,10 @@ export async function POST(req: Request) {
     const { error } = await supabaseServer.from("ab_experiments").update(payload).eq("id", id);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: safeErrorMessage(error, "Could not update pick.") },
+        { status: 500 }
+      );
     }
     return NextResponse.json({ ok: true, picks_a: nextA, picks_b: nextB });
   }
@@ -93,11 +116,13 @@ export async function POST(req: Request) {
   return NextResponse.json({ error: "Unknown action." }, { status: 400 });
 }
 
-export async function GET() {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export async function GET(req: Request) {
+  const authResult = await requireUser(req, "ab-test:list");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
+
+  const rateLimited = rateLimitByUser(userId, "ab-test:list", RATE_LIMITS.generalApi);
+  if (rateLimited) return rateLimited;
 
   const { data, error } = await supabaseServer
     .from("ab_experiments")
@@ -107,7 +132,10 @@ export async function GET() {
     .limit(20);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(error, "Could not load experiments.") },
+      { status: 500 }
+    );
   }
   return NextResponse.json({ items: data ?? [] });
 }

@@ -5,6 +5,21 @@
  */
 import { NextResponse } from "next/server";
 import { getGmailMailer, verifyGmailMailer } from "@/lib/gmail-mailer";
+import {
+  RATE_LIMITS,
+  rateLimitByIp,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
+import {
+  readJsonWithLimit,
+  REQUEST_SIZE_LIMITS,
+} from "@/lib/security/request-size";
+import {
+  escapeHtml,
+  isValidEmail,
+  sanitizeEmail,
+  sanitizeText,
+} from "@/lib/security/sanitize";
 import { SUPPORT_EMAIL } from "@/lib/support-contact";
 import { CONTACT_SUBJECT_OPTIONS, isContactSubject } from "@/lib/contact-form";
 
@@ -12,39 +27,36 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type Body = {
-  name?: string;
-  email?: string;
-  message?: string;
-  subject?: string;
+  name?: unknown;
+  email?: unknown;
+  message?: unknown;
+  subject?: unknown;
 };
 
-function escapeHtml(text: string) {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
 export async function POST(req: Request) {
-  let body: Body;
-  try {
-    body = (await req.json()) as Body;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON." }, { status: 400 });
-  }
+  const rateLimited = rateLimitByIp(
+    req,
+    "contact:submit",
+    RATE_LIMITS.contact,
+    "You've sent the contact form too many times. Please wait an hour and try again."
+  );
+  if (rateLimited) return rateLimited;
 
-  const name = (body.name ?? "").toString().trim();
-  const email = (body.email ?? "").toString().trim();
-  const message = (body.message ?? "").toString().trim();
-  const rawSubject = (body.subject ?? "General Question").toString().trim();
+  const bodyResult = await readJsonWithLimit<Body>(req, REQUEST_SIZE_LIMITS.contact);
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
+
+  const name = sanitizeText(body.name, { maxLength: 200 });
+  const email = sanitizeEmail(body.email);
+  const message = sanitizeText(body.message, { maxLength: 8000, allowLineBreaks: true });
+  const rawSubject = sanitizeText(body.subject ?? "General Question", { maxLength: 120 });
   const subject = isContactSubject(rawSubject) ? rawSubject : CONTACT_SUBJECT_OPTIONS[0];
 
   if (!name || name.length > 200) {
     return NextResponse.json({ error: "Please enter your name." }, { status: 400 });
   }
 
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!email || !isValidEmail(email)) {
     return NextResponse.json({ error: "Please enter a valid email." }, { status: 400 });
   }
 
@@ -80,7 +92,7 @@ export async function POST(req: Request) {
       {
         error:
           "Email is not configured correctly. Use a Google App Password for captionaisupport@gmail.com (not your normal Gmail password).",
-        details: process.env.NODE_ENV === "development" ? err : undefined,
+        details: safeErrorMessage(e, undefined),
       },
       { status: 503 }
     );
@@ -121,8 +133,8 @@ export async function POST(req: Request) {
     console.error("[contact/gmail] send:", err);
     return NextResponse.json(
       {
-        error: "Could not send your message. Check Gmail app password and try again, or email us directly.",
-        details: process.env.NODE_ENV === "development" ? err : undefined,
+        error: "Could not send your message. Please try again or email us directly.",
+        details: safeErrorMessage(e, undefined),
       },
       { status: 502 }
     );

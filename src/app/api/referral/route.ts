@@ -1,8 +1,18 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { fetchExchangeRatesFromUsd } from "@/lib/affiliate-currency";
 import { getAffiliatePayoutSummary } from "@/lib/affiliate-payout";
 import { getAppUrl } from "@/lib/get-app-url";
+import {
+  RATE_LIMITS,
+  rateLimitByUser,
+  requireUser,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
+import {
+  readJsonWithLimit,
+  REQUEST_SIZE_LIMITS,
+} from "@/lib/security/request-size";
+import { sanitizeText } from "@/lib/security/sanitize";
 import { supabaseServer } from "@/lib/supabase/server";
 
 /** Node ensures Clerk + Supabase service role env match production API behavior. */
@@ -31,10 +41,12 @@ async function legacyInsertReferralCode(userId: string, code: string) {
 }
 
 export async function GET(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authResult = await requireUser(req, "referral:get");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
+
+  const rateLimited = rateLimitByUser(userId, "referral:get", RATE_LIMITS.generalApi);
+  if (rateLimited) return rateLimited;
 
   const { data: existing } = await supabaseServer.from("affiliates").select("code").eq("user_id", userId).maybeSingle();
 
@@ -76,7 +88,10 @@ export async function GET(req: Request) {
   }
 
   if (!code) {
-    return NextResponse.json({ error: "Could not allocate referral code." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Could not allocate referral code." },
+      { status: 500 }
+    );
   }
 
   const base = getAppUrl(req);
@@ -115,18 +130,19 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authResult = await requireUser(req, "referral:claim");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
 
-  let body: { code?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON." }, { status: 400 });
-  }
-  const code = (body.code ?? "").toString().trim().toLowerCase();
+  const rateLimited = rateLimitByUser(userId, "referral:claim", RATE_LIMITS.generalApi);
+  if (rateLimited) return rateLimited;
+
+  const bodyResult = await readJsonWithLimit<{ code?: unknown }>(
+    req,
+    REQUEST_SIZE_LIMITS.default
+  );
+  if (!bodyResult.ok) return bodyResult.response;
+  const code = sanitizeText(bodyResult.data.code, { maxLength: 32 }).toLowerCase();
   if (!code) {
     return NextResponse.json({ error: "Missing code." }, { status: 400 });
   }
@@ -161,7 +177,10 @@ export async function POST(req: Request) {
         { onConflict: "user_id" }
       );
       if (syncAffErr) {
-        return NextResponse.json({ error: syncAffErr.message }, { status: 500 });
+        return NextResponse.json(
+          { error: safeErrorMessage(syncAffErr, "Could not sync affiliate code.") },
+          { status: 500 }
+        );
       }
     }
   }
@@ -186,7 +205,10 @@ export async function POST(req: Request) {
   });
 
   if (attrErr) {
-    return NextResponse.json({ error: attrErr.message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(attrErr, "Could not record signup.") },
+      { status: 500 }
+    );
   }
 
   const { error: rpcErr } = await supabaseServer.rpc("increment_affiliate_signup", {
@@ -219,7 +241,10 @@ export async function POST(req: Request) {
 
   if (statsErr) {
     await supabaseServer.from("affiliate_signup_attributions").delete().eq("lead_user_id", userId);
-    return NextResponse.json({ error: statsErr.message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(statsErr, "Could not update affiliate stats.") },
+      { status: 500 }
+    );
   }
 
   try {

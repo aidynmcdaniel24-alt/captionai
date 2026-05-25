@@ -1,9 +1,19 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { containsBlockedWord, getBlockedWordList } from "@/lib/blocked-words";
 import { getGroqClient } from "@/lib/groq-client";
 import { extractJsonPayload } from "@/lib/groq-json";
 import { withGroqRetry } from "@/lib/groq-retry";
+import {
+  RATE_LIMITS,
+  rateLimitByUser,
+  requireUser,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
+import {
+  readJsonWithLimit,
+  REQUEST_SIZE_LIMITS,
+} from "@/lib/security/request-size";
+import { sanitizeText } from "@/lib/security/sanitize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,14 +35,22 @@ function parseBestTime(raw: string): string | null {
 }
 
 export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authResult = await requireUser(req, "tools:best-time");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
 
-  const body = await req.json();
-  const topic = (body.topic ?? "").toString().trim().slice(0, TOPIC_MAX);
-  const platform = (body.platform ?? "Instagram").toString().trim().slice(0, 80) || "Instagram";
+  const rateLimited = rateLimitByUser(userId, "tools:best-time", RATE_LIMITS.captionGenerate);
+  if (rateLimited) return rateLimited;
+
+  const bodyResult = await readJsonWithLimit<Record<string, unknown>>(
+    req,
+    REQUEST_SIZE_LIMITS.captionGenerate
+  );
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
+
+  const topic = sanitizeText(body.topic, { maxLength: TOPIC_MAX, allowLineBreaks: true });
+  const platform = sanitizeText(body.platform ?? "Instagram", { maxLength: 80 }) || "Instagram";
 
   if (!topic) {
     return NextResponse.json({ error: "Topic is required." }, { status: 400 });
@@ -75,7 +93,9 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ bestTime });
   } catch (e) {
-    const details = e instanceof Error ? e.message : "Error";
-    return NextResponse.json({ error: details }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(e, "Could not generate best time.") },
+      { status: 500 }
+    );
   }
 }

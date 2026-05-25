@@ -1,25 +1,37 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { resolveIsClerkAdmin } from "@/lib/admin";
+import {
+  RATE_LIMITS,
+  rateLimitByUser,
+  requireUser,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
+import {
+  readJsonWithLimit,
+  REQUEST_SIZE_LIMITS,
+} from "@/lib/security/request-size";
+import { sanitizeText } from "@/lib/security/sanitize";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId || !(await resolveIsClerkAdmin(userId))) {
+  const authResult = await requireUser(req, "admin:payouts:mark-paid");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
+
+  if (!(await resolveIsClerkAdmin(userId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  let body: { id?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
-  }
+  const rateLimited = rateLimitByUser(userId, "admin:payouts:mark-paid", RATE_LIMITS.adminApi);
+  if (rateLimited) return rateLimited;
 
-  const id = body.id?.trim();
+  const bodyResult = await readJsonWithLimit<{ id?: unknown }>(req, REQUEST_SIZE_LIMITS.default);
+  if (!bodyResult.ok) return bodyResult.response;
+
+  const id = sanitizeText(bodyResult.data.id, { maxLength: 64 });
   if (!id) {
     return NextResponse.json({ error: "Missing payout request id." }, { status: 400 });
   }
@@ -33,7 +45,10 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(error, "Could not mark payout paid.") },
+      { status: 500 }
+    );
   }
 
   if (!data) {

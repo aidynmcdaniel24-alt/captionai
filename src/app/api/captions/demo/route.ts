@@ -2,32 +2,19 @@ import { NextResponse } from "next/server";
 import { containsBlockedWord, getBlockedWordList } from "@/lib/blocked-words";
 import { getGroqClient } from "@/lib/groq-client";
 import { withGroqRetry } from "@/lib/groq-retry";
+import {
+  RATE_LIMITS,
+  rateLimitByIp,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
+import {
+  readJsonWithLimit,
+  REQUEST_SIZE_LIMITS,
+} from "@/lib/security/request-size";
+import { sanitizeText } from "@/lib/security/sanitize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const WINDOW_MS = 60 * 60 * 1000;
-const MAX_PER_WINDOW = 12;
-const hits = new Map<string, number[]>();
-
-function clientIp(req: Request) {
-  const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) {
-    return forwarded.split(",")[0]?.trim() || "unknown";
-  }
-  return req.headers.get("x-real-ip")?.trim() || "unknown";
-}
-
-function allowDemo(ip: string) {
-  const now = Date.now();
-  const prev = hits.get(ip)?.filter((t) => now - t < WINDOW_MS) ?? [];
-  if (prev.length >= MAX_PER_WINDOW) {
-    return false;
-  }
-  prev.push(now);
-  hits.set(ip, prev);
-  return true;
-}
 
 function buildDemoPrompt(topic: string, platform: string, tone: string) {
   return `
@@ -59,29 +46,26 @@ function parseDemoCaption(raw: string) {
 }
 
 export async function POST(req: Request) {
-  const ip = clientIp(req);
-  if (!allowDemo(ip)) {
-    return NextResponse.json(
-      {
-        error:
-          "Demo limit reached for now. Create a free account for more captions.",
-      },
-      { status: 429 }
-    );
-  }
+  const rateLimited = rateLimitByIp(
+    req,
+    "captions:demo",
+    RATE_LIMITS.demo,
+    "Demo limit reached for now. Create a free account for more captions."
+  );
+  if (rateLimited) return rateLimited;
 
-  let body: Record<string, unknown>;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON." }, { status: 400 });
-  }
+  const bodyResult = await readJsonWithLimit<Record<string, unknown>>(
+    req,
+    REQUEST_SIZE_LIMITS.captionGenerate
+  );
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
 
-  const topic = (body.topic ?? "").toString().trim();
-  const platform = (body.platform ?? "Instagram").toString().slice(0, 80);
-  const tone = (body.tone ?? "inspirational").toString().slice(0, 80);
+  const topic = sanitizeText(body.topic, { maxLength: 400, allowLineBreaks: true });
+  const platform = sanitizeText(body.platform ?? "Instagram", { maxLength: 80 }) || "Instagram";
+  const tone = sanitizeText(body.tone ?? "inspirational", { maxLength: 80 }) || "inspirational";
 
-  if (!topic || topic.length > 400) {
+  if (!topic) {
     return NextResponse.json(
       { error: "Describe your topic in a few words (max 400 characters)." },
       { status: 400 }
@@ -137,9 +121,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ caption });
   } catch (error) {
-    const details = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Could not generate a caption right now.", details },
+      { error: "Could not generate a caption right now.", details: safeErrorMessage(error, "AI service error.") },
       { status: 500 }
     );
   }

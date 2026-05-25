@@ -1,5 +1,15 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import {
+  RATE_LIMITS,
+  rateLimitByUser,
+  requireUser,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
+import {
+  readJsonWithLimit,
+  REQUEST_SIZE_LIMITS,
+} from "@/lib/security/request-size";
+import { sanitizeText } from "@/lib/security/sanitize";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -8,25 +18,34 @@ export const dynamic = "force-dynamic";
 const RATINGS = new Set(["worst", "medium", "best"]);
 
 export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authResult = await requireUser(req, "captions:rate");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
 
-  const body = await req.json();
-  const historyId = (body.historyId ?? "").toString().trim();
+  const rateLimited = rateLimitByUser(userId, "captions:rate", RATE_LIMITS.generalApi);
+  if (rateLimited) return rateLimited;
+
+  const bodyResult = await readJsonWithLimit<Record<string, unknown>>(
+    req,
+    REQUEST_SIZE_LIMITS.default
+  );
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
+
+  const historyId = sanitizeText(body.historyId, { maxLength: 64 });
   const rawIndex = body.captionIndex;
   if (rawIndex === null || rawIndex === undefined || rawIndex === "") {
     return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
   }
   const captionIndex = Number(rawIndex);
-  const rating = (body.rating ?? "").toString().trim().toLowerCase();
+  const rating = sanitizeText(body.rating, { maxLength: 16 }).toLowerCase();
 
   if (
     !historyId ||
     Number.isNaN(captionIndex) ||
     !Number.isInteger(captionIndex) ||
     captionIndex < 0 ||
+    captionIndex > 99 ||
     !RATINGS.has(rating)
   ) {
     return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
@@ -55,7 +74,10 @@ export async function POST(req: Request) {
   );
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(error, "Could not save rating.") },
+      { status: 500 }
+    );
   }
   return NextResponse.json({ ok: true });
 }

@@ -1,10 +1,20 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { CaptionRatingKey } from "@/lib/caption-rating-styles";
 import { containsBlockedWord, getBlockedWordList } from "@/lib/blocked-words";
 import { getGroqClient } from "@/lib/groq-client";
 import { extractJsonPayload } from "@/lib/groq-json";
 import { withGroqRetry } from "@/lib/groq-retry";
+import {
+  RATE_LIMITS,
+  rateLimitByUser,
+  requireUser,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
+import {
+  readJsonWithLimit,
+  REQUEST_SIZE_LIMITS,
+} from "@/lib/security/request-size";
+import { sanitizeText } from "@/lib/security/sanitize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,15 +56,27 @@ function isRating(v: unknown): v is CaptionRatingKey {
 }
 
 export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authResult = await requireUser(req, "tools:best-time-captions");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
 
-  const body = await req.json();
-  const platform = (body.platform ?? "Instagram").toString().trim().slice(0, 80) || "Instagram";
-  const tone = (body.tone ?? "inspirational").toString().trim().slice(0, 40) || "inspirational";
-  const topic = (body.topic ?? "").toString().trim().slice(0, TOPIC_MAX);
+  const rateLimited = rateLimitByUser(
+    userId,
+    "tools:best-time-captions",
+    RATE_LIMITS.captionGenerate
+  );
+  if (rateLimited) return rateLimited;
+
+  const bodyResult = await readJsonWithLimit<Record<string, unknown>>(
+    req,
+    REQUEST_SIZE_LIMITS.captionGenerate * 2
+  );
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
+
+  const platform = sanitizeText(body.platform ?? "Instagram", { maxLength: 80 }) || "Instagram";
+  const tone = sanitizeText(body.tone ?? "inspirational", { maxLength: 40 }) || "inspirational";
+  const topic = sanitizeText(body.topic, { maxLength: TOPIC_MAX, allowLineBreaks: true });
   const rawItems = Array.isArray(body.items) ? body.items : [];
 
   if (rawItems.length === 0 || rawItems.length > MAX_ITEMS) {
@@ -63,8 +85,12 @@ export async function POST(req: Request) {
 
   const items: CaptionItem[] = [];
   for (const row of rawItems) {
-    const caption = (row?.caption ?? "").toString().trim().slice(0, CAPTION_MAX);
-    const rating = row?.rating;
+    const rawRow = row as { caption?: unknown; rating?: unknown } | null;
+    const caption = sanitizeText(rawRow?.caption, {
+      maxLength: CAPTION_MAX,
+      allowLineBreaks: true,
+    });
+    const rating = rawRow?.rating;
     if (!caption || !isRating(rating)) {
       return NextResponse.json({ error: "Each item needs caption and rating." }, { status: 400 });
     }
@@ -132,7 +158,9 @@ Rules:
     }
     return NextResponse.json({ times });
   } catch (e) {
-    const details = e instanceof Error ? e.message : "Error";
-    return NextResponse.json({ error: details }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(e, "Could not generate posting times.") },
+      { status: 500 }
+    );
   }
 }

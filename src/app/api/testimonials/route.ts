@@ -1,5 +1,16 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import {
+  RATE_LIMITS,
+  rateLimitByIp,
+  rateLimitByUser,
+  requireUser,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
+import {
+  readJsonWithLimit,
+  REQUEST_SIZE_LIMITS,
+} from "@/lib/security/request-size";
+import { sanitizeText } from "@/lib/security/sanitize";
 import { supabaseServer } from "@/lib/supabase/server";
 import { moderateTestimonial } from "@/lib/testimonial-moderation";
 
@@ -41,7 +52,10 @@ const MESSAGE_MAX = 200;
 const NAME_MAX = 80;
 const TITLE_MAX = 80;
 
-export async function GET() {
+export async function GET(req: Request) {
+  const rateLimited = rateLimitByIp(req, "testimonials:list", RATE_LIMITS.publicRead);
+  if (rateLimited) return rateLimited;
+
   const { data, error } = await supabaseServer
     .from("testimonials")
     .select("id, name, title, message, rating, helpful_count, created_at")
@@ -49,38 +63,47 @@ export async function GET() {
     .order("created_at", { ascending: false });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(error, "Could not load testimonials.") },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ items: (data ?? []) as PublicTestimonial[] });
 }
 
 type SubmitBody = {
-  name?: string;
-  title?: string;
-  message?: string;
-  rating?: number;
+  name?: unknown;
+  title?: unknown;
+  message?: unknown;
+  rating?: unknown;
 };
 
 export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json(
-      { error: "Sign in to submit a testimonial." },
-      { status: 401 }
-    );
-  }
+  const authResult = await requireUser(req, "testimonials:submit");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
 
-  let body: SubmitBody;
-  try {
-    body = (await req.json()) as SubmitBody;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
-  }
+  const rateLimited = rateLimitByUser(
+    userId,
+    "testimonials:submit",
+    RATE_LIMITS.generalApi
+  );
+  if (rateLimited) return rateLimited;
 
-  const name = (body.name ?? "").toString().trim();
-  const title = (body.title ?? "").toString().trim();
-  const message = (body.message ?? "").toString().trim();
+  const bodyResult = await readJsonWithLimit<SubmitBody>(
+    req,
+    REQUEST_SIZE_LIMITS.testimonial
+  );
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
+
+  const name = sanitizeText(body.name, { maxLength: NAME_MAX });
+  const title = sanitizeText(body.title, { maxLength: TITLE_MAX });
+  const message = sanitizeText(body.message, {
+    maxLength: MESSAGE_MAX,
+    allowLineBreaks: true,
+  });
   const rating = Number(body.rating);
 
   if (!name || name.length > NAME_MAX) {
@@ -136,7 +159,10 @@ export async function POST(req: Request) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(error, "Could not save your testimonial.") },
+      { status: 500 }
+    );
   }
 
   if (moderation.status === "approved") {

@@ -1,6 +1,11 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { resolveIsClerkAdmin } from "@/lib/admin";
+import {
+  RATE_LIMITS,
+  rateLimitByUser,
+  requireUser,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -28,11 +33,17 @@ type AffiliateEvent =
       is_test: boolean;
     };
 
-export async function GET() {
-  const { userId } = await auth();
-  if (!userId || !(await resolveIsClerkAdmin(userId))) {
+export async function GET(req: Request) {
+  const authResult = await requireUser(req, "admin:affiliate");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
+
+  if (!(await resolveIsClerkAdmin(userId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  const rateLimited = rateLimitByUser(userId, "admin:affiliate", RATE_LIMITS.adminApi);
+  if (rateLimited) return rateLimited;
 
   const limit = 50;
 
@@ -56,7 +67,10 @@ export async function GET() {
   ]);
 
   if (statsRes.error) {
-    return NextResponse.json({ error: statsRes.error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(statsRes.error, "Could not load affiliate stats.") },
+      { status: 500 }
+    );
   }
 
   const clicksErr = clicksRes.error;
@@ -64,10 +78,16 @@ export async function GET() {
   const upgradesErr = upgradesRes.error;
 
   if (signupsErr) {
-    return NextResponse.json({ error: signupsErr.message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(signupsErr, "Could not load affiliate signups.") },
+      { status: 500 }
+    );
   }
   if (upgradesErr) {
-    return NextResponse.json({ error: upgradesErr.message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(upgradesErr, "Could not load affiliate upgrades.") },
+      { status: 500 }
+    );
   }
 
   const totals = (statsRes.data ?? []).reduce(

@@ -1,4 +1,3 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { logAdminEvent } from "@/lib/admin-log";
 import { containsBlockedWord, getBlockedWordList } from "@/lib/blocked-words";
@@ -12,6 +11,17 @@ import {
   parseCaptionModelJson,
   type ParsedCaptionResponse,
 } from "@/lib/parse-caption-response";
+import {
+  RATE_LIMITS,
+  rateLimitByUser,
+  requireUser,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
+import { sanitizeText } from "@/lib/security/sanitize";
+import {
+  readJsonWithLimit,
+  REQUEST_SIZE_LIMITS,
+} from "@/lib/security/request-size";
 import { supabaseServer } from "@/lib/supabase/server";
 
 type Plan = "free" | "pro";
@@ -600,19 +610,32 @@ async function generateParsedCaptions(
 }
 
 export async function POST(req: Request) {
-  const { userId } = await auth();
+  const authResult = await requireUser(req, "captions:generate");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
 
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const rateLimited = rateLimitByUser(
+    userId,
+    "captions:generate",
+    RATE_LIMITS.captionGenerate,
+    "You're generating captions too fast. Please wait a minute and try again."
+  );
+  if (rateLimited) return rateLimited;
 
-  const body = await req.json();
-  const topic = (body.topic ?? "").toString().trim();
-  const platformRaw = (body.platform ?? "Instagram").toString();
-  const platformCustom = (body.platformCustom ?? "").toString();
-  const toneRaw = (body.tone ?? "inspirational").toString();
-  const toneCustom = (body.toneCustom ?? "").toString();
-  const language = (body.language ?? "English").toString().trim().slice(0, 40) || "English";
+  const bodyResult = await readJsonWithLimit<Record<string, unknown>>(
+    req,
+    REQUEST_SIZE_LIMITS.captionGenerate
+  );
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
+
+  const topic = sanitizeText(body.topic, { maxLength: 500, allowLineBreaks: true });
+  const platformRaw = sanitizeText(body.platform ?? "Instagram", { maxLength: 80 });
+  const platformCustom = sanitizeText(body.platformCustom, { maxLength: 80 });
+  const toneRaw = sanitizeText(body.tone ?? "inspirational", { maxLength: 80 });
+  const toneCustom = sanitizeText(body.toneCustom, { maxLength: 80 });
+  const language =
+    sanitizeText(body.language ?? "English", { maxLength: 40 }) || "English";
 
   const platform = resolvePlatform(platformRaw, platformCustom);
   const tone = resolveTone(toneRaw, toneCustom);
@@ -639,13 +662,15 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (subscriptionError) {
-    await logAdminEvent("error", "subscription-read failed", { userId, details: subscriptionError.message });
+    await logAdminEvent("error", "subscription-read failed", {
+      userId,
+      details: subscriptionError.message,
+    });
     return NextResponse.json(
       {
-        error:
-          "Could not read subscription status. Check your Supabase key and make sure the subscriptions table exists.",
+        error: "Could not read subscription status. Please try again in a moment.",
         stage: "subscription-read",
-        details: subscriptionError.message,
+        details: safeErrorMessage(subscriptionError, "Subscription lookup failed."),
       },
       { status: 500 }
     );
@@ -670,13 +695,15 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (usageReadError) {
-    await logAdminEvent("error", "usage-read failed", { userId, details: usageReadError.message });
+    await logAdminEvent("error", "usage-read failed", {
+      userId,
+      details: usageReadError.message,
+    });
     return NextResponse.json(
       {
-        error:
-          "Could not read daily usage. Check your Supabase key and make sure the usage table exists.",
+        error: "Could not read daily usage. Please try again in a moment.",
         stage: "usage-read",
-        details: usageReadError.message,
+        details: safeErrorMessage(usageReadError, "Usage lookup failed."),
       },
       { status: 500 }
     );
@@ -763,12 +790,15 @@ export async function POST(req: Request) {
     );
 
     if (usageWriteError) {
-      await logAdminEvent("error", "usage-write failed", { userId, details: usageWriteError.message });
+      await logAdminEvent("error", "usage-write failed", {
+        userId,
+        details: usageWriteError.message,
+      });
       return NextResponse.json(
         {
-          error: "Could not update daily usage.",
+          error: "Could not update daily usage. Please try again in a moment.",
           stage: "usage-write",
-          details: usageWriteError.message,
+          details: safeErrorMessage(usageWriteError, "Usage update failed."),
         },
         { status: 500 }
       );
@@ -831,9 +861,9 @@ export async function POST(req: Request) {
     await logAdminEvent("error", "groq-generate failed", { userId, details });
     return NextResponse.json(
       {
-        error: "Could not generate AI captions with Groq. Check your GROQ_API_KEY.",
+        error: "Could not generate AI captions right now. Please try again in a moment.",
         stage: "groq-generate",
-        details,
+        details: safeErrorMessage(error, "AI service error."),
       },
       { status: 500 }
     );

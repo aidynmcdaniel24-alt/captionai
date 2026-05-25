@@ -1,32 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import {
+  RATE_LIMITS,
+  rateLimitByIp,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
+import {
+  readJsonWithLimit,
+  REQUEST_SIZE_LIMITS,
+} from "@/lib/security/request-size";
+import { sanitizeText } from "@/lib/security/sanitize";
 import { supabaseServer } from "@/lib/supabase/server";
-
-const CLICK_WINDOW_MS = 60_000;
-const CLICK_MAX_PER_WINDOW = 10;
-const clickHits = new Map<string, { count: number; resetAt: number }>();
-
-function rateLimitClick(ip: string): boolean {
-  const now = Date.now();
-  const entry = clickHits.get(ip);
-  if (!entry || entry.resetAt <= now) {
-    clickHits.set(ip, { count: 1, resetAt: now + CLICK_WINDOW_MS });
-    if (clickHits.size > 5000) {
-      for (const [key, value] of clickHits) {
-        if (value.resetAt <= now) clickHits.delete(key);
-      }
-    }
-    return true;
-  }
-  entry.count += 1;
-  return entry.count <= CLICK_MAX_PER_WINDOW;
-}
-
-function clientIp(req: Request): string {
-  const fwd = req.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0]?.trim() || "unknown";
-  return req.headers.get("x-real-ip") ?? "unknown";
-}
 
 async function resolveAffiliateUserId(
   supabase: SupabaseClient,
@@ -61,20 +45,22 @@ async function resolveAffiliateUserId(
 }
 
 export async function POST(req: Request) {
+  const rateLimited = rateLimitByIp(
+    req,
+    "affiliate:click",
+    RATE_LIMITS.affiliateClick
+  );
+  if (rateLimited) return rateLimited;
+
   const supabase: SupabaseClient = supabaseServer;
 
-  if (!rateLimitClick(clientIp(req))) {
-    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
-  }
+  const bodyResult = await readJsonWithLimit<{ affiliate_code?: unknown }>(
+    req,
+    REQUEST_SIZE_LIMITS.default
+  );
+  if (!bodyResult.ok) return bodyResult.response;
 
-  let body: { affiliate_code?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-
-  const affiliate_code = (body.affiliate_code ?? "").toString().trim();
+  const affiliate_code = sanitizeText(bodyResult.data.affiliate_code, { maxLength: 32 });
   if (!affiliate_code) {
     return NextResponse.json({ error: "Missing affiliate_code" }, { status: 400 });
   }
@@ -93,7 +79,10 @@ export async function POST(req: Request) {
 
   if (upsertError) {
     console.error("[track-click] upsert:", upsertError);
-    return NextResponse.json({ error: "Failed to track click" }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(upsertError, "Failed to track click") },
+      { status: 500 }
+    );
   }
 
   const { error: rpcError } = await supabase.rpc("increment_affiliate_clicks", {
@@ -121,7 +110,10 @@ export async function POST(req: Request) {
         });
     if (manualErr) {
       console.error("[track-click] manual increment:", manualErr.message);
-      return NextResponse.json({ error: "Failed to increment" }, { status: 500 });
+      return NextResponse.json(
+        { error: safeErrorMessage(manualErr, "Failed to increment") },
+        { status: 500 }
+      );
     }
   }
 

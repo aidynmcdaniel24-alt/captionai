@@ -1,6 +1,12 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getAppUrl } from "@/lib/get-app-url";
+import {
+  RATE_LIMITS,
+  rateLimitByUser,
+  requireUser,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
 import { resolveStripeCustomerId } from "@/lib/stripe-resolve-customer";
 import { getStripe } from "@/lib/stripe";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -9,10 +15,12 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authResult = await requireUser(req, "billing:portal");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
+
+  const rateLimited = rateLimitByUser(userId, "billing:portal", RATE_LIMITS.generalApi);
+  if (rateLimited) return rateLimited;
 
   const stripe = getStripe();
   if (!stripe) {
@@ -33,7 +41,10 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (readError) {
-    return NextResponse.json({ error: readError.message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(readError, "Could not look up billing customer.") },
+      { status: 500 }
+    );
   }
 
   const customerId = await resolveStripeCustomerId(
@@ -66,8 +77,8 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ url: portal.url });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Could not open billing portal.";
-    if (message.toLowerCase().includes("customer portal is not enabled")) {
+    const raw = error instanceof Error ? error.message : "";
+    if (raw.toLowerCase().includes("customer portal is not enabled")) {
       return NextResponse.json(
         {
           error:
@@ -76,6 +87,9 @@ export async function POST(req: Request) {
         { status: 500 }
       );
     }
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(error, "Could not open billing portal.") },
+      { status: 500 }
+    );
   }
 }

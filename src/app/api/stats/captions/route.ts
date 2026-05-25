@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { RATE_LIMITS, rateLimitByIp } from "@/lib/security/api-guard";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -6,7 +7,10 @@ export const dynamic = "force-dynamic";
 // Cache the result for 60s so we don't hammer Supabase from the homepage.
 export const revalidate = 60;
 
-export async function GET() {
+export async function GET(req: Request) {
+  const rateLimited = rateLimitByIp(req, "stats:captions", RATE_LIMITS.publicRead);
+  if (rateLimited) return rateLimited;
+
   try {
     const { count, error } = await supabaseServer
       .from("caption_history")

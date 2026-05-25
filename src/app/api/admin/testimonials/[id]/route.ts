@@ -1,6 +1,15 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { resolveIsClerkAdmin } from "@/lib/admin";
+import {
+  RATE_LIMITS,
+  rateLimitByUser,
+  requireUser,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
+import {
+  readJsonWithLimit,
+  REQUEST_SIZE_LIMITS,
+} from "@/lib/security/request-size";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -15,22 +24,25 @@ export async function PATCH(
   req: Request,
   ctx: { params: Promise<{ id: string }> }
 ) {
-  const { userId } = await auth();
-  if (!userId || !(await resolveIsClerkAdmin(userId))) {
+  const authResult = await requireUser(req, "admin:testimonials:patch");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
+
+  if (!(await resolveIsClerkAdmin(userId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  const rateLimited = rateLimitByUser(userId, "admin:testimonials:patch", RATE_LIMITS.adminApi);
+  if (rateLimited) return rateLimited;
 
   const { id } = await ctx.params;
   if (!id || !UUID_RE.test(id)) {
     return NextResponse.json({ error: "Invalid testimonial id." }, { status: 400 });
   }
 
-  let body: PatchBody;
-  try {
-    body = (await req.json()) as PatchBody;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
-  }
+  const bodyResult = await readJsonWithLimit<PatchBody>(req, REQUEST_SIZE_LIMITS.default);
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
 
   if (body.action !== "approve" && body.action !== "reject") {
     return NextResponse.json(
@@ -47,7 +59,11 @@ export async function PATCH(
       .select("id, approved")
       .maybeSingle();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error)
+      return NextResponse.json(
+        { error: safeErrorMessage(error, "Could not approve testimonial.") },
+        { status: 500 }
+      );
     if (!data) return NextResponse.json({ error: "Not found." }, { status: 404 });
     return NextResponse.json({ ok: true, id: data.id, approved: data.approved });
   }
@@ -60,19 +76,29 @@ export async function PATCH(
     .select("id")
     .maybeSingle();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error)
+    return NextResponse.json(
+      { error: safeErrorMessage(error, "Could not reject testimonial.") },
+      { status: 500 }
+    );
   if (!data) return NextResponse.json({ error: "Not found." }, { status: 404 });
   return NextResponse.json({ ok: true, id: data.id, deleted: true });
 }
 
 export async function DELETE(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ id: string }> }
 ) {
-  const { userId } = await auth();
-  if (!userId || !(await resolveIsClerkAdmin(userId))) {
+  const authResult = await requireUser(req, "admin:testimonials:delete");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
+
+  if (!(await resolveIsClerkAdmin(userId))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  const rateLimited = rateLimitByUser(userId, "admin:testimonials:delete", RATE_LIMITS.adminApi);
+  if (rateLimited) return rateLimited;
 
   const { id } = await ctx.params;
   if (!id || !UUID_RE.test(id)) {
@@ -86,7 +112,11 @@ export async function DELETE(
     .select("id")
     .maybeSingle();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error)
+    return NextResponse.json(
+      { error: safeErrorMessage(error, "Could not delete testimonial.") },
+      { status: 500 }
+    );
   if (!data) return NextResponse.json({ error: "Not found." }, { status: 404 });
   return NextResponse.json({ ok: true, id: data.id, deleted: true });
 }

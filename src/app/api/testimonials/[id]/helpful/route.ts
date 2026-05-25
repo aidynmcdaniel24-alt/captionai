@@ -1,4 +1,13 @@
 import { NextResponse } from "next/server";
+import {
+  RATE_LIMITS,
+  rateLimitByIp,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
+import {
+  readJsonWithLimit,
+  REQUEST_SIZE_LIMITS,
+} from "@/lib/security/request-size";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -13,22 +22,21 @@ export async function POST(
   req: Request,
   ctx: { params: Promise<{ id: string }> }
 ) {
+  const rateLimited = rateLimitByIp(req, "testimonials:helpful", RATE_LIMITS.generalApi);
+  if (rateLimited) return rateLimited;
+
   const { id } = await ctx.params;
 
   if (!id || !UUID_RE.test(id)) {
     return NextResponse.json({ error: "Invalid testimonial id." }, { status: 400 });
   }
 
-  // Default to increment for back-compat with any older clients.
   let action: "increment" | "decrement" = "increment";
-  try {
-    const body = (await req.json()) as Body | null;
-    if (body?.action === "decrement") action = "decrement";
-  } catch {
-    // empty / non-JSON body is fine; we already default to increment
+  const bodyResult = await readJsonWithLimit<Body>(req, REQUEST_SIZE_LIMITS.default);
+  if (bodyResult.ok) {
+    if (bodyResult.data?.action === "decrement") action = "decrement";
   }
 
-  // Prefer the atomic RPC if it exists; fall back to read-modify-write.
   const rpcName =
     action === "increment"
       ? "testimonials_increment_helpful"
@@ -47,7 +55,10 @@ export async function POST(
     .maybeSingle();
 
   if (readErr) {
-    return NextResponse.json({ error: readErr.message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(readErr, "Could not load testimonial.") },
+      { status: 500 }
+    );
   }
 
   if (!existing || !existing.approved) {
@@ -69,7 +80,10 @@ export async function POST(
     .single();
 
   if (updateErr) {
-    return NextResponse.json({ error: updateErr.message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(updateErr, "Could not update helpful count.") },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ ok: true, helpful_count: updated.helpful_count });

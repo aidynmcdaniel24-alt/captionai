@@ -1,22 +1,55 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import {
+  RATE_LIMITS,
+  rateLimitByUser,
+  requireUser,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
+import {
+  readJsonWithLimit,
+  REQUEST_SIZE_LIMITS,
+} from "@/lib/security/request-size";
+import { sanitizeText } from "@/lib/security/sanitize";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+type FavoriteBody = {
+  historyId?: unknown;
+  captionIndex?: unknown;
+};
 
-  const body = await req.json();
-  const historyId = (body.historyId ?? "").toString().trim();
-  const captionIndex = Number(body.captionIndex);
-  if (!historyId || !Number.isInteger(captionIndex) || captionIndex < 0) {
-    return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
+async function parseFavoriteBody(req: Request) {
+  const result = await readJsonWithLimit<FavoriteBody>(req, REQUEST_SIZE_LIMITS.default);
+  if (!result.ok) return result;
+  const historyId = sanitizeText(result.data.historyId, { maxLength: 64 });
+  const captionIndex = Number(result.data.captionIndex);
+  if (
+    !historyId ||
+    !Number.isInteger(captionIndex) ||
+    captionIndex < 0 ||
+    captionIndex > 99
+  ) {
+    return {
+      ok: false as const,
+      response: NextResponse.json({ error: "Invalid payload." }, { status: 400 }),
+    };
   }
+  return { ok: true as const, historyId, captionIndex };
+}
+
+export async function POST(req: Request) {
+  const authResult = await requireUser(req, "captions:favorite");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
+
+  const rateLimited = rateLimitByUser(userId, "captions:favorite", RATE_LIMITS.generalApi);
+  if (rateLimited) return rateLimited;
+
+  const parsed = await parseFavoriteBody(req);
+  if (!parsed.ok) return parsed.response;
+  const { historyId, captionIndex } = parsed;
 
   const { data: row } = await supabaseServer
     .from("caption_history")
@@ -39,23 +72,25 @@ export async function POST(req: Request) {
     if (error.code === "23505") {
       return NextResponse.json({ ok: true, already: true });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(error, "Could not favorite.") },
+      { status: 500 }
+    );
   }
   return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authResult = await requireUser(req, "captions:favorite:delete");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
 
-  const body = await req.json();
-  const historyId = (body.historyId ?? "").toString().trim();
-  const captionIndex = Number(body.captionIndex);
-  if (!historyId || !Number.isInteger(captionIndex)) {
-    return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
-  }
+  const rateLimited = rateLimitByUser(userId, "captions:favorite:delete", RATE_LIMITS.generalApi);
+  if (rateLimited) return rateLimited;
+
+  const parsed = await parseFavoriteBody(req);
+  if (!parsed.ok) return parsed.response;
+  const { historyId, captionIndex } = parsed;
 
   const { error } = await supabaseServer
     .from("caption_favorites")
@@ -65,7 +100,10 @@ export async function DELETE(req: Request) {
     .eq("caption_index", captionIndex);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(error, "Could not remove favorite.") },
+      { status: 500 }
+    );
   }
   return NextResponse.json({ ok: true });
 }

@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { getGroqClient } from "@/lib/groq-client";
 import { withGroqRetry } from "@/lib/groq-retry";
+import {
+  RATE_LIMITS,
+  rateLimitByIp,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +25,10 @@ function parseTopics(raw: string): string[] | null {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const rateLimited = rateLimitByIp(req, "trending:get", RATE_LIMITS.publicRead);
+  if (rateLimited) return rateLimited;
+
   const now = Date.now();
   if (cached && now - cached.at < cacheTtlMs) {
     return NextResponse.json({ topics: cached.topics, cached: true });
@@ -65,7 +73,9 @@ export async function GET() {
     cached = { at: now, topics };
     return NextResponse.json({ topics, cached: false });
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Trending failed";
-    return NextResponse.json({ error: message, topics: [] }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(e, "Trending failed"), topics: [] },
+      { status: 500 }
+    );
   }
 }

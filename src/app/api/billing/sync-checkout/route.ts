@@ -1,5 +1,15 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import {
+  RATE_LIMITS,
+  rateLimitByUser,
+  requireUser,
+  safeErrorMessage,
+} from "@/lib/security/api-guard";
+import {
+  readJsonWithLimit,
+  REQUEST_SIZE_LIMITS,
+} from "@/lib/security/request-size";
+import { sanitizeText } from "@/lib/security/sanitize";
 import {
   checkoutSessionIsPaidSubscription,
   clerkUserIdFromCheckoutSession,
@@ -11,20 +21,25 @@ import { upsertProSubscription } from "@/lib/subscription-db";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type SyncBody = {
+  sessionId?: unknown;
+  session_id?: unknown;
+};
+
 /** Confirms checkout after redirect (backup when webhooks are delayed or misconfigured). */
 export async function POST(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authResult = await requireUser(req, "billing:sync-checkout");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
 
-  let sessionId = "";
-  try {
-    const body = await req.json();
-    sessionId = (body.sessionId ?? body.session_id ?? "").toString().trim();
-  } catch {
-    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
-  }
+  const rateLimited = rateLimitByUser(userId, "billing:sync-checkout", RATE_LIMITS.generalApi);
+  if (rateLimited) return rateLimited;
+
+  const bodyResult = await readJsonWithLimit<SyncBody>(req, REQUEST_SIZE_LIMITS.default);
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
+
+  const sessionId = sanitizeText(body.sessionId ?? body.session_id, { maxLength: 200 });
 
   if (!sessionId) {
     return NextResponse.json({ error: "sessionId is required." }, { status: 400 });
@@ -51,12 +66,17 @@ export async function POST(req: Request) {
     const result = await upsertProSubscription(userId, customerId);
 
     if (!result.ok) {
-      return NextResponse.json({ error: result.message }, { status: 500 });
+      return NextResponse.json(
+        { error: safeErrorMessage(new Error(result.message), "Could not save subscription.") },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ plan: "pro", stripeCustomerId: customerId });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Could not verify checkout.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: safeErrorMessage(error, "Could not verify checkout.") },
+      { status: 500 }
+    );
   }
 }
