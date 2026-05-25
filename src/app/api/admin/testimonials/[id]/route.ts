@@ -64,3 +64,29 @@ export async function PATCH(
   if (!data) return NextResponse.json({ error: "Not found." }, { status: 404 });
   return NextResponse.json({ ok: true, id: data.id, deleted: true });
 }
+
+export async function DELETE(
+  _req: Request,
+  ctx: { params: Promise<{ id: string }> }
+) {
+  const { userId } = await auth();
+  if (!userId || !(await resolveIsClerkAdmin(userId))) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { id } = await ctx.params;
+  if (!id || !UUID_RE.test(id)) {
+    return NextResponse.json({ error: "Invalid testimonial id." }, { status: 400 });
+  }
+
+  const { data, error } = await supabaseServer
+    .from("testimonials")
+    .delete()
+    .eq("id", id)
+    .select("id")
+    .maybeSingle();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!data) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  return NextResponse.json({ ok: true, id: data.id, deleted: true });
+}

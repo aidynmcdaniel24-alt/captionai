@@ -139,54 +139,72 @@ export function TestimonialsSection() {
     return () => clearInterval(id);
   }, [pages.length]);
 
-  const handleHelpful = useCallback(async (id: string) => {
-    setHelpfulSet((prev) => {
-      if (prev.has(id)) return prev;
-      const next = new Set(prev);
-      next.add(id);
-      persistHelpfulSet(next);
-      return next;
-    });
+  const handleHelpful = useCallback(
+    async (id: string) => {
+      const wasMarked = helpfulSet.has(id);
+      const direction = wasMarked ? -1 : 1;
 
-    setItems((prev) =>
-      prev.map((t) =>
-        t.id === id ? { ...t, helpful_count: t.helpful_count + 1 } : t
-      )
-    );
-
-    try {
-      const res = await fetch(`/api/testimonials/${id}/helpful`, {
-        method: "POST",
-      });
-      if (!res.ok) {
-        throw new Error("request failed");
-      }
-      const data = (await res.json()) as { helpful_count?: number };
-      if (typeof data.helpful_count === "number") {
-        setItems((prev) =>
-          prev.map((t) =>
-            t.id === id ? { ...t, helpful_count: data.helpful_count! } : t
-          )
-        );
-      }
-    } catch {
-      // revert optimistic update on failure
-      setItems((prev) =>
-        prev.map((t) =>
-          t.id === id
-            ? { ...t, helpful_count: Math.max(0, t.helpful_count - 1) }
-            : t
-        )
-      );
       setHelpfulSet((prev) => {
-        if (!prev.has(id)) return prev;
         const next = new Set(prev);
-        next.delete(id);
+        if (wasMarked) next.delete(id);
+        else next.add(id);
         persistHelpfulSet(next);
         return next;
       });
-    }
-  }, []);
+
+      setItems((prev) =>
+        prev.map((t) =>
+          t.id === id
+            ? {
+                ...t,
+                helpful_count: Math.max(0, t.helpful_count + direction),
+              }
+            : t
+        )
+      );
+
+      try {
+        const res = await fetch(`/api/testimonials/${id}/helpful`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: wasMarked ? "decrement" : "increment",
+          }),
+        });
+        if (!res.ok) {
+          throw new Error("request failed");
+        }
+        const data = (await res.json()) as { helpful_count?: number };
+        if (typeof data.helpful_count === "number") {
+          setItems((prev) =>
+            prev.map((t) =>
+              t.id === id ? { ...t, helpful_count: data.helpful_count! } : t
+            )
+          );
+        }
+      } catch {
+        // revert optimistic update on failure
+        setItems((prev) =>
+          prev.map((t) =>
+            t.id === id
+              ? {
+                  ...t,
+                  helpful_count: Math.max(0, t.helpful_count - direction),
+                }
+              : t
+          )
+        );
+        setHelpfulSet((prev) => {
+          const next = new Set(prev);
+          if (wasMarked) next.add(id);
+          else next.delete(id);
+          persistHelpfulSet(next);
+          return next;
+        });
+      }
+    },
+    [helpfulSet]
+  );
 
   const safePage = pages.length === 0 ? 0 : page % pages.length;
   const currentSet = pages[safePage] ?? [];
@@ -372,19 +390,25 @@ function HelpfulButton({
     <button
       type="button"
       onClick={onClick}
-      disabled={marked}
       aria-pressed={marked}
-      aria-label={`Mark testimonial as helpful (${count})`}
+      aria-label={
+        marked
+          ? `Remove helpful vote (${count})`
+          : `Mark testimonial as helpful (${count})`
+      }
       className={`group inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold tabular-nums transition ${
         marked
-          ? "border-purple-500 bg-purple-600 text-white shadow-md shadow-purple-600/30"
+          ? "border-purple-500 bg-purple-600 text-white shadow-md shadow-purple-600/30 hover:bg-purple-500"
           : "border-zinc-300 bg-white text-zinc-600 hover:border-purple-400 hover:text-purple-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-purple-400 dark:hover:text-purple-300"
       }`}
     >
       <svg
         aria-hidden
         viewBox="0 0 20 20"
-        fill="currentColor"
+        fill={marked ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth={marked ? 0 : 1.5}
+        strokeLinejoin="round"
         className={`h-3.5 w-3.5 transition-transform ${
           marked ? "" : "group-hover:-translate-y-0.5"
         }`}

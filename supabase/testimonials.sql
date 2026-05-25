@@ -53,3 +53,27 @@ $$;
 
 revoke all on function public.testimonials_increment_helpful(uuid) from public;
 grant execute on function public.testimonials_increment_helpful(uuid) to service_role;
+
+-- Atomic helpful-count decrement (clamped at zero).
+-- Used by POST /api/testimonials/:id/helpful when toggling a "Helpful" vote off.
+create or replace function public.testimonials_decrement_helpful(testimonial_id uuid)
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  new_count int;
+begin
+  update public.testimonials
+     set helpful_count = greatest(0, helpful_count - 1)
+   where id = testimonial_id
+     and approved = true
+  returning helpful_count into new_count;
+
+  return new_count;
+end;
+$$;
+
+revoke all on function public.testimonials_decrement_helpful(uuid) from public;
+grant execute on function public.testimonials_decrement_helpful(uuid) to service_role;

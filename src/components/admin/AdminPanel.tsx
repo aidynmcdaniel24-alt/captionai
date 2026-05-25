@@ -253,6 +253,35 @@ export function AdminPanel({
     }
   }
 
+  async function deleteTestimonial(id: string) {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm("Are you sure you want to delete this testimonial?")
+    ) {
+      return;
+    }
+
+    setTestimonialActionId(id);
+    setTestimonialsError("");
+    try {
+      const res = await fetch(`/api/admin/testimonials/${id}`, {
+        method: "DELETE",
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setTestimonialsError(data.error || "Could not delete testimonial.");
+        return;
+      }
+      setPendingTestimonials((prev) => prev.filter((t) => t.id !== id));
+      setRejectedTestimonials((prev) => prev.filter((t) => t.id !== id));
+      setApprovedTestimonials((prev) => prev.filter((t) => t.id !== id));
+    } catch {
+      setTestimonialsError("Could not delete testimonial.");
+    } finally {
+      setTestimonialActionId(null);
+    }
+  }
+
   async function markPayoutPaid(id: string) {
     setMarkingPaidId(id);
     try {
@@ -404,7 +433,7 @@ export function AdminPanel({
           approved={approvedTestimonials}
           actionId={testimonialActionId}
           onApprove={(id) => actOnTestimonial(id, "approve")}
-          onReject={(id) => actOnTestimonial(id, "reject")}
+          onDelete={(id) => deleteTestimonial(id)}
         />
       ) : null}
 
@@ -707,7 +736,7 @@ function TestimonialsSection({
   approved,
   actionId,
   onApprove,
-  onReject,
+  onDelete,
 }: {
   loading: boolean;
   error: string;
@@ -716,7 +745,7 @@ function TestimonialsSection({
   approved: AdminTestimonial[];
   actionId: string | null;
   onApprove: (id: string) => void;
-  onReject: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   return (
     <div className="space-y-6">
@@ -731,7 +760,7 @@ function TestimonialsSection({
         </div>
         <p className="mt-1 text-sm text-zinc-500">
           Submissions where the AI moderator was unavailable. Approve to publish, or
-          reject to delete.
+          delete to remove the submission.
         </p>
 
         {error ? (
@@ -763,11 +792,11 @@ function TestimonialsSection({
                   </button>
                   <button
                     type="button"
-                    onClick={() => onReject(t.id)}
+                    onClick={() => onDelete(t.id)}
                     disabled={actionId === t.id}
                     className="rounded-lg bg-rose-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-600 disabled:opacity-50"
                   >
-                    {actionId === t.id ? "Saving…" : "Reject"}
+                    {actionId === t.id ? "Deleting…" : "Delete"}
                   </button>
                 </div>
               </li>
@@ -786,8 +815,8 @@ function TestimonialsSection({
           </span>
         </div>
         <p className="mt-1 text-sm text-zinc-500">
-          The AI moderator blocked these. Approve to override and publish, or remove
-          to delete.
+          The AI moderator blocked these. Approve to override and publish, or delete
+          to remove the submission.
         </p>
 
         {loading ? (
@@ -821,11 +850,11 @@ function TestimonialsSection({
                   </button>
                   <button
                     type="button"
-                    onClick={() => onReject(t.id)}
+                    onClick={() => onDelete(t.id)}
                     disabled={actionId === t.id}
                     className="rounded-lg bg-rose-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-600 disabled:opacity-50"
                   >
-                    {actionId === t.id ? "Saving…" : "Remove"}
+                    {actionId === t.id ? "Deleting…" : "Delete"}
                   </button>
                 </div>
               </li>
@@ -842,7 +871,8 @@ function TestimonialsSection({
           <span className="text-xs text-zinc-500">{approved.length} live</span>
         </div>
         <p className="mt-1 text-sm text-zinc-500">
-          Already visible on the landing page. Reject to remove.
+          Already visible on the landing page. Delete to permanently remove from
+          Supabase.
         </p>
 
         {loading ? (
@@ -862,11 +892,11 @@ function TestimonialsSection({
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => onReject(t.id)}
+                    onClick={() => onDelete(t.id)}
                     disabled={actionId === t.id}
                     className="rounded-lg bg-rose-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-600 disabled:opacity-50"
                   >
-                    {actionId === t.id ? "Saving…" : "Remove"}
+                    {actionId === t.id ? "Deleting…" : "Delete"}
                   </button>
                 </div>
               </li>
