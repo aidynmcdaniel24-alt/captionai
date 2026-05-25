@@ -1,66 +1,103 @@
 "use client";
 
+import { BrandLogo } from "@/components/BrandLogo";
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support-contact";
 import Link from "next/link";
 
-const footerLinks = [
-  { label: "Features", href: "#features" },
-  { label: "Demo", href: "#demo" },
-  { label: "Pricing", href: "#pricing" },
+type FooterLink = { label: string; href: string };
+
+const productLinks: FooterLink[] = [
+  { label: "Features", href: "/#features" },
+  { label: "Live demo", href: "/#demo" },
+  { label: "Pricing", href: "/pricing" },
+  { label: "Dashboard", href: "/dashboard" },
+];
+
+const companyLinks: FooterLink[] = [
+  { label: "About", href: "/about" },
+  { label: "Changelog", href: "/changelog" },
+  { label: "Affiliate program", href: "/affiliate" },
+];
+
+const supportLinks: FooterLink[] = [
   { label: "Support", href: "/support" },
   { label: "FAQ", href: "/faq" },
   { label: "Terms", href: "/terms" },
   { label: "Privacy", href: "/privacy" },
+];
+
+const accountLinks: FooterLink[] = [
   { label: "Sign in", href: "/sign-in" },
   { label: "Sign up", href: "/sign-up" },
 ];
 
+function FooterColumn({ title, links }: { title: string; links: FooterLink[] }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
+        {title}
+      </p>
+      <ul className="mt-3 flex flex-col gap-2.5">
+        {links.map((l) =>
+          l.href.startsWith("#") || l.href.startsWith("/#") || l.href.startsWith("mailto:") ? (
+            <li key={l.href + l.label}>
+              <a
+                href={l.href}
+                className="text-sm text-zinc-600 transition hover:text-purple-700 dark:text-zinc-400 dark:hover:text-purple-300"
+              >
+                {l.label}
+              </a>
+            </li>
+          ) : (
+            <li key={l.href + l.label}>
+              <Link
+                href={l.href}
+                className="text-sm text-zinc-600 transition hover:text-purple-700 dark:text-zinc-400 dark:hover:text-purple-300"
+              >
+                {l.label}
+              </Link>
+            </li>
+          ),
+        )}
+      </ul>
+    </div>
+  );
+}
+
 export function FooterSection() {
   return (
-    <footer className="border-t border-zinc-200 bg-white px-4 py-10 sm:px-6 sm:py-14 dark:border-white/5 dark:bg-zinc-950">
-      <div className="mx-auto flex max-w-6xl flex-col gap-8 sm:flex-row sm:items-start sm:justify-between sm:gap-10">
-        <div>
+    <footer className="border-t border-zinc-200 bg-white px-4 py-12 sm:px-6 sm:py-16 dark:border-white/5 dark:bg-zinc-950">
+      <div className="mx-auto grid max-w-6xl gap-10 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="lg:col-span-2">
           <Link
             href="/"
             className="flex items-center gap-2 text-lg font-semibold text-zinc-900 dark:text-white"
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-violet-600 text-sm font-bold text-white">
-              C
-            </span>
+            <BrandLogo className="h-8 w-8" />
             CaptionAI
           </Link>
           <p className="mt-3 max-w-xs text-sm leading-relaxed text-zinc-600 sm:mt-4 dark:text-zinc-500">
             AI captions for creators who would rather post than stare at a blank caption box.
           </p>
-        </div>
-        <nav className="grid grid-cols-2 gap-x-6 gap-y-3 sm:flex sm:flex-wrap sm:gap-x-10">
-          {footerLinks.map((l) => (
+          <p className="mt-5 text-sm text-zinc-600 dark:text-zinc-400">
             <a
-              key={l.href + l.label}
-              href={l.href}
-              className="text-sm text-zinc-600 transition hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+              href={SUPPORT_MAILTO}
+              className="underline-offset-2 hover:text-purple-700 hover:underline dark:hover:text-purple-300"
             >
-              {l.label}
+              {SUPPORT_EMAIL}
             </a>
-          ))}
-          <Link
-            href="/dashboard"
-            className="text-sm text-zinc-600 transition hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
-          >
-            Dashboard
-          </Link>
-        </nav>
+          </p>
+        </div>
+
+        <FooterColumn title="Product" links={productLinks} />
+        <FooterColumn title="Company" links={companyLinks} />
+        <div className="grid grid-cols-2 gap-10 sm:col-span-2 sm:grid-cols-2 lg:col-span-1 lg:grid-cols-1 lg:gap-6">
+          <FooterColumn title="Support" links={supportLinks} />
+          <FooterColumn title="Account" links={accountLinks} />
+        </div>
       </div>
-      <div className="mx-auto mt-10 max-w-6xl border-t border-zinc-200 pt-6 text-center text-xs text-zinc-500 sm:mt-12 sm:pt-8 sm:text-left dark:border-white/5 dark:text-zinc-600">
-        <p>
-          <a
-            href={SUPPORT_MAILTO}
-            className="text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-500 dark:hover:text-zinc-300"
-          >
-            {SUPPORT_EMAIL}
-          </a>
-        </p>
-        <p className="mt-2">© {new Date().getFullYear()} CaptionAI. Built for learning and shipping.</p>
+      <div className="mx-auto mt-12 max-w-6xl border-t border-zinc-200 pt-6 text-center text-xs text-zinc-500 sm:text-left dark:border-white/5 dark:text-zinc-600">
+        <p>© {new Date().getFullYear()} CaptionAI. Built for creators who ship.</p>
       </div>
     </footer>
   );

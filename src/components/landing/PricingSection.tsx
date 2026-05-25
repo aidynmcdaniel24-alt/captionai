@@ -3,6 +3,7 @@
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { MoneyBackBadge } from "./MoneyBackBadge";
 
 export function PricingSection() {
   const { isSignedIn, isLoaded } = useUser();
@@ -19,6 +20,19 @@ export function PricingSection() {
           <h2 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-4xl dark:text-white">Simple pricing</h2>
           <p className="mt-3 text-base text-zinc-600 sm:mt-4 sm:text-lg dark:text-zinc-400">
             Start free. Upgrade when you are posting every day and need unlimited generations.
+          </p>
+          <div className="mt-5 flex justify-center">
+            <MoneyBackBadge />
+          </div>
+          <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
+            See the full breakdown on the{" "}
+            <Link
+              href="/pricing"
+              className="font-medium text-purple-700 underline-offset-4 hover:underline dark:text-purple-300"
+            >
+              pricing page
+            </Link>
+            .
           </p>
         </motion.div>
 

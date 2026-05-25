@@ -10,7 +10,8 @@ import { useState } from "react";
 const nav = [
   { label: "Features", href: "#features" },
   { label: "Try it", href: "#demo" },
-  { label: "Pricing", href: "#pricing" },
+  { label: "Pricing", href: "/pricing" },
+  { label: "About", href: "/about" },
 ];
 
 export function LandingHeader() {
@@ -34,15 +35,25 @@ export function LandingHeader() {
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
-          {nav.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              className="text-sm text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
-            >
-              {item.label}
-            </a>
-          ))}
+          {nav.map((item) =>
+            item.href.startsWith("#") ? (
+              <a
+                key={item.href}
+                href={item.href}
+                className="text-sm text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+              >
+                {item.label}
+              </a>
+            ) : (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="text-sm text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+              >
+                {item.label}
+              </Link>
+            ),
+          )}
         </nav>
 
         <div className="hidden min-h-[40px] items-center gap-3 md:flex">
@@ -101,16 +112,27 @@ export function LandingHeader() {
           className="border-t border-zinc-200 bg-white/95 px-4 pb-5 pt-3 dark:border-white/5 dark:bg-zinc-950/95 md:hidden"
         >
           <div className="flex flex-col gap-1">
-            {nav.map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                className="flex min-h-[48px] items-center rounded-lg px-3 text-base font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800/60"
-                onClick={() => setOpen(false)}
-              >
-                {item.label}
-              </a>
-            ))}
+            {nav.map((item) =>
+              item.href.startsWith("#") ? (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className="flex min-h-[48px] items-center rounded-lg px-3 text-base font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800/60"
+                  onClick={() => setOpen(false)}
+                >
+                  {item.label}
+                </a>
+              ) : (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="flex min-h-[48px] items-center rounded-lg px-3 text-base font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800/60"
+                  onClick={() => setOpen(false)}
+                >
+                  {item.label}
+                </Link>
+              ),
+            )}
             <div className="mt-2 flex flex-col gap-2">
               {!isLoaded ? (
                 <div className="h-12 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-800" aria-hidden />

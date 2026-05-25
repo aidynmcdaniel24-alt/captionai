@@ -1,6 +1,7 @@
 "use client";
 
 import { BrandLogo } from "@/components/BrandLogo";
+import { CaptionLoadingState } from "@/components/dashboard/CaptionLoadingState";
 import { GeneratedCaptionsPanel } from "@/components/dashboard/GeneratedCaptionsPanel";
 import { HookLibraryTab } from "@/components/dashboard/HookLibraryTab";
 import type { CaptionRatingKey } from "@/lib/caption-rating-styles";
@@ -779,6 +780,10 @@ export function DashboardPageClient() {
               {usageText ? <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-300">{usageText}</p> : null}
 
             </div>
+
+            {isLoading ? (
+              <CaptionLoadingState subject={`Generating for ${resolvedPlatform}`} />
+            ) : null}
 
             {captions.length > 0 ? (
               <GeneratedCaptionsPanel

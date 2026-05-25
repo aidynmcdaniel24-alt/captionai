@@ -3,8 +3,11 @@
 import { AuthContinueSection } from "./AuthContinueSection";
 import { LandingHeader } from "./LandingHeader";
 import { HeroSection } from "./HeroSection";
+import { LiveCaptionsCounter } from "./LiveCaptionsCounter";
 import { FeaturesSection } from "./FeaturesSection";
 import { LiveDemoSection } from "./LiveDemoSection";
+import { TestimonialsSection } from "./TestimonialsSection";
+import { StatsSection } from "./StatsSection";
 import { PricingSection } from "./PricingSection";
 import { FooterSection } from "./FooterSection";
 
@@ -20,9 +23,12 @@ export function LandingPage() {
       <LandingHeader />
       <main>
         <HeroSection />
+        <LiveCaptionsCounter />
         <AuthContinueSection />
         <FeaturesSection />
         <LiveDemoSection />
+        <StatsSection />
+        <TestimonialsSection />
         <PricingSection />
       </main>
       <FooterSection />

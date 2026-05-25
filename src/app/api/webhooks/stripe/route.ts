@@ -1,6 +1,8 @@
+import { clerkClient } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { commissionCentsFromPayment } from "@/lib/affiliate-commission";
+import { sendProUpgradeEmail } from "@/lib/emails";
 import { shouldCreditAffiliateCommission } from "@/lib/stripe-mode";
 import {
   checkoutSessionIsPaidSubscription,
@@ -10,6 +12,87 @@ import {
 import { getStripe } from "@/lib/stripe";
 import { upsertProSubscription } from "@/lib/subscription-db";
 import { supabaseServer } from "@/lib/supabase/server";
+
+async function intervalFromCheckoutSession(
+  stripe: Stripe,
+  session: Stripe.Checkout.Session,
+): Promise<"month" | "year" | "unknown"> {
+  try {
+    if (session.subscription) {
+      const subId =
+        typeof session.subscription === "string" ? session.subscription : session.subscription.id;
+      const sub = await stripe.subscriptions.retrieve(subId, { expand: ["items.data.price"] });
+      const interval = sub.items.data[0]?.price?.recurring?.interval;
+      if (interval === "month") return "month";
+      if (interval === "year") return "year";
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "unknown";
+    console.warn("[stripe webhook] interval lookup:", msg);
+  }
+  return "unknown";
+}
+
+async function sendProUpgradeEmailForUser(
+  stripe: Stripe,
+  userId: string,
+  session: Stripe.Checkout.Session,
+): Promise<void> {
+  try {
+    const { data: existing } = await supabaseServer
+      .from("subscriptions")
+      .select("pro_email_sent_at")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (existing?.pro_email_sent_at) {
+      return;
+    }
+
+    let email = session.customer_details?.email ?? null;
+    let firstName: string | undefined;
+
+    try {
+      const client = await clerkClient();
+      const user = await client.users.getUser(userId);
+      firstName = user.firstName?.trim() || undefined;
+      if (!email) {
+        const primaryId = user.primaryEmailAddressId;
+        email =
+          user.emailAddresses.find((e) => e.id === primaryId)?.emailAddress ??
+          user.emailAddresses[0]?.emailAddress ??
+          null;
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "clerk-lookup-failed";
+      console.warn("[stripe webhook] clerk user lookup:", msg);
+    }
+
+    if (!email) {
+      return;
+    }
+
+    const result = await sendProUpgradeEmail(email, {
+      interval: await intervalFromCheckoutSession(stripe, session),
+      firstName,
+    });
+
+    if (!result.ok) {
+      return;
+    }
+
+    const { error } = await supabaseServer
+      .from("subscriptions")
+      .update({ pro_email_sent_at: new Date().toISOString() })
+      .eq("user_id", userId);
+    if (error) {
+      console.warn("[stripe webhook] mark pro email sent failed:", error.message);
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "unknown";
+    console.warn("[stripe webhook] sendProUpgradeEmail:", msg);
+  }
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -76,6 +159,9 @@ export async function POST(req: Request) {
       if (errRes) {
         return errRes;
       }
+
+      // Send the "Welcome to Pro" thank you email (deduped via subscriptions.pro_email_sent_at).
+      await sendProUpgradeEmailForUser(stripe, userId, session);
 
       const amountTotal = session.amount_total ?? 0;
       const commission = commissionCentsFromPayment(amountTotal);

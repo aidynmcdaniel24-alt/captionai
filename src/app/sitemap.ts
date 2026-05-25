@@ -4,6 +4,9 @@ const baseUrl = (process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "https:/
 
 const publicPaths = [
   "/",
+  "/pricing",
+  "/about",
+  "/changelog",
   "/faq",
   "/privacy",
   "/terms",
