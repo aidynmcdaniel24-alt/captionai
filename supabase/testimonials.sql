@@ -1,0 +1,46 @@
+-- Testimonials submitted by signed-in users from the landing page.
+-- Run in Supabase SQL Editor.
+
+create table if not exists public.testimonials (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null,
+  name text not null,
+  title text not null,
+  message text not null check (char_length(message) <= 200),
+  rating int not null check (rating between 1 and 5),
+  helpful_count int not null default 0 check (helpful_count >= 0),
+  approved boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists testimonials_approved_idx
+  on public.testimonials (approved, created_at desc);
+
+create index if not exists testimonials_user_idx
+  on public.testimonials (user_id, created_at desc);
+
+comment on table public.testimonials is
+  'User-submitted landing-page testimonials; require admin approval before they are publicly listed.';
+
+-- Atomic helpful-count increment (used by POST /api/testimonials/:id/helpful)
+create or replace function public.testimonials_increment_helpful(testimonial_id uuid)
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  new_count int;
+begin
+  update public.testimonials
+     set helpful_count = helpful_count + 1
+   where id = testimonial_id
+     and approved = true
+  returning helpful_count into new_count;
+
+  return new_count;
+end;
+$$;
+
+revoke all on function public.testimonials_increment_helpful(uuid) from public;
+grant execute on function public.testimonials_increment_helpful(uuid) to service_role;

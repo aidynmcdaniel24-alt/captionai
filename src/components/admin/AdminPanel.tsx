@@ -60,6 +60,18 @@ type PayoutRequestRow = {
   created_at: string;
 };
 
+type AdminTestimonial = {
+  id: string;
+  user_id: string;
+  name: string;
+  title: string;
+  message: string;
+  rating: number;
+  helpful_count: number;
+  approved: boolean;
+  created_at: string;
+};
+
 export function AdminPanel({
   totalUsers,
   proCount,
@@ -79,7 +91,9 @@ export function AdminPanel({
   allErr?: string;
   recent: RecentUser[];
 }) {
-  const [tab, setTab] = useState<"overview" | "errors" | "logs" | "affiliate" | "payouts">("overview");
+  const [tab, setTab] = useState<
+    "overview" | "errors" | "logs" | "affiliate" | "payouts" | "testimonials"
+  >("overview");
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [logLoading, setLogLoading] = useState(false);
   const [logError, setLogError] = useState("");
@@ -95,6 +109,11 @@ export function AdminPanel({
   const [payoutError, setPayoutError] = useState("");
   const [payoutWarnings, setPayoutWarnings] = useState<string[]>([]);
   const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
+  const [pendingTestimonials, setPendingTestimonials] = useState<AdminTestimonial[]>([]);
+  const [approvedTestimonials, setApprovedTestimonials] = useState<AdminTestimonial[]>([]);
+  const [testimonialsLoading, setTestimonialsLoading] = useState(false);
+  const [testimonialsError, setTestimonialsError] = useState("");
+  const [testimonialActionId, setTestimonialActionId] = useState<string | null>(null);
 
   const loadLogs = useCallback(async (level?: string) => {
     setLogLoading(true);
@@ -179,6 +198,55 @@ export function AdminPanel({
     }
   }, []);
 
+  const loadTestimonials = useCallback(async () => {
+    setTestimonialsLoading(true);
+    setTestimonialsError("");
+    try {
+      const res = await fetch("/api/admin/testimonials");
+      const data = (await res.json()) as {
+        pending?: AdminTestimonial[];
+        approved?: AdminTestimonial[];
+        error?: string;
+      };
+      if (!res.ok) {
+        setTestimonialsError(data.error || "Could not load testimonials.");
+        setPendingTestimonials([]);
+        setApprovedTestimonials([]);
+        return;
+      }
+      setPendingTestimonials(data.pending ?? []);
+      setApprovedTestimonials(data.approved ?? []);
+    } catch {
+      setTestimonialsError("Could not load testimonials.");
+      setPendingTestimonials([]);
+      setApprovedTestimonials([]);
+    } finally {
+      setTestimonialsLoading(false);
+    }
+  }, []);
+
+  async function actOnTestimonial(id: string, action: "approve" | "reject") {
+    setTestimonialActionId(id);
+    setTestimonialsError("");
+    try {
+      const res = await fetch(`/api/admin/testimonials/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setTestimonialsError(data.error || "Could not update testimonial.");
+        return;
+      }
+      await loadTestimonials();
+    } catch {
+      setTestimonialsError("Could not update testimonial.");
+    } finally {
+      setTestimonialActionId(null);
+    }
+  }
+
   async function markPayoutPaid(id: string) {
     setMarkingPaidId(id);
     try {
@@ -215,6 +283,7 @@ export function AdminPanel({
             ["overview", "Overview"],
             ["affiliate", "Affiliate"],
             ["payouts", "Payouts"],
+            ["testimonials", "Testimonials"],
             ["errors", "Error logs"],
             ["logs", "All logs"],
           ] as const
@@ -235,6 +304,9 @@ export function AdminPanel({
               }
               if (id === "payouts") {
                 void loadPayouts();
+              }
+              if (id === "testimonials") {
+                void loadTestimonials();
               }
             }}
             className={`rounded-lg px-4 py-2 text-sm font-medium ${
@@ -314,6 +386,18 @@ export function AdminPanel({
           warnings={affiliateWarnings}
           totals={affiliateTotals}
           events={affiliateEvents}
+        />
+      ) : null}
+
+      {tab === "testimonials" ? (
+        <TestimonialsSection
+          loading={testimonialsLoading}
+          error={testimonialsError}
+          pending={pendingTestimonials}
+          approved={approvedTestimonials}
+          actionId={testimonialActionId}
+          onApprove={(id) => actOnTestimonial(id, "approve")}
+          onReject={(id) => actOnTestimonial(id, "reject")}
         />
       ) : null}
 
@@ -605,6 +689,155 @@ function AffiliateEventHeader({
       <span className={accent}>{label}</span>
       <span>{when}</span>
     </div>
+  );
+}
+
+function TestimonialsSection({
+  loading,
+  error,
+  pending,
+  approved,
+  actionId,
+  onApprove,
+  onReject,
+}: {
+  loading: boolean;
+  error: string;
+  pending: AdminTestimonial[];
+  approved: AdminTestimonial[];
+  actionId: string | null;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-semibold text-white">
+            Pending testimonials
+          </h2>
+          <span className="text-xs text-zinc-500">
+            {pending.length} awaiting review
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-zinc-500">
+          Approve to publish on the landing page, or reject to delete the submission.
+        </p>
+
+        {error ? (
+          <p className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+            {error}
+          </p>
+        ) : null}
+
+        {loading ? (
+          <p className="mt-4 text-zinc-500">Loading…</p>
+        ) : pending.length === 0 ? (
+          <p className="mt-4 text-zinc-500">No pending testimonials.</p>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {pending.map((t) => (
+              <li
+                key={t.id}
+                className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4"
+              >
+                <TestimonialAdminRow row={t} />
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onApprove(t.id)}
+                    disabled={actionId === t.id}
+                    className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-600 disabled:opacity-50"
+                  >
+                    {actionId === t.id ? "Saving…" : "Approve"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onReject(t.id)}
+                    disabled={actionId === t.id}
+                    className="rounded-lg bg-rose-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-600 disabled:opacity-50"
+                  >
+                    {actionId === t.id ? "Saving…" : "Reject"}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-semibold text-white">
+            Approved testimonials
+          </h2>
+          <span className="text-xs text-zinc-500">{approved.length} live</span>
+        </div>
+        <p className="mt-1 text-sm text-zinc-500">
+          Already visible on the landing page. Reject to remove.
+        </p>
+
+        {loading ? (
+          <p className="mt-4 text-zinc-500">Loading…</p>
+        ) : approved.length === 0 ? (
+          <p className="mt-4 text-zinc-500">
+            No approved testimonials yet. Approve a pending submission to publish it.
+          </p>
+        ) : (
+          <ul className="mt-4 max-h-[520px] space-y-3 overflow-y-auto">
+            {approved.map((t) => (
+              <li
+                key={t.id}
+                className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4"
+              >
+                <TestimonialAdminRow row={t} showHelpful />
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onReject(t.id)}
+                    disabled={actionId === t.id}
+                    className="rounded-lg bg-rose-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-600 disabled:opacity-50"
+                  >
+                    {actionId === t.id ? "Saving…" : "Remove"}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TestimonialAdminRow({
+  row,
+  showHelpful = false,
+}: {
+  row: AdminTestimonial;
+  showHelpful?: boolean;
+}) {
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500">
+        <span className="text-amber-300">{"★".repeat(row.rating)}{"☆".repeat(5 - row.rating)}</span>
+        <span>{new Date(row.created_at).toLocaleString()}</span>
+      </div>
+      <p className="mt-2 text-sm text-zinc-200">&ldquo;{row.message}&rdquo;</p>
+      <p className="mt-2 text-xs text-zinc-400">
+        <span className="font-semibold text-zinc-200">{row.name}</span>
+        {" · "}
+        {row.title}
+      </p>
+      <p className="mt-1 text-[11px] text-zinc-500">
+        user: <span className="font-mono">{row.user_id}</span>
+        {showHelpful ? (
+          <>
+            {" · "}helpful: <span className="text-zinc-300">{row.helpful_count}</span>
+          </>
+        ) : null}
+      </p>
+    </>
   );
 }
 
