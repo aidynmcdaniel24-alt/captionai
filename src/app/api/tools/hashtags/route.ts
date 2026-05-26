@@ -13,6 +13,7 @@ import {
   REQUEST_SIZE_LIMITS,
 } from "@/lib/security/request-size";
 import { sanitizeText } from "@/lib/security/sanitize";
+import { spendTokens, TOKEN_COSTS, tokenInfoPayload } from "@/lib/tokens";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -62,6 +63,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "AI unavailable." }, { status: 503 });
   }
 
+  const spend = await spendTokens(userId, TOKEN_COSTS.hashtag, "tools:hashtags");
+  if (!spend.ok) {
+    return spend.response;
+  }
+
   try {
     const completion = await withGroqRetry(() =>
       groq.chat.completions.create({
@@ -88,7 +94,7 @@ export async function POST(req: Request) {
     if (!hashtags) {
       return NextResponse.json({ error: "Could not parse hashtags." }, { status: 502 });
     }
-    return NextResponse.json({ hashtags });
+    return NextResponse.json({ hashtags, tokens: tokenInfoPayload(spend) });
   } catch (e) {
     return NextResponse.json(
       { error: safeErrorMessage(e, "Could not generate hashtags.") },

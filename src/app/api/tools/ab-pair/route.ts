@@ -13,6 +13,7 @@ import {
   REQUEST_SIZE_LIMITS,
 } from "@/lib/security/request-size";
 import { sanitizeText } from "@/lib/security/sanitize";
+import { spendTokens, TOKEN_COSTS, tokenInfoPayload } from "@/lib/tokens";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,6 +64,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "AI unavailable." }, { status: 503 });
   }
 
+  const spend = await spendTokens(userId, TOKEN_COSTS.abTest, "tools:ab-pair");
+  if (!spend.ok) {
+    return spend.response;
+  }
+
   try {
     const completion = await withGroqRetry(() =>
       groq.chat.completions.create({
@@ -95,7 +101,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Output blocked by filter." }, { status: 400 });
       }
     }
-    return NextResponse.json(pair);
+    return NextResponse.json({ ...pair, tokens: tokenInfoPayload(spend) });
   } catch (e) {
     return NextResponse.json(
       { error: safeErrorMessage(e, "Could not generate A/B pair.") },

@@ -24,6 +24,9 @@ type HistoryRow = {
   ratings?: Record<string, "worst" | "medium" | "best">;
 };
 
+const FREE_HISTORY_LIMIT = 20;
+const PRO_HISTORY_LIMIT = 5000;
+
 export async function GET(req: Request) {
   const authResult = await requireUser(req, "captions:history");
   if (!authResult.ok) return authResult.response;
@@ -32,12 +35,29 @@ export async function GET(req: Request) {
   const rateLimited = rateLimitByUser(userId, "captions:history", RATE_LIMITS.generalApi);
   if (rateLimited) return rateLimited;
 
+  // Pull plan first so we know whether to cap the result set at 20 (free)
+  // or return the full history (Pro).
+  const { data: subRow } = await supabaseServer
+    .from("subscriptions")
+    .select("plan")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const plan = subRow?.plan === "pro" ? "pro" : "free";
+  const limit = plan === "pro" ? PRO_HISTORY_LIMIT : FREE_HISTORY_LIMIT;
+
+  // Total count is cheap (head: true) and lets the client show
+  // "Showing 20 of 173" + an upgrade hint when the cap kicks in.
+  const { count: totalCount } = await supabaseServer
+    .from("caption_history")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId);
+
   const { data, error } = await supabaseServer
     .from("caption_history")
     .select("id, topic, platform, tone, language, captions, created_at, ai_ratings")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(limit);
 
   if (error) {
     return NextResponse.json(
@@ -52,7 +72,13 @@ export async function GET(req: Request) {
   const rows = (data ?? []) as Omit<HistoryRow, "favoriteIndexes" | "ratings">[];
   const ids = rows.map((r) => r.id);
   if (ids.length === 0) {
-    return NextResponse.json({ items: [] });
+    return NextResponse.json({
+      items: [],
+      plan,
+      totalCount: totalCount ?? 0,
+      limit,
+      truncated: false,
+    });
   }
 
   const [favRes, rateRes] = await Promise.all([
@@ -104,7 +130,14 @@ export async function GET(req: Request) {
     };
   });
 
-  return NextResponse.json({ items });
+  const truncated = plan === "free" && (totalCount ?? items.length) > items.length;
+  return NextResponse.json({
+    items,
+    plan,
+    totalCount: totalCount ?? items.length,
+    limit,
+    truncated,
+  });
 }
 
 export async function DELETE(req: Request) {

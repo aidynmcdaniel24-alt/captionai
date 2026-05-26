@@ -3,6 +3,7 @@
 import { CaptionActions } from "@/components/dashboard/CaptionActions";
 import { CaptionBestTimeBadge } from "@/components/dashboard/CaptionBestTimeBadge";
 import { CaptionScoreBar } from "@/components/dashboard/CaptionScoreBar";
+import { SaveToCollectionMenu } from "@/components/dashboard/SaveToCollectionMenu";
 import { useCaptionBestTimes } from "@/components/dashboard/useCaptionBestTimes";
 import type { CaptionScore } from "@/lib/caption-score";
 import {
@@ -147,15 +148,25 @@ export function GeneratedCaptionsPanel({
                 ) : (
                   <span />
                 )}
-                <button
-                  type="button"
-                  title={fav[index] ? "Remove favorite" : "Add favorite"}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-xl leading-none text-zinc-500 transition hover:bg-zinc-200/80 hover:text-amber-500 dark:text-zinc-400 dark:hover:bg-zinc-800"
-                  onClick={() => onToggleFavorite(index)}
-                  aria-label={fav[index] ? "Remove favorite" : "Add favorite"}
-                >
-                  {fav[index] ? "★" : "☆"}
-                </button>
+                <div className="flex items-center gap-2">
+                  {plan === "pro" && !locked ? (
+                    <SaveToCollectionMenu
+                      captionText={caption}
+                      platform={platform}
+                      tone={tone}
+                      topic={topic}
+                    />
+                  ) : null}
+                  <button
+                    type="button"
+                    title={fav[index] ? "Remove favorite" : "Add favorite"}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-xl leading-none text-zinc-500 transition hover:bg-zinc-200/80 hover:text-amber-500 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                    onClick={() => onToggleFavorite(index)}
+                    aria-label={fav[index] ? "Remove favorite" : "Add favorite"}
+                  >
+                    {fav[index] ? "★" : "☆"}
+                  </button>
+                </div>
               </div>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 flex-1">

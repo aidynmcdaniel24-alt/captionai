@@ -18,6 +18,15 @@ type HistoryItem = {
   favoriteIndexes?: number[];
 };
 
+type HistoryResponse = {
+  items?: HistoryItem[];
+  plan?: "free" | "pro";
+  totalCount?: number;
+  limit?: number;
+  truncated?: boolean;
+  error?: string;
+};
+
 const PLATFORM_FILTERS: { id: string; label: string; match: (p: string) => boolean }[] = [
   { id: "all", label: "All", match: () => true },
   {
@@ -79,6 +88,10 @@ export function HistoryPageClient() {
   const router = useRouter();
   const { isLoaded, isSignedIn } = useUser();
   const [items, setItems] = useState<HistoryItem[]>([]);
+  const [plan, setPlan] = useState<"free" | "pro" | null>(null);
+  const [totalCount, setTotalCount] = useState<number>(0);
+  const [historyLimit, setHistoryLimit] = useState<number>(20);
+  const [truncated, setTruncated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [platformFilter, setPlatformFilter] = useState("all");
@@ -97,18 +110,48 @@ export function HistoryPageClient() {
     setError("");
     try {
       const res = await fetch("/api/captions/history");
-      const data = (await res.json()) as { items?: HistoryItem[]; error?: string };
+      const data = (await res.json()) as HistoryResponse;
       if (!res.ok) {
         setError(data.error || "Could not load caption history.");
         setItems([]);
         return;
       }
       setItems(data.items ?? []);
+      if (data.plan) setPlan(data.plan);
+      if (typeof data.totalCount === "number") setTotalCount(data.totalCount);
+      if (typeof data.limit === "number") setHistoryLimit(data.limit);
+      setTruncated(Boolean(data.truncated));
     } catch {
       setError("Could not load caption history.");
       setItems([]);
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const isPro = plan === "pro";
+
+  const handleExport = useCallback(async () => {
+    setError("");
+    try {
+      const res = await fetch("/api/captions/history/export");
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(data.error || "Could not export history.");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const today = new Date().toISOString().split("T")[0];
+      link.download = `captionai-history-${today}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("Could not export history.");
     }
   }, []);
 
@@ -214,6 +257,35 @@ export function HistoryPageClient() {
 
         <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-5 dark:border-zinc-800 dark:bg-zinc-900/80">
           <div className="flex flex-col gap-3 sm:gap-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                {totalCount > 0
+                  ? `${items.length} shown · ${totalCount} total`
+                  : "No saved generations yet."}
+              </div>
+              {isPro ? (
+                <button
+                  type="button"
+                  onClick={handleExport}
+                  className="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-lg border border-purple-300 bg-purple-50 px-3 py-2 text-sm font-semibold text-purple-700 transition hover:bg-purple-100 dark:border-purple-700/60 dark:bg-purple-950/40 dark:text-purple-200 dark:hover:bg-purple-900/40"
+                >
+                  Export to CSV
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  title="Pro feature"
+                  aria-label="Export to CSV (Pro feature)"
+                  className="inline-flex min-h-[40px] cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-2 text-sm font-semibold text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-400"
+                >
+                  Export to CSV
+                  <span className="rounded-full bg-purple-600/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-purple-700 dark:text-purple-300">
+                    Pro
+                  </span>
+                </button>
+              )}
+            </div>
             <div>
               <label
                 htmlFor="history-search"
@@ -348,6 +420,24 @@ export function HistoryPageClient() {
             ))}
           </ul>
         )}
+
+        {truncated && !loading ? (
+          <div className="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-fuchsia-50 p-5 text-center text-sm text-zinc-700 shadow-sm dark:border-purple-800/40 dark:from-purple-950/40 dark:to-fuchsia-950/30 dark:text-zinc-200">
+            <p className="font-semibold text-zinc-900 dark:text-white">
+              Showing your {historyLimit} most recent captions.
+            </p>
+            <p className="mt-1 text-zinc-600 dark:text-zinc-300">
+              You have {totalCount} captions saved in total. Upgrade to Pro to see your full
+              history.
+            </p>
+            <Link
+              href="/pricing"
+              className="mt-3 inline-flex min-h-[40px] items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:from-purple-500 hover:to-fuchsia-500"
+            >
+              Upgrade to Pro
+            </Link>
+          </div>
+        ) : null}
       </div>
     </main>
   );

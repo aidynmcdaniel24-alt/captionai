@@ -6,6 +6,11 @@ import {
   requireUser,
 } from "@/lib/security/api-guard";
 import { supabaseServer } from "@/lib/supabase/server";
+import {
+  FREE_DAILY_TOKENS,
+  nextResetIso,
+  TOKEN_COSTS,
+} from "@/lib/tokens";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -78,11 +83,23 @@ export async function GET(req: Request) {
     };
   }
 
+  const tokensUsed = Math.max(0, usageRow?.count ?? 0);
+  const tokensLimit = plan === "pro" ? null : FREE_DAILY_TOKENS;
+  const tokensRemaining =
+    tokensLimit === null ? null : Math.max(0, tokensLimit - tokensUsed);
+
   return NextResponse.json({
     plan,
     totalCaptions,
-    usageToday: usageRow?.count ?? 0,
-    freeLimit: 5,
+    // Legacy fields kept for any callers still reading them.
+    usageToday: tokensUsed,
+    freeLimit: FREE_DAILY_TOKENS,
+    // New token system
+    tokensUsed,
+    tokensLimit,
+    tokensRemaining,
+    tokenCosts: TOKEN_COSTS,
+    resetAt: nextResetIso(),
     referralsCount,
     abSummary,
     isAdmin: await resolveIsClerkAdmin(userId),

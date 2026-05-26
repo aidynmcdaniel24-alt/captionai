@@ -1,11 +1,17 @@
 "use client";
 
+import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
 import { BrandLogo } from "@/components/BrandLogo";
 import { CaptionLoadingState } from "@/components/dashboard/CaptionLoadingState";
+import { CollectionsTab } from "@/components/dashboard/CollectionsTab";
 import { GeneratedCaptionsPanel } from "@/components/dashboard/GeneratedCaptionsPanel";
 import { HookLibraryTab } from "@/components/dashboard/HookLibraryTab";
+import { ImageUploader } from "@/components/dashboard/ImageUploader";
+import { TokenBalance } from "@/components/dashboard/TokenBalance";
+import { TokenUpgradeModal } from "@/components/dashboard/TokenUpgradeModal";
 import type { CaptionRatingKey } from "@/lib/caption-rating-styles";
 import type { CaptionScore } from "@/lib/caption-score";
+import { TOKEN_COSTS, type TokenInfo } from "@/lib/tokens-shared";
 import {
   hasSeenOnboarding,
   WelcomeOnboardingModal,
@@ -55,7 +61,9 @@ type Tab =
   | "trending"
   | "ab"
   | "favorites"
-  | "hookLibrary";
+  | "hookLibrary"
+  | "analytics"
+  | "collections";
 
 type FavoriteHistoryItem = {
   id: string;
@@ -68,6 +76,14 @@ type FavoriteHistoryItem = {
   favoriteIndexes: number[];
 };
 
+type PaywallPayload = {
+  paywall?: boolean;
+  resetAt?: string;
+  cost?: number;
+  tokensRemaining?: number;
+  tokensLimit?: number;
+};
+
 type ApiResult = {
   captions?: string[];
   emojiPerCaption?: string[][];
@@ -76,18 +92,11 @@ type ApiResult = {
   historyId?: string;
   plan?: "free" | "pro";
   proBoost?: boolean;
-  usage?: {
-    count: number;
-    limit: number | null;
-    date: string;
-  };
+  tokens?: TokenInfo;
   error?: string;
   details?: string;
   stage?: string;
-  paywall?: boolean;
-  limit?: number;
-  count?: number;
-};
+} & PaywallPayload;
 
 export function DashboardPageClient() {
   const [tab, setTab] = useState<Tab>("captions");
@@ -98,19 +107,25 @@ export function DashboardPageClient() {
   const [captions, setCaptions] = useState<string[]>([]);
   const [emojiPerCaption, setEmojiPerCaption] = useState<string[][]>([]);
   const [historyId, setHistoryId] = useState<string | null>(null);
-  const [usageText, setUsageText] = useState("");
-  const [usageToday, setUsageToday] = useState<number | null>(null);
-  const [freeLimit, setFreeLimit] = useState(5);
   const [plan, setPlan] = useState<"free" | "pro" | null>(null);
+  const [tokensUsed, setTokensUsed] = useState<number | null>(null);
+  const [tokensLimit, setTokensLimit] = useState<number | null>(null);
+  const [tokensRemaining, setTokensRemaining] = useState<number | null>(null);
+  const [resetAt, setResetAt] = useState<string | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeMessage, setUpgradeMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showPaywall, setShowPaywall] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [captionRatings, setCaptionRatings] = useState<CaptionRatingKey[]>([]);
   const [captionScores, setCaptionScores] = useState<CaptionScore[]>([]);
   const [proBoost, setProBoost] = useState(false);
   const [fav, setFav] = useState<Record<number, boolean>>({});
+
+  // Image-to-caption (Feature 3)
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageAnalyzing, setImageAnalyzing] = useState(false);
 
   // Hashtags tab
   const [htags, setHtags] = useState<string[]>([]);
@@ -138,6 +153,18 @@ export function DashboardPageClient() {
   const resolvedTone = tone.trim().slice(0, 80) || "inspirational";
   const resolvedPlatform = platform.trim().slice(0, 80) || "Instagram";
 
+  const applyTokenInfo = useCallback((info?: TokenInfo | null) => {
+    if (!info) return;
+    if (info.plan === "free" || info.plan === "pro") {
+      setPlan(info.plan);
+    }
+    if (typeof info.tokensUsed === "number") setTokensUsed(info.tokensUsed);
+    setTokensLimit(info.tokensLimit ?? null);
+    if (typeof info.tokensRemaining === "number" || info.tokensRemaining === null) {
+      setTokensRemaining(info.tokensRemaining ?? null);
+    }
+  }, []);
+
   const refreshPlan = useCallback(async () => {
     try {
       const res = await fetch("/api/profile/stats");
@@ -146,20 +173,60 @@ export function DashboardPageClient() {
       }
       const data = (await res.json()) as {
         plan?: string;
-        usageToday?: number;
-        freeLimit?: number;
+        tokensUsed?: number;
+        tokensLimit?: number | null;
+        tokensRemaining?: number | null;
+        resetAt?: string;
       };
-      setPlan(data.plan === "pro" ? "pro" : "free");
-      if (typeof data.usageToday === "number") {
-        setUsageToday(data.usageToday);
+      const planValue = data.plan === "pro" ? "pro" : "free";
+      setPlan(planValue);
+      if (typeof data.tokensUsed === "number") setTokensUsed(data.tokensUsed);
+      setTokensLimit(planValue === "pro" ? null : data.tokensLimit ?? null);
+      if (
+        typeof data.tokensRemaining === "number" ||
+        data.tokensRemaining === null
+      ) {
+        setTokensRemaining(data.tokensRemaining ?? null);
       }
-      if (typeof data.freeLimit === "number") {
-        setFreeLimit(data.freeLimit);
-      }
+      if (data.resetAt) setResetAt(data.resetAt);
     } catch {
       /* ignore */
     }
   }, []);
+
+  /**
+   * Pre-flight check for any token-spending action. Pro users always pass.
+   * Free users with insufficient tokens trigger the upgrade modal and the
+   * caller short-circuits without firing the API call.
+   */
+  const ensureTokensOrShowModal = useCallback(
+    (cost: number, message?: string): boolean => {
+      if (plan === "pro") return true;
+      if (tokensRemaining === null) return true;
+      if (tokensRemaining < cost) {
+        setUpgradeMessage(message ?? null);
+        setShowUpgradeModal(true);
+        return false;
+      }
+      return true;
+    },
+    [plan, tokensRemaining]
+  );
+
+  const handleTokenPaywall = useCallback(
+    (data: PaywallPayload) => {
+      if (typeof data.tokensRemaining === "number") {
+        setTokensRemaining(data.tokensRemaining);
+      }
+      if (typeof data.tokensLimit === "number") {
+        setTokensLimit(data.tokensLimit);
+      }
+      if (data.resetAt) setResetAt(data.resetAt);
+      setUpgradeMessage(null);
+      setShowUpgradeModal(true);
+    },
+    []
+  );
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate plan/usage on mount
@@ -209,6 +276,7 @@ export function DashboardPageClient() {
   }
 
   async function handleGenerate() {
+    if (!ensureTokensOrShowModal(TOKEN_COSTS.caption)) return;
     setError("");
     setIsLoading(true);
     setCaptionRatings([]);
@@ -232,8 +300,7 @@ export function DashboardPageClient() {
 
       if (!res.ok) {
         if (data.paywall) {
-          setShowPaywall(true);
-          setUsageText(`Free limit reached: ${data.count}/${data.limit} used today.`);
+          handleTokenPaywall(data);
           setCaptions([]);
           setEmojiPerCaption([]);
           setCaptionRatings([]);
@@ -248,7 +315,6 @@ export function DashboardPageClient() {
         return;
       }
 
-      setShowPaywall(false);
       setCaptions(data.captions ?? []);
       setEmojiPerCaption(data.emojiPerCaption ?? []);
       setCaptionRatings(data.captionRatings ?? []);
@@ -258,12 +324,7 @@ export function DashboardPageClient() {
       if (data.plan === "pro" || data.plan === "free") {
         setPlan(data.plan);
       }
-
-      if (data.usage?.limit) {
-        setUsageText(`Free plan usage: ${data.usage.count}/${data.usage.limit} today`);
-      } else {
-        setUsageText(`Pro plan: unlimited usage`);
-      }
+      applyTokenInfo(data.tokens);
       await refreshPlan();
     } catch {
       setError("Could not generate captions. Please try again.");
@@ -334,6 +395,7 @@ export function DashboardPageClient() {
   }
 
   async function runHashtags() {
+    if (!ensureTokensOrShowModal(TOKEN_COSTS.hashtag)) return;
     setHtLoading(true);
     setHtags([]);
     setError("");
@@ -347,12 +409,21 @@ export function DashboardPageClient() {
           count: 15,
         }),
       });
-      const data = (await res.json()) as { hashtags?: string[]; error?: string };
+      const data = (await res.json()) as {
+        hashtags?: string[];
+        tokens?: TokenInfo;
+        error?: string;
+      } & PaywallPayload;
       if (!res.ok) {
+        if (data.paywall) {
+          handleTokenPaywall(data);
+          return;
+        }
         setError(data.error || "Hashtag generation failed.");
         return;
       }
       setHtags(data.hashtags ?? []);
+      applyTokenInfo(data.tokens);
     } catch {
       setError("Network error.");
     } finally {
@@ -361,6 +432,7 @@ export function DashboardPageClient() {
   }
 
   async function runBio() {
+    if (!ensureTokensOrShowModal(TOKEN_COSTS.bio)) return;
     setBioLoading(true);
     setBio("");
     setError("");
@@ -374,14 +446,23 @@ export function DashboardPageClient() {
           tone: resolvedTone,
         }),
       });
-      const data = (await res.json()) as { bio?: string; error?: string };
+      const data = (await res.json()) as {
+        bio?: string;
+        tokens?: TokenInfo;
+        error?: string;
+      } & PaywallPayload;
       if (!res.ok) {
+        if (data.paywall) {
+          handleTokenPaywall(data);
+          return;
+        }
         setError(data.error || "Bio generation failed.");
         return;
       }
       if (data.bio) {
         setBio(data.bio);
       }
+      applyTokenInfo(data.tokens);
     } catch {
       setError("Network error.");
     } finally {
@@ -389,18 +470,32 @@ export function DashboardPageClient() {
     }
   }
 
-  async function loadTrending() {
+  const loadTrending = useCallback(async () => {
+    if (!ensureTokensOrShowModal(TOKEN_COSTS.trending)) {
+      setTrendingLoaded(true);
+      return;
+    }
     setTrLoading(true);
     setError("");
     try {
       const res = await fetch("/api/trending");
-      const data = (await res.json()) as { topics?: string[]; error?: string };
+      const data = (await res.json()) as {
+        topics?: string[];
+        tokens?: TokenInfo;
+        error?: string;
+      } & PaywallPayload;
       if (!res.ok) {
+        if (data.paywall) {
+          handleTokenPaywall(data);
+          setTrending([]);
+          return;
+        }
         setTrending([]);
         setError(data.error || "Could not load trending topics.");
         return;
       }
       setTrending(data.topics ?? []);
+      applyTokenInfo(data.tokens);
     } catch {
       setTrending([]);
       setError("Could not load trending topics.");
@@ -408,16 +503,17 @@ export function DashboardPageClient() {
       setTrLoading(false);
       setTrendingLoaded(true);
     }
-  }
+  }, [applyTokenInfo, ensureTokensOrShowModal, handleTokenPaywall]);
 
   useEffect(() => {
     if (tab === "trending" && !trendingLoaded && !trLoading) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- load trending when tab opens
       void loadTrending();
     }
-  }, [tab, trendingLoaded, trLoading]);
+  }, [tab, trendingLoaded, trLoading, loadTrending]);
 
   async function generateAbPair() {
+    if (!ensureTokensOrShowModal(TOKEN_COSTS.abTest)) return;
     setAbLoading(true);
     setAbA("");
     setAbB("");
@@ -433,18 +529,80 @@ export function DashboardPageClient() {
           tone: resolvedTone,
         }),
       });
-      const data = (await res.json()) as { a?: string; b?: string; error?: string };
+      const data = (await res.json()) as {
+        a?: string;
+        b?: string;
+        tokens?: TokenInfo;
+        error?: string;
+      } & PaywallPayload;
       if (!res.ok) {
+        if (data.paywall) {
+          handleTokenPaywall(data);
+          return;
+        }
         setError(data.error || "Could not generate pair.");
         return;
       }
       setAbA(data.a ?? "");
       setAbB(data.b ?? "");
+      applyTokenInfo(data.tokens);
     } catch {
       setError("Network error.");
     } finally {
       setAbLoading(false);
     }
+  }
+
+  // Image-to-caption upload handler (Feature 3). Sends a base64-encoded
+  // image to the backend, which calls Groq vision and returns a topic
+  // description. Costs an extra 5 tokens for free users.
+  async function handleImageUpload(file: File) {
+    if (!ensureTokensOrShowModal(TOKEN_COSTS.image)) return;
+    setError("");
+    setImageAnalyzing(true);
+    try {
+      const reader = new FileReader();
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+      setImagePreview(dataUrl);
+
+      const res = await fetch("/api/captions/describe-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageData: dataUrl, mimeType: file.type }),
+      });
+      const data = (await res.json()) as {
+        description?: string;
+        tokens?: TokenInfo;
+        error?: string;
+      } & PaywallPayload;
+      if (!res.ok) {
+        if (data.paywall) {
+          handleTokenPaywall(data);
+          setImagePreview(null);
+          return;
+        }
+        setError(data.error || "Could not analyze your image.");
+        setImagePreview(null);
+        return;
+      }
+      if (data.description) {
+        setTopic(data.description);
+      }
+      applyTokenInfo(data.tokens);
+    } catch {
+      setError("Could not analyze your image.");
+      setImagePreview(null);
+    } finally {
+      setImageAnalyzing(false);
+    }
+  }
+
+  function handleImageRemove() {
+    setImagePreview(null);
   }
 
   async function saveAbExperiment() {
@@ -555,7 +713,11 @@ export function DashboardPageClient() {
     }
   }
 
-  const showFreeWarning = plan === "free" && usageToday !== null && usageToday >= 3 && usageToday < freeLimit;
+  const lowTokens =
+    plan === "free" &&
+    tokensRemaining !== null &&
+    tokensRemaining > 0 &&
+    tokensRemaining < 50;
 
   return (
     <main className={`${shell} px-4 py-6 sm:px-6 sm:py-8`}>
@@ -595,6 +757,12 @@ export function DashboardPageClient() {
           ) : null}
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <TokenBalance
+              plan={plan}
+              tokensUsed={tokensUsed}
+              tokensLimit={tokensLimit}
+              tokensRemaining={tokensRemaining}
+            />
             <div className="hidden sm:block">
               <ThemeToggle />
             </div>
@@ -607,10 +775,6 @@ export function DashboardPageClient() {
               >
                 {checkoutLoading ? "Opening checkout…" : "Upgrade — $9/mo"}
               </button>
-            ) : plan === "pro" ? (
-              <span className="rounded-lg border border-emerald-700/80 bg-emerald-50 px-3 py-1.5 text-sm text-emerald-800 dark:border-emerald-800/80 dark:bg-emerald-950/40 dark:text-emerald-300">
-                Pro
-              </span>
             ) : null}
             <Link
               href="/history"
@@ -636,13 +800,24 @@ export function DashboardPageClient() {
           </div>
         </div>
 
-        {showFreeWarning ? (
+        {lowTokens ? (
           <div
-            className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-100"
+            className="flex flex-col gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-100"
             role="status"
           >
-            You have used {usageToday} of {freeLimit} free generations today. Upgrade for unlimited captions, or
-            come back tomorrow.
+            <span>
+              ⚠️ Running low on tokens! Only{" "}
+              <span className="font-semibold tabular-nums">{tokensRemaining}</span> of{" "}
+              {tokensLimit ?? 200} left today.
+            </span>
+            <button
+              type="button"
+              onClick={() => startCheckout("month")}
+              disabled={checkoutLoading}
+              className="inline-flex min-h-[40px] shrink-0 items-center justify-center rounded-full bg-amber-900 px-4 py-1.5 text-xs font-semibold text-amber-50 transition hover:bg-amber-950 disabled:opacity-50"
+            >
+              Upgrade to Pro
+            </button>
           </div>
         ) : null}
 
@@ -654,28 +829,35 @@ export function DashboardPageClient() {
           <div className="flex min-w-max gap-1.5 sm:gap-2">
             {(
               [
-                ["captions", "Captions"],
-                ["hashtags", "Hashtags"],
-                ["bio", "Bio"],
-                ["trending", "Trending"],
-                ["ab", "A/B test"],
-                ["favorites", "Favorites"],
-                ["hookLibrary", "Hook Library"],
+                ["captions", "Captions", false],
+                ["hashtags", "Hashtags", false],
+                ["bio", "Bio", false],
+                ["trending", "Trending", false],
+                ["ab", "A/B test", false],
+                ["favorites", "Favorites", false],
+                ["collections", "Collections", true],
+                ["hookLibrary", "Hook Library", false],
+                ["analytics", "Analytics", true],
               ] as const
-            ).map(([id, label]) => (
+            ).map(([id, label, proOnly]) => (
               <button
                 key={id}
                 type="button"
                 role="tab"
                 aria-selected={tab === id}
                 onClick={() => setTab(id)}
-                className={`inline-flex min-h-[40px] shrink-0 items-center justify-center whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition ${
+                className={`inline-flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition ${
                   tab === id
                     ? "bg-purple-600 text-white shadow-sm"
                     : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
                 }`}
               >
                 {label}
+                {proOnly && plan !== "pro" ? (
+                  <span aria-hidden className="text-[11px] opacity-70">
+                    🔒
+                  </span>
+                ) : null}
               </button>
             ))}
           </div>
@@ -722,7 +904,19 @@ export function DashboardPageClient() {
                 </div>
               </div>
 
-              <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Photo/topic description</label>
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <label className="block text-sm text-zinc-600 dark:text-zinc-300">
+                  Photo/topic description
+                </label>
+                <ImageUploader
+                  preview={imagePreview}
+                  analyzing={imageAnalyzing}
+                  cost={TOKEN_COSTS.image}
+                  isPro={plan === "pro"}
+                  onUpload={handleImageUpload}
+                  onRemove={handleImageRemove}
+                />
+              </div>
               <textarea
                 className="min-h-32 w-full rounded-xl border border-zinc-300 bg-white p-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                 placeholder="Example: my coffee shop in New Orleans"
@@ -769,20 +963,33 @@ export function DashboardPageClient() {
                 </div>
               </div>
 
-              <button
-                className="mt-5 inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-purple-600 px-5 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-purple-500 disabled:opacity-70 sm:w-auto"
-                disabled={isLoading}
-                onClick={handleGenerate}
-              >
-                {isLoading ? "Generating..." : "Generate captions"}
-              </button>
-
-              {usageText ? <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-300">{usageText}</p> : null}
-
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <button
+                  className="inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-purple-600 px-5 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-purple-500 disabled:opacity-70 sm:w-auto"
+                  disabled={isLoading}
+                  onClick={handleGenerate}
+                >
+                  {isLoading ? "Generating..." : `Generate captions (${TOKEN_COSTS.caption} tokens)`}
+                </button>
+                {plan === "pro" ? (
+                  <span
+                    title="Pro subscribers get priority placement in the AI generation queue."
+                    className="inline-flex items-center gap-1 rounded-full border border-purple-400/70 bg-gradient-to-r from-purple-100 to-fuchsia-100 px-3 py-1.5 text-xs font-bold text-purple-900 dark:border-purple-500/50 dark:from-purple-950/60 dark:to-fuchsia-950/60 dark:text-purple-100"
+                  >
+                    ⚡ Priority
+                  </span>
+                ) : null}
+              </div>
             </div>
 
             {isLoading ? (
-              <CaptionLoadingState subject={`Generating for ${resolvedPlatform}`} />
+              <CaptionLoadingState
+                subject={
+                  plan === "pro"
+                    ? `⚡ Pro priority generation for ${resolvedPlatform}`
+                    : `Generating for ${resolvedPlatform}`
+                }
+              />
             ) : null}
 
             {captions.length > 0 ? (
@@ -837,14 +1044,28 @@ export function DashboardPageClient() {
               />
             </div>
 
-            <button
-              type="button"
-              className="mt-5 inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-purple-600 px-5 py-3 text-base font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50 sm:w-auto"
-              disabled={htLoading || !topic.trim()}
-              onClick={runHashtags}
-            >
-              {htLoading ? "Generating…" : "Generate hashtags"}
-            </button>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                className="inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-purple-600 px-5 py-3 text-base font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50 sm:w-auto"
+                disabled={htLoading || !topic.trim()}
+                onClick={runHashtags}
+              >
+                {htLoading
+                  ? plan === "pro"
+                    ? "⚡ Pro priority generation…"
+                    : "Generating…"
+                  : `Generate hashtags (${TOKEN_COSTS.hashtag} tokens)`}
+              </button>
+              {plan === "pro" ? (
+                <span
+                  title="Pro subscribers get priority placement in the AI generation queue."
+                  className="inline-flex items-center gap-1 rounded-full border border-purple-400/70 bg-gradient-to-r from-purple-100 to-fuchsia-100 px-3 py-1.5 text-xs font-bold text-purple-900 dark:border-purple-500/50 dark:from-purple-950/60 dark:to-fuchsia-950/60 dark:text-purple-100"
+                >
+                  ⚡ Priority
+                </span>
+              ) : null}
+            </div>
 
             {htags.length > 0 ? (
               <div className="mt-6">
@@ -916,14 +1137,28 @@ export function DashboardPageClient() {
               </div>
             </div>
 
-            <button
-              type="button"
-              className="mt-5 inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-purple-600 px-5 py-3 text-base font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50 sm:w-auto"
-              disabled={bioLoading || !topic.trim()}
-              onClick={runBio}
-            >
-              {bioLoading ? "Writing…" : "Generate bio"}
-            </button>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                className="inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-purple-600 px-5 py-3 text-base font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50 sm:w-auto"
+                disabled={bioLoading || !topic.trim()}
+                onClick={runBio}
+              >
+                {bioLoading
+                  ? plan === "pro"
+                    ? "⚡ Pro priority generation…"
+                    : "Writing…"
+                  : `Generate bio (${TOKEN_COSTS.bio} tokens)`}
+              </button>
+              {plan === "pro" ? (
+                <span
+                  title="Pro subscribers get priority placement in the AI generation queue."
+                  className="inline-flex items-center gap-1 rounded-full border border-purple-400/70 bg-gradient-to-r from-purple-100 to-fuchsia-100 px-3 py-1.5 text-xs font-bold text-purple-900 dark:border-purple-500/50 dark:from-purple-950/60 dark:to-fuchsia-950/60 dark:text-purple-100"
+                >
+                  ⚡ Priority
+                </span>
+              ) : null}
+            </div>
 
             {bio ? (
               <div className="mt-6">
@@ -1012,14 +1247,28 @@ export function DashboardPageClient() {
               </div>
             </div>
 
-            <button
-              type="button"
-              className="mt-5 inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-purple-600 px-5 py-3 text-base font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50 sm:w-auto"
-              disabled={abLoading || !topic.trim()}
-              onClick={generateAbPair}
-            >
-              {abLoading ? "Generating…" : "Generate A/B pair"}
-            </button>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                className="inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-purple-600 px-5 py-3 text-base font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50 sm:w-auto"
+                disabled={abLoading || !topic.trim()}
+                onClick={generateAbPair}
+              >
+                {abLoading
+                  ? plan === "pro"
+                    ? "⚡ Pro priority generation…"
+                    : "Generating…"
+                  : `Generate A/B pair (${TOKEN_COSTS.abTest} tokens)`}
+              </button>
+              {plan === "pro" ? (
+                <span
+                  title="Pro subscribers get priority placement in the AI generation queue."
+                  className="inline-flex items-center gap-1 rounded-full border border-purple-400/70 bg-gradient-to-r from-purple-100 to-fuchsia-100 px-3 py-1.5 text-xs font-bold text-purple-900 dark:border-purple-500/50 dark:from-purple-950/60 dark:to-fuchsia-950/60 dark:text-purple-100"
+                >
+                  ⚡ Priority
+                </span>
+              ) : null}
+            </div>
 
             {abA && abB ? (
               <div className="mt-6 space-y-4">
@@ -1097,17 +1346,37 @@ export function DashboardPageClient() {
                   Captions you starred from past generations.
                 </p>
               </div>
-              <button
-                type="button"
-                className="inline-flex min-h-[40px] items-center justify-center rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                onClick={() => {
-                  setFavoritesLoaded(false);
-                  void loadFavorites();
-                }}
-                disabled={favoritesLoading}
-              >
-                {favoritesLoading ? "Refreshing…" : "Refresh"}
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className={`inline-flex min-h-[40px] items-center justify-center rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                    plan === "pro"
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200 dark:hover:bg-emerald-950/60"
+                      : "border-zinc-300 bg-zinc-100 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-500"
+                  }`}
+                  onClick={() => {
+                    if (plan !== "pro") {
+                      setShowUpgradeModal(true);
+                      return;
+                    }
+                    window.location.href = "/api/captions/favorites/export";
+                  }}
+                  title={plan !== "pro" ? "Pro feature — upgrade to export" : "Download favorites as CSV"}
+                >
+                  {plan === "pro" ? "Export favorites to CSV" : "Export favorites — Pro"}
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex min-h-[40px] items-center justify-center rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  onClick={() => {
+                    setFavoritesLoaded(false);
+                    void loadFavorites();
+                  }}
+                  disabled={favoritesLoading}
+                >
+                  {favoritesLoading ? "Refreshing…" : "Refresh"}
+                </button>
+              </div>
             </div>
 
             {favoritesLoading && favorites.length === 0 ? (
@@ -1179,43 +1448,35 @@ export function DashboardPageClient() {
             }}
           />
         ) : null}
+
+        {tab === "collections" ? (
+          <CollectionsTab
+            plan={plan}
+            checkoutLoading={checkoutLoading}
+            onStartCheckout={startCheckout}
+          />
+        ) : null}
+
+        {tab === "analytics" ? (
+          <AnalyticsTab
+            plan={plan}
+            checkoutLoading={checkoutLoading}
+            onStartCheckout={startCheckout}
+          />
+        ) : null}
       </div>
 
-      {showPaywall ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 sm:p-6">
-          <div className="w-full max-w-md rounded-2xl border border-zinc-700 bg-zinc-900 p-5 text-center text-white sm:p-6">
-            <h3 className="text-xl font-semibold sm:text-2xl">Free Limit Reached</h3>
-            <p className="mt-2 text-sm text-zinc-300 sm:text-base">
-              You have used all {freeLimit} free captions for today. Upgrade to Pro for unlimited usage.
-            </p>
-            <div className="mt-5 flex flex-col gap-2 sm:gap-3">
-              <button
-                type="button"
-                className="inline-flex min-h-[52px] w-full items-center justify-center rounded-full bg-purple-600 px-6 py-3 text-base font-bold text-white shadow-lg shadow-purple-600/30 transition hover:bg-purple-500 disabled:opacity-50"
-                disabled={checkoutLoading}
-                onClick={() => startCheckout("month")}
-              >
-                {checkoutLoading ? "Opening Stripe…" : "Upgrade monthly — $9"}
-              </button>
-              <button
-                type="button"
-                className="inline-flex min-h-[52px] w-full items-center justify-center rounded-full border border-purple-400 px-6 py-3 text-base font-bold text-purple-100 transition hover:bg-purple-900/30 disabled:opacity-50"
-                disabled={checkoutLoading}
-                onClick={() => startCheckout("year")}
-              >
-                {checkoutLoading ? "…" : "Upgrade yearly — $79"}
-              </button>
-              <button
-                type="button"
-                className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full border border-zinc-600 px-4 py-2 text-sm text-zinc-200 transition hover:bg-zinc-800"
-                onClick={() => setShowPaywall(false)}
-              >
-                Maybe later
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <TokenUpgradeModal
+        open={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        onUpgrade={(interval) => {
+          setShowUpgradeModal(false);
+          void startCheckout(interval);
+        }}
+        upgrading={checkoutLoading}
+        resetAt={resetAt}
+        message={upgradeMessage ?? undefined}
+      />
 
       <WelcomeOnboardingModal open={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </main>

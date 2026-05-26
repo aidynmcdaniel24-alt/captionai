@@ -3,9 +3,11 @@ import { getGroqClient } from "@/lib/groq-client";
 import { withGroqRetry } from "@/lib/groq-retry";
 import {
   RATE_LIMITS,
-  rateLimitByIp,
+  rateLimitByUser,
+  requireUser,
   safeErrorMessage,
 } from "@/lib/security/api-guard";
+import { spendTokens, TOKEN_COSTS, tokenInfoPayload } from "@/lib/tokens";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,12 +28,25 @@ function parseTopics(raw: string): string[] | null {
 }
 
 export async function GET(req: Request) {
-  const rateLimited = rateLimitByIp(req, "trending:get", RATE_LIMITS.publicRead);
+  const authResult = await requireUser(req, "trending:get");
+  if (!authResult.ok) return authResult.response;
+  const { userId } = authResult;
+
+  const rateLimited = rateLimitByUser(userId, "trending:get", RATE_LIMITS.publicRead);
   if (rateLimited) return rateLimited;
+
+  const spend = await spendTokens(userId, TOKEN_COSTS.trending, "trending:get");
+  if (!spend.ok) {
+    return spend.response;
+  }
 
   const now = Date.now();
   if (cached && now - cached.at < cacheTtlMs) {
-    return NextResponse.json({ topics: cached.topics, cached: true });
+    return NextResponse.json({
+      topics: cached.topics,
+      cached: true,
+      tokens: tokenInfoPayload(spend),
+    });
   }
 
   const groq = getGroqClient();
@@ -43,7 +58,12 @@ export async function GET(req: Request) {
       "Product launch teasers",
       "Creator morning routines",
     ];
-    return NextResponse.json({ topics: fallback, cached: false, source: "fallback" });
+    return NextResponse.json({
+      topics: fallback,
+      cached: false,
+      source: "fallback",
+      tokens: tokenInfoPayload(spend),
+    });
   }
 
   try {
@@ -68,10 +88,14 @@ export async function GET(req: Request) {
     const content = completion.choices[0]?.message?.content ?? "";
     const topics = parseTopics(content);
     if (!topics || topics.length === 0) {
-      return NextResponse.json({ topics: ["Lifestyle photo dumps", "Day-in-the-life vlogs"], cached: false });
+      return NextResponse.json({
+        topics: ["Lifestyle photo dumps", "Day-in-the-life vlogs"],
+        cached: false,
+        tokens: tokenInfoPayload(spend),
+      });
     }
     cached = { at: now, topics };
-    return NextResponse.json({ topics, cached: false });
+    return NextResponse.json({ topics, cached: false, tokens: tokenInfoPayload(spend) });
   } catch (e) {
     return NextResponse.json(
       { error: safeErrorMessage(e, "Trending failed"), topics: [] },

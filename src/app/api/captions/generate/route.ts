@@ -23,14 +23,11 @@ import {
   REQUEST_SIZE_LIMITS,
 } from "@/lib/security/request-size";
 import { supabaseServer } from "@/lib/supabase/server";
+import { spendTokens, TOKEN_COSTS, tokenInfoPayload } from "@/lib/tokens";
 
 type Plan = "free" | "pro";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function getTodayDateString() {
-  return new Date().toISOString().split("T")[0];
-}
 
 function resolvePlatform(platform: string, custom: string) {
   const p = platform.trim();
@@ -653,31 +650,14 @@ export async function POST(req: Request) {
     );
   }
 
-  const today = getTodayDateString();
-
-  const { data: subscriptionRow, error: subscriptionError } = await supabaseServer
+  // Auto-create the subscription row on first use so the token spend
+  // helper has a plan to read. We don't need the row's value here — the
+  // token helper re-reads it before deciding what to charge.
+  const { data: subscriptionRow } = await supabaseServer
     .from("subscriptions")
     .select("plan")
     .eq("user_id", userId)
     .maybeSingle();
-
-  if (subscriptionError) {
-    await logAdminEvent("error", "subscription-read failed", {
-      userId,
-      details: subscriptionError.message,
-    });
-    return NextResponse.json(
-      {
-        error: "Could not read subscription status. Please try again in a moment.",
-        stage: "subscription-read",
-        details: safeErrorMessage(subscriptionError, "Subscription lookup failed."),
-      },
-      { status: 500 }
-    );
-  }
-
-  const plan: Plan = subscriptionRow?.plan === "pro" ? "pro" : "free";
-  const proBoost = plan === "pro";
 
   if (!subscriptionRow) {
     await supabaseServer.from("subscriptions").insert({
@@ -687,43 +667,13 @@ export async function POST(req: Request) {
     });
   }
 
-  const { data: usageRow, error: usageReadError } = await supabaseServer
-    .from("usage")
-    .select("count")
-    .eq("user_id", userId)
-    .eq("date", today)
-    .maybeSingle();
-
-  if (usageReadError) {
-    await logAdminEvent("error", "usage-read failed", {
-      userId,
-      details: usageReadError.message,
-    });
-    return NextResponse.json(
-      {
-        error: "Could not read daily usage. Please try again in a moment.",
-        stage: "usage-read",
-        details: safeErrorMessage(usageReadError, "Usage lookup failed."),
-      },
-      { status: 500 }
-    );
+  const spend = await spendTokens(userId, TOKEN_COSTS.caption, "captions:generate");
+  if (!spend.ok) {
+    return spend.response;
   }
 
-  const currentCount = usageRow?.count ?? 0;
-  const freeLimit = 5;
-
-  if (plan === "free" && currentCount >= freeLimit) {
-    return NextResponse.json(
-      {
-        error: "Free plan limit reached.",
-        paywall: true,
-        plan,
-        count: currentCount,
-        limit: freeLimit,
-      },
-      { status: 402 }
-    );
-  }
+  const plan: Plan = spend.plan;
+  const proBoost = plan === "pro";
 
   const groq = getGroqClient();
   if (!groq) {
@@ -777,33 +727,6 @@ export async function POST(req: Request) {
       }
     }
 
-    const nextCount = currentCount + 1;
-    const { error: usageWriteError } = await supabaseServer.from("usage").upsert(
-      {
-        user_id: userId,
-        date: today,
-        count: nextCount,
-      },
-      {
-        onConflict: "user_id,date",
-      }
-    );
-
-    if (usageWriteError) {
-      await logAdminEvent("error", "usage-write failed", {
-        userId,
-        details: usageWriteError.message,
-      });
-      return NextResponse.json(
-        {
-          error: "Could not update daily usage. Please try again in a moment.",
-          stage: "usage-write",
-          details: safeErrorMessage(usageWriteError, "Usage update failed."),
-        },
-        { status: 500 }
-      );
-    }
-
     const { data: inserted, error: historyError } = await supabaseServer
       .from("caption_history")
       .insert({
@@ -850,11 +773,7 @@ export async function POST(req: Request) {
       historyId,
       plan,
       proBoost,
-      usage: {
-        count: nextCount,
-        limit: plan === "free" ? freeLimit : null,
-        date: today,
-      },
+      tokens: tokenInfoPayload(spend),
     });
   } catch (error) {
     const details = error instanceof Error ? error.message : "Unknown Groq API error.";
