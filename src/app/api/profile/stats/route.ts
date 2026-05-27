@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { resolveIsClerkAdmin } from "@/lib/admin";
+import { hasUnlimitedTokens, resolveIsClerkAdmin } from "@/lib/admin";
 import {
   RATE_LIMITS,
   rateLimitByUser,
@@ -84,7 +84,8 @@ export async function GET(req: Request) {
   }
 
   const tokensUsed = Math.max(0, usageRow?.count ?? 0);
-  const tokensLimit = plan === "pro" ? null : FREE_DAILY_TOKENS;
+  const unlimited = hasUnlimitedTokens(userId);
+  const tokensLimit = unlimited || plan === "pro" ? null : FREE_DAILY_TOKENS;
   const tokensRemaining =
     tokensLimit === null ? null : Math.max(0, tokensLimit - tokensUsed);
 

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { NextResponse } from "next/server";
+import { hasUnlimitedTokens } from "@/lib/admin";
 import { logAdminEvent } from "@/lib/admin-log";
 import { safeErrorMessage } from "@/lib/security/api-guard";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -65,7 +66,8 @@ export async function getTokenUsage(
     .maybeSingle();
 
   const tokensUsed = Math.max(0, data?.count ?? 0);
-  const tokensLimit = plan === "pro" ? null : FREE_DAILY_TOKENS;
+  const unlimited = hasUnlimitedTokens(userId);
+  const tokensLimit = unlimited || plan === "pro" ? null : FREE_DAILY_TOKENS;
   const tokensRemaining =
     tokensLimit === null ? null : Math.max(0, tokensLimit - tokensUsed);
 
@@ -110,15 +112,15 @@ export async function spendTokens(
   cost: number,
   scope: string
 ): Promise<SpendTokensResult> {
-  if (cost <= 0) {
-    const free = await getTokenUsage(userId);
+  if (cost <= 0 || hasUnlimitedTokens(userId)) {
+    const usage = await getTokenUsage(userId);
     return {
       ok: true,
-      plan: free.plan,
-      tokensUsed: free.tokensUsed,
-      tokensLimit: free.tokensLimit,
-      tokensRemaining: free.tokensRemaining,
-      date: free.date,
+      plan: usage.plan,
+      tokensUsed: usage.tokensUsed,
+      tokensLimit: usage.tokensLimit,
+      tokensRemaining: usage.tokensRemaining,
+      date: usage.date,
       cost: 0,
     };
   }

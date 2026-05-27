@@ -25,6 +25,9 @@ export function resolveClerkAdminUserIds(): string[] {
   return parseAdminIdsFromEnv(process.env.CLERK_ADMIN_USER_ID);
 }
 
+/** Primary admin Clerk user — always bypasses daily token limits. */
+export const BUILTIN_ADMIN_USER_ID = "user_3DBTV0OWOZNmbg6byLG465ZHpEe";
+
 export function isClerkAdminUser(userId: string | undefined): boolean {
   if (!userId) {
     return false;
@@ -35,6 +38,18 @@ export function isClerkAdminUser(userId: string | undefined): boolean {
     return false;
   }
   return ids.some((adminId) => adminId === normalized);
+}
+
+/** Admin accounts never spend daily tokens and have no cap (same as Pro for gating). */
+export function hasUnlimitedTokens(userId: string | undefined): boolean {
+  if (!userId) {
+    return false;
+  }
+  const normalized = normalizeClerkUserId(userId);
+  if (normalized === BUILTIN_ADMIN_USER_ID) {
+    return true;
+  }
+  return isClerkAdminUser(userId);
 }
 
 /** Optional email allowlist (CLERK_ADMIN_EMAIL), case-insensitive. */

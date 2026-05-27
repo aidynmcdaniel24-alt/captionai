@@ -21,19 +21,21 @@ export function TokenBalance({
   tokensLimit,
   tokensRemaining,
 }: Props) {
-  if (plan === "pro") {
+  const unlimited = plan === "pro" || tokensLimit === null;
+
+  if (unlimited) {
     return (
       <div
         className="inline-flex items-center gap-2 rounded-full border border-purple-300/70 bg-gradient-to-r from-purple-100 to-fuchsia-100 px-3 py-1.5 text-xs font-semibold text-purple-900 shadow-sm dark:border-purple-500/40 dark:from-purple-950/60 dark:to-fuchsia-950/60 dark:text-purple-100"
-        aria-label="Pro plan: unlimited tokens"
+        aria-label="Unlimited tokens"
       >
         <span aria-hidden>✨</span>
-        <span>Pro — Unlimited</span>
+        <span>{plan === "pro" ? "Pro — Unlimited" : "Unlimited tokens"}</span>
       </div>
     );
   }
 
-  if (plan !== "free" || tokensUsed === null || tokensLimit === null) {
+  if (plan !== "free" || tokensUsed === null) {
     return null;
   }
 

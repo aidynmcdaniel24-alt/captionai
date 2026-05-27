@@ -181,7 +181,11 @@ export function DashboardPageClient() {
       const planValue = data.plan === "pro" ? "pro" : "free";
       setPlan(planValue);
       if (typeof data.tokensUsed === "number") setTokensUsed(data.tokensUsed);
-      setTokensLimit(planValue === "pro" ? null : data.tokensLimit ?? null);
+      setTokensLimit(
+        planValue === "pro" || data.tokensLimit === null
+          ? null
+          : data.tokensLimit ?? null
+      );
       if (
         typeof data.tokensRemaining === "number" ||
         data.tokensRemaining === null
@@ -201,8 +205,9 @@ export function DashboardPageClient() {
    */
   const ensureTokensOrShowModal = useCallback(
     (cost: number, message?: string): boolean => {
-      if (plan === "pro") return true;
-      if (tokensRemaining === null) return true;
+      if (plan === "pro" || tokensRemaining === null || tokensLimit === null) {
+        return true;
+      }
       if (tokensRemaining < cost) {
         setUpgradeMessage(message ?? null);
         setShowUpgradeModal(true);
@@ -210,7 +215,7 @@ export function DashboardPageClient() {
       }
       return true;
     },
-    [plan, tokensRemaining]
+    [plan, tokensLimit, tokensRemaining]
   );
 
   const handleTokenPaywall = useCallback(
