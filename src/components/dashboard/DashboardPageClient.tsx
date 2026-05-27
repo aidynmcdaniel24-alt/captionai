@@ -8,6 +8,7 @@ import { GeneratedCaptionsPanel } from "@/components/dashboard/GeneratedCaptions
 import { HookLibraryTab } from "@/components/dashboard/HookLibraryTab";
 import { ImageUploader } from "@/components/dashboard/ImageUploader";
 import { TokenBalance } from "@/components/dashboard/TokenBalance";
+import { TokenCounter } from "@/components/dashboard/TokenCounter";
 import { TokenUpgradeModal } from "@/components/dashboard/TokenUpgradeModal";
 import type { CaptionRatingKey } from "@/lib/caption-rating-styles";
 import type { CaptionScore } from "@/lib/caption-score";
@@ -968,22 +969,32 @@ export function DashboardPageClient() {
                 </div>
               </div>
 
-              <div className="mt-5 flex flex-wrap items-center gap-3">
+              <div className="mt-5 flex flex-col gap-2">
                 <button
                   className="inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-purple-600 px-5 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-purple-500 disabled:opacity-70 sm:w-auto"
                   disabled={isLoading}
                   onClick={handleGenerate}
                 >
-                  {isLoading ? "Generating..." : `Generate captions (${TOKEN_COSTS.caption} tokens)`}
+                  {isLoading ? "Generating..." : "Generate captions"}
                 </button>
-                {plan === "pro" ? (
-                  <span
-                    title="Pro subscribers get priority placement in the AI generation queue."
-                    className="inline-flex items-center gap-1 rounded-full border border-purple-400/70 bg-gradient-to-r from-purple-100 to-fuchsia-100 px-3 py-1.5 text-xs font-bold text-purple-900 dark:border-purple-500/50 dark:from-purple-950/60 dark:to-fuchsia-950/60 dark:text-purple-100"
-                  >
-                    ⚡ Priority
-                  </span>
-                ) : null}
+                <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                  {plan === "pro" ? (
+                    <span
+                      title="Pro subscribers get priority placement in the AI generation queue."
+                      className="inline-flex items-center gap-1 text-xs font-medium text-purple-600 dark:text-purple-300"
+                    >
+                      <span aria-hidden>⚡</span>
+                      <span>Priority generation</span>
+                    </span>
+                  ) : (
+                    <span aria-hidden />
+                  )}
+                  <TokenCounter
+                    plan={plan}
+                    tokensRemaining={tokensRemaining}
+                    tokensLimit={tokensLimit}
+                  />
+                </div>
               </div>
             </div>
 
@@ -1049,27 +1060,33 @@ export function DashboardPageClient() {
               />
             </div>
 
-            <div className="mt-5 flex flex-wrap items-center gap-3">
+            <div className="mt-5 flex flex-col gap-2">
               <button
                 type="button"
                 className="inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-purple-600 px-5 py-3 text-base font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50 sm:w-auto"
                 disabled={htLoading || !topic.trim()}
                 onClick={runHashtags}
               >
-                {htLoading
-                  ? plan === "pro"
-                    ? "⚡ Pro priority generation…"
-                    : "Generating…"
-                  : `Generate hashtags (${TOKEN_COSTS.hashtag} tokens)`}
+                {htLoading ? "Generating…" : "Generate hashtags"}
               </button>
-              {plan === "pro" ? (
-                <span
-                  title="Pro subscribers get priority placement in the AI generation queue."
-                  className="inline-flex items-center gap-1 rounded-full border border-purple-400/70 bg-gradient-to-r from-purple-100 to-fuchsia-100 px-3 py-1.5 text-xs font-bold text-purple-900 dark:border-purple-500/50 dark:from-purple-950/60 dark:to-fuchsia-950/60 dark:text-purple-100"
-                >
-                  ⚡ Priority
-                </span>
-              ) : null}
+              <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                {plan === "pro" ? (
+                  <span
+                    title="Pro subscribers get priority placement in the AI generation queue."
+                    className="inline-flex items-center gap-1 text-xs font-medium text-purple-600 dark:text-purple-300"
+                  >
+                    <span aria-hidden>⚡</span>
+                    <span>Priority generation</span>
+                  </span>
+                ) : (
+                  <span aria-hidden />
+                )}
+                <TokenCounter
+                  plan={plan}
+                  tokensRemaining={tokensRemaining}
+                  tokensLimit={tokensLimit}
+                />
+              </div>
             </div>
 
             {htags.length > 0 ? (
@@ -1142,27 +1159,33 @@ export function DashboardPageClient() {
               </div>
             </div>
 
-            <div className="mt-5 flex flex-wrap items-center gap-3">
+            <div className="mt-5 flex flex-col gap-2">
               <button
                 type="button"
                 className="inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-purple-600 px-5 py-3 text-base font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50 sm:w-auto"
                 disabled={bioLoading || !topic.trim()}
                 onClick={runBio}
               >
-                {bioLoading
-                  ? plan === "pro"
-                    ? "⚡ Pro priority generation…"
-                    : "Writing…"
-                  : `Generate bio (${TOKEN_COSTS.bio} tokens)`}
+                {bioLoading ? "Writing…" : "Generate bio"}
               </button>
-              {plan === "pro" ? (
-                <span
-                  title="Pro subscribers get priority placement in the AI generation queue."
-                  className="inline-flex items-center gap-1 rounded-full border border-purple-400/70 bg-gradient-to-r from-purple-100 to-fuchsia-100 px-3 py-1.5 text-xs font-bold text-purple-900 dark:border-purple-500/50 dark:from-purple-950/60 dark:to-fuchsia-950/60 dark:text-purple-100"
-                >
-                  ⚡ Priority
-                </span>
-              ) : null}
+              <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                {plan === "pro" ? (
+                  <span
+                    title="Pro subscribers get priority placement in the AI generation queue."
+                    className="inline-flex items-center gap-1 text-xs font-medium text-purple-600 dark:text-purple-300"
+                  >
+                    <span aria-hidden>⚡</span>
+                    <span>Priority generation</span>
+                  </span>
+                ) : (
+                  <span aria-hidden />
+                )}
+                <TokenCounter
+                  plan={plan}
+                  tokensRemaining={tokensRemaining}
+                  tokensLimit={tokensLimit}
+                />
+              </div>
             </div>
 
             {bio ? (
@@ -1252,27 +1275,33 @@ export function DashboardPageClient() {
               </div>
             </div>
 
-            <div className="mt-5 flex flex-wrap items-center gap-3">
+            <div className="mt-5 flex flex-col gap-2">
               <button
                 type="button"
                 className="inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-purple-600 px-5 py-3 text-base font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50 sm:w-auto"
                 disabled={abLoading || !topic.trim()}
                 onClick={generateAbPair}
               >
-                {abLoading
-                  ? plan === "pro"
-                    ? "⚡ Pro priority generation…"
-                    : "Generating…"
-                  : `Generate A/B pair (${TOKEN_COSTS.abTest} tokens)`}
+                {abLoading ? "Generating…" : "Generate A/B pair"}
               </button>
-              {plan === "pro" ? (
-                <span
-                  title="Pro subscribers get priority placement in the AI generation queue."
-                  className="inline-flex items-center gap-1 rounded-full border border-purple-400/70 bg-gradient-to-r from-purple-100 to-fuchsia-100 px-3 py-1.5 text-xs font-bold text-purple-900 dark:border-purple-500/50 dark:from-purple-950/60 dark:to-fuchsia-950/60 dark:text-purple-100"
-                >
-                  ⚡ Priority
-                </span>
-              ) : null}
+              <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                {plan === "pro" ? (
+                  <span
+                    title="Pro subscribers get priority placement in the AI generation queue."
+                    className="inline-flex items-center gap-1 text-xs font-medium text-purple-600 dark:text-purple-300"
+                  >
+                    <span aria-hidden>⚡</span>
+                    <span>Priority generation</span>
+                  </span>
+                ) : (
+                  <span aria-hidden />
+                )}
+                <TokenCounter
+                  plan={plan}
+                  tokensRemaining={tokensRemaining}
+                  tokensLimit={tokensLimit}
+                />
+              </div>
             </div>
 
             {abA && abB ? (
