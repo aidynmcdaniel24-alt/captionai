@@ -140,6 +140,123 @@ The CaptionAI team`;
   });
 }
 
+export async function sendHighScoreCaptionEmail(
+  to: string,
+  opts: {
+    firstName?: string;
+    score: number;
+    caption: string;
+    platform: string;
+    breakdown: {
+      hook: number;
+      emotion: number;
+      cta: number;
+      platformFit: number;
+      originality: number;
+    };
+    explanation?: string;
+  },
+) {
+  const name = opts.firstName?.trim() || "creator";
+  const dashboard = `${APP_URL}/dashboard`;
+  const score = Math.max(0, Math.min(100, Math.round(opts.score)));
+  const captionEscaped = opts.caption
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  const bar = (val: number, max: number, color: string) => `
+    <div style="margin:0 0 10px;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:#1f1235;margin:0 0 4px;">
+        <span style="font-weight:600;">${color === "#7c3aed" ? "Hook" : color === "#ec4899" ? "Emotion" : color === "#f59e0b" ? "CTA" : color === "#10b981" ? "Platform fit" : "Originality"}</span>
+        <span style="color:#6b6480;">${val}/${max}</span>
+      </div>
+      <div style="background:#efeaff;border-radius:9999px;height:8px;overflow:hidden;">
+        <div style="background:${color};height:8px;border-radius:9999px;width:${Math.min(100, (val / max) * 100)}%;"></div>
+      </div>
+    </div>`;
+
+  const breakdown = opts.breakdown;
+  const breakdownHtml = `
+    ${bar(breakdown.hook, 25, "#7c3aed")}
+    ${bar(breakdown.emotion, 25, "#ec4899")}
+    ${bar(breakdown.cta, 20, "#f59e0b")}
+    ${bar(breakdown.platformFit, 20, "#10b981")}
+    ${bar(breakdown.originality, 10, "#0ea5e9")}
+  `;
+
+  const tips: string[] = [];
+  if (breakdown.hook >= 18) tips.push("Your opening line is doing the heavy lifting — it stops the scroll before anything else has to.");
+  if (breakdown.emotion >= 18) tips.push("Real emotion landed. Readers feel something specific, which is what drives saves and shares.");
+  if (breakdown.cta >= 14) tips.push("Your CTA reads like a real human invitation, not a desperate brand. That's why people will actually reply.");
+  if (breakdown.platformFit >= 16) tips.push(`Length, format, and hashtag count match ${opts.platform} conventions perfectly.`);
+  if (breakdown.originality >= 8) tips.push("Fresh angle — no clichés, no recycled phrasing. Algorithms reward novelty.");
+  if (tips.length === 0) {
+    tips.push("Strong all-around balance across hook, emotion, CTA, fit, and originality — exactly what 80+ captions look like.");
+  }
+  const tipsHtml = tips.map((t) => `<li>${t}</li>`).join("");
+
+  const html = shell(
+    `Your caption scored ${score}/100 🎉`,
+    `
+      <p style="font-size:16px;line-height:1.6;margin:0 0 14px;">Hey ${name},</p>
+      <p style="font-size:15px;line-height:1.7;margin:0 0 14px;">
+        You just generated a caption that scored <b>${score} out of 100</b>. That's elite territory —
+        the kind of caption real creators screenshot and study.
+      </p>
+
+      <div style="background:#f6f4ff;border:1px solid #ece6ff;border-radius:14px;padding:18px;margin:0 0 18px;">
+        <p style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#7c3aed;margin:0 0 8px;">
+          ${opts.platform} caption · ${score}/100
+        </p>
+        <p style="white-space:pre-wrap;font-size:14px;line-height:1.65;color:#1f1235;margin:0;">${captionEscaped}</p>
+      </div>
+
+      <p style="font-size:14px;font-weight:700;color:#1f1235;margin:0 0 10px;">Score breakdown</p>
+      ${breakdownHtml}
+
+      ${opts.explanation ? `<p style="font-size:13px;color:#6b6480;margin:14px 0 0;font-style:italic;">"${opts.explanation.replace(/"/g, '&quot;')}"</p>` : ""}
+
+      <p style="font-size:14px;font-weight:700;color:#1f1235;margin:22px 0 6px;">Why it scored this high:</p>
+      <ul style="font-size:14px;line-height:1.7;padding-left:20px;margin:0 0 8px;color:#1f1235;">
+        ${tipsHtml}
+      </ul>
+    `,
+    dashboard,
+    "Open my dashboard",
+  );
+
+  const text = `Your caption scored ${score}/100!
+
+Hey ${name},
+
+You just generated a caption that scored ${score} out of 100. That's elite territory.
+
+Caption (${opts.platform}):
+${opts.caption}
+
+Score breakdown:
+- Hook: ${breakdown.hook}/25
+- Emotion: ${breakdown.emotion}/25
+- CTA: ${breakdown.cta}/20
+- Platform fit: ${breakdown.platformFit}/20
+- Originality: ${breakdown.originality}/10
+${opts.explanation ? `\n"${opts.explanation}"\n` : ""}
+Why it scored high:
+${tips.map((t) => `- ${t}`).join("\n")}
+
+Open dashboard: ${dashboard}
+
+— The CaptionAI team`;
+
+  return sendTransactional({
+    to,
+    subject: `Your caption scored ${score}/100! 🎉`,
+    html,
+    text,
+  });
+}
+
 export async function sendProUpgradeEmail(
   to: string,
   opts: { interval: "month" | "year" | "unknown"; firstName?: string },

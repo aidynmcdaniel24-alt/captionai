@@ -18,15 +18,51 @@ import { spendTokens, TOKEN_COSTS, tokenInfoPayload } from "@/lib/tokens";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function parsePair(raw: string): { a: string; b: string } | null {
+const ALLOWED_STYLES = [
+  "Hook-based",
+  "Story-based",
+  "Question-based",
+  "Contrarian",
+  "List/Tips",
+  "Statistic-driven",
+  "Promotional",
+  "Behind-the-scenes",
+  "Quote",
+  "How-to",
+] as const;
+type Style = (typeof ALLOWED_STYLES)[number];
+
+function normalizeStyle(value: unknown): Style {
+  if (typeof value === "string") {
+    const lower = value.trim().toLowerCase();
+    for (const s of ALLOWED_STYLES) {
+      if (s.toLowerCase() === lower) return s;
+    }
+  }
+  return "Hook-based";
+}
+
+function parsePair(
+  raw: string
+): { a: string; b: string; styleA: Style; styleB: Style } | null {
   try {
-    const j = JSON.parse(raw) as { a?: string; b?: string };
+    const j = JSON.parse(raw) as {
+      a?: string;
+      b?: string;
+      styleA?: string;
+      styleB?: string;
+    };
     const a = j.a?.trim();
     const b = j.b?.trim();
     if (!a || !b) {
       return null;
     }
-    return { a, b };
+    return {
+      a,
+      b,
+      styleA: normalizeStyle(j.styleA),
+      styleB: normalizeStyle(j.styleB),
+    };
   } catch {
     return null;
   }
@@ -86,7 +122,7 @@ export async function POST(req: Request) {
           },
           {
             role: "user",
-            content: `Write TWO clearly different caption variants for the SAME post for A/B testing. Platform: ${platform}. Tone: ${tone}. Topic: "${topic}". The two variants MUST differ in hook, structure, or angle (not just word choice). Return JSON exactly in this shape: {"a":"variant A caption","b":"variant B caption"}`,
+            content: `Write TWO clearly different caption variants for the SAME post for A/B testing. Platform: ${platform}. Tone: ${tone}. Topic: "${topic}". The two variants MUST differ in hook, structure, or angle (not just word choice). Pick a different ARCHETYPE for each variant from this exact list: ${ALLOWED_STYLES.join(", ")}. Return JSON exactly in this shape: {"a":"variant A caption","b":"variant B caption","styleA":"<one of the archetypes>","styleB":"<one of the archetypes, different from styleA>"}. The styleA and styleB values must be copied verbatim from the list above with matching capitalization.`,
           },
         ],
       })
@@ -97,7 +133,18 @@ export async function POST(req: Request) {
     if (!pair) {
       return NextResponse.json({ error: "Could not parse A/B pair." }, { status: 502 });
     }
-    return NextResponse.json({ ...pair, tokens: tokenInfoPayload(spend) });
+    let styleB = pair.styleB;
+    if (styleB === pair.styleA) {
+      const next = ALLOWED_STYLES.find((s) => s !== pair.styleA) ?? "Story-based";
+      styleB = next;
+    }
+    return NextResponse.json({
+      a: pair.a,
+      b: pair.b,
+      styleA: pair.styleA,
+      styleB,
+      tokens: tokenInfoPayload(spend),
+    });
   } catch (e) {
     return NextResponse.json(
       { error: safeErrorMessage(e, "Could not generate A/B pair.") },

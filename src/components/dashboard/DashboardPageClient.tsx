@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  AbPastWinners,
+  type AbExperimentRow,
+  type AbWinnerMetric,
+} from "@/components/dashboard/AbPastWinners";
 import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
 import { BrandLogo } from "@/components/BrandLogo";
 import { CaptionLoadingState } from "@/components/dashboard/CaptionLoadingState";
@@ -7,6 +12,8 @@ import { CollectionsTab } from "@/components/dashboard/CollectionsTab";
 import { GeneratedCaptionsPanel } from "@/components/dashboard/GeneratedCaptionsPanel";
 import { HookLibraryTab } from "@/components/dashboard/HookLibraryTab";
 import { ImageUploader } from "@/components/dashboard/ImageUploader";
+import { IndustryTemplates } from "@/components/dashboard/IndustryTemplates";
+import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 import { TokenBalance } from "@/components/dashboard/TokenBalance";
 import { TokenCounter } from "@/components/dashboard/TokenCounter";
 import { TokenUpgradeModal } from "@/components/dashboard/TokenUpgradeModal";
@@ -36,25 +43,6 @@ const LANGUAGES = [
   "Korean",
 ];
 
-type CaptionTemplate = {
-  icon: string;
-  label: string;
-  prompt: string;
-};
-
-const CAPTION_TEMPLATES: CaptionTemplate[] = [
-  { icon: "🚀", label: "Product Launch", prompt: "new product launch showcase features and benefits" },
-  { icon: "🎬", label: "Behind the Scenes", prompt: "behind the scenes look at how we work" },
-  { icon: "💥", label: "Sale Announcement", prompt: "limited time sale discount offer" },
-  { icon: "💪", label: "Motivational Quote", prompt: "motivational message to inspire my audience" },
-  { icon: "📅", label: "Event Promotion", prompt: "upcoming event details and why to attend" },
-  { icon: "🍽️", label: "Food & Drink", prompt: "delicious food photo at restaurant" },
-  { icon: "🏋️", label: "Fitness", prompt: "gym workout progress transformation" },
-  { icon: "✈️", label: "Travel", prompt: "travel photo exploring new destination" },
-  { icon: "🛍️", label: "Fashion", prompt: "outfit of the day style look" },
-  { icon: "🎮", label: "Gaming", prompt: "gaming setup highlights" },
-];
-
 type Tab =
   | "captions"
   | "hashtags"
@@ -76,6 +64,37 @@ type FavoriteHistoryItem = {
   created_at: string;
   favoriteIndexes: number[];
 };
+
+type TrendingCategory = {
+  key: string;
+  label: string;
+  icon: string;
+  topics: string[];
+};
+
+const TRENDING_PLATFORMS = [
+  "Instagram",
+  "TikTok",
+  "LinkedIn",
+  "Twitter/X",
+  "Facebook",
+  "YouTube",
+  "Pinterest",
+  "Threads",
+] as const;
+
+const AB_METRIC_OPTIONS: {
+  value: AbWinnerMetric;
+  label: string;
+  icon: string;
+}[] = [
+  { value: "likes", label: "More likes", icon: "❤️" },
+  { value: "comments", label: "More comments", icon: "💬" },
+  { value: "shares", label: "More shares", icon: "🔁" },
+  { value: "profile_visits", label: "More profile visits", icon: "👤" },
+  { value: "reach", label: "Higher reach", icon: "📈" },
+];
+
 
 type PaywallPayload = {
   paywall?: boolean;
@@ -135,14 +154,24 @@ export function DashboardPageClient() {
   const [bio, setBio] = useState("");
   const [bioLoading, setBioLoading] = useState(false);
   // Trending
-  const [trending, setTrending] = useState<string[]>([]);
+  const [trendingCategories, setTrendingCategories] = useState<TrendingCategory[]>([]);
+  const [trendingPlatform, setTrendingPlatform] = useState("Instagram");
+  const [trendingGeneratedAt, setTrendingGeneratedAt] = useState<number | null>(null);
   const [trLoading, setTrLoading] = useState(false);
   const [trendingLoaded, setTrendingLoaded] = useState(false);
   // A/B
   const [abA, setAbA] = useState("");
   const [abB, setAbB] = useState("");
+  const [abStyleA, setAbStyleA] = useState<string | null>(null);
+  const [abStyleB, setAbStyleB] = useState<string | null>(null);
   const [abExpId, setAbExpId] = useState<string | null>(null);
   const [abLoading, setAbLoading] = useState(false);
+  const [abWinnerSide, setAbWinnerSide] = useState<"a" | "b" | null>(null);
+  const [abMetricSaving, setAbMetricSaving] = useState(false);
+  const [abWinnerSaved, setAbWinnerSaved] = useState(false);
+  const [abPastWinners, setAbPastWinners] = useState<AbExperimentRow[]>([]);
+  const [abPastLoading, setAbPastLoading] = useState(false);
+  const [abPastLoaded, setAbPastLoaded] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [favorites, setFavorites] = useState<FavoriteHistoryItem[]>([]);
   const [favoritesLoading, setFavoritesLoading] = useState(false);
@@ -476,40 +505,56 @@ export function DashboardPageClient() {
     }
   }
 
-  const loadTrending = useCallback(async () => {
-    if (!ensureTokensOrShowModal(TOKEN_COSTS.trending)) {
-      setTrendingLoaded(true);
-      return;
-    }
-    setTrLoading(true);
-    setError("");
-    try {
-      const res = await fetch("/api/trending");
-      const data = (await res.json()) as {
-        topics?: string[];
-        tokens?: TokenInfo;
-        error?: string;
-      } & PaywallPayload;
-      if (!res.ok) {
-        if (data.paywall) {
-          handleTokenPaywall(data);
-          setTrending([]);
-          return;
-        }
-        setTrending([]);
-        setError(data.error || "Could not load trending topics.");
+  const loadTrending = useCallback(
+    async (opts?: { platform?: string; refresh?: boolean }) => {
+      if (!ensureTokensOrShowModal(TOKEN_COSTS.trending)) {
+        setTrendingLoaded(true);
         return;
       }
-      setTrending(data.topics ?? []);
-      applyTokenInfo(data.tokens);
-    } catch {
-      setTrending([]);
-      setError("Could not load trending topics.");
-    } finally {
-      setTrLoading(false);
-      setTrendingLoaded(true);
-    }
-  }, [applyTokenInfo, ensureTokensOrShowModal, handleTokenPaywall]);
+      const targetPlatform = (opts?.platform ?? trendingPlatform).trim() || "Instagram";
+      setTrLoading(true);
+      setError("");
+      try {
+        const url = new URL("/api/trending", window.location.origin);
+        url.searchParams.set("platform", targetPlatform);
+        if (opts?.refresh) url.searchParams.set("refresh", "1");
+        const res = await fetch(url.pathname + url.search);
+        const data = (await res.json()) as {
+          categories?: TrendingCategory[];
+          generatedAt?: number;
+          platform?: string;
+          tokens?: TokenInfo;
+          error?: string;
+        } & PaywallPayload;
+        if (!res.ok) {
+          if (data.paywall) {
+            handleTokenPaywall(data);
+            setTrendingCategories([]);
+            return;
+          }
+          setTrendingCategories([]);
+          setError(data.error || "Could not load trending topics.");
+          return;
+        }
+        setTrendingCategories(data.categories ?? []);
+        setTrendingGeneratedAt(data.generatedAt ?? Date.now());
+        if (data.platform) setTrendingPlatform(data.platform);
+        applyTokenInfo(data.tokens);
+      } catch {
+        setTrendingCategories([]);
+        setError("Could not load trending topics.");
+      } finally {
+        setTrLoading(false);
+        setTrendingLoaded(true);
+      }
+    },
+    [
+      applyTokenInfo,
+      ensureTokensOrShowModal,
+      handleTokenPaywall,
+      trendingPlatform,
+    ]
+  );
 
   useEffect(() => {
     if (tab === "trending" && !trendingLoaded && !trLoading) {
@@ -523,7 +568,11 @@ export function DashboardPageClient() {
     setAbLoading(true);
     setAbA("");
     setAbB("");
+    setAbStyleA(null);
+    setAbStyleB(null);
     setAbExpId(null);
+    setAbWinnerSide(null);
+    setAbWinnerSaved(false);
     setError("");
     try {
       const res = await fetch("/api/tools/ab-pair", {
@@ -538,6 +587,8 @@ export function DashboardPageClient() {
       const data = (await res.json()) as {
         a?: string;
         b?: string;
+        styleA?: string;
+        styleB?: string;
         tokens?: TokenInfo;
         error?: string;
       } & PaywallPayload;
@@ -551,6 +602,8 @@ export function DashboardPageClient() {
       }
       setAbA(data.a ?? "");
       setAbB(data.b ?? "");
+      setAbStyleA(data.styleA ?? null);
+      setAbStyleB(data.styleB ?? null);
       applyTokenInfo(data.tokens);
     } catch {
       setError("Network error.");
@@ -558,6 +611,59 @@ export function DashboardPageClient() {
       setAbLoading(false);
     }
   }
+
+  async function saveAbWinner(side: "a" | "b", metric: AbWinnerMetric) {
+    if (!abExpId) return;
+    setAbMetricSaving(true);
+    setError("");
+    try {
+      const style = side === "a" ? abStyleA : abStyleB;
+      const res = await fetch("/api/ab-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "winner",
+          id: abExpId,
+          winner: side,
+          metric,
+          style,
+        }),
+      });
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        setError(data.error || "Could not save winner.");
+        return;
+      }
+      setAbWinnerSaved(true);
+      setAbPastLoaded(false);
+    } catch {
+      setError("Could not save winner.");
+    } finally {
+      setAbMetricSaving(false);
+    }
+  }
+
+  const loadAbPastWinners = useCallback(async () => {
+    setAbPastLoading(true);
+    try {
+      const res = await fetch("/api/ab-test");
+      if (!res.ok) return;
+      const data = (await res.json()) as { items?: AbExperimentRow[] };
+      setAbPastWinners((data.items ?? []).filter((row) => row.winner !== null));
+    } catch {
+      /* ignore */
+    } finally {
+      setAbPastLoading(false);
+      setAbPastLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tab === "ab" && !abPastLoaded && !abPastLoading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- load past A/B winners when tab opens
+      void loadAbPastWinners();
+    }
+  }, [tab, abPastLoaded, abPastLoading, loadAbPastWinners]);
 
   // Image-to-caption upload handler (Feature 3). Sends a base64-encoded
   // image to the backend, which calls Groq vision and returns a topic
@@ -626,6 +732,8 @@ export function DashboardPageClient() {
           variantB: abB,
           label: topic.slice(0, 80),
           platform: resolvedPlatform,
+          styleA: abStyleA,
+          styleB: abStyleB,
         }),
       });
       const data = (await res.json()) as { id?: string; error?: string };
@@ -636,26 +744,6 @@ export function DashboardPageClient() {
       setError(data.error || "Could not save A/B experiment.");
     } catch {
       setError("Could not save A/B experiment.");
-    }
-  }
-
-  async function pickAb(side: "a" | "b") {
-    if (!abExpId) {
-      return;
-    }
-    setError("");
-    try {
-      const res = await fetch("/api/ab-test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "pick", id: abExpId, pick: side }),
-      });
-      if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        setError(data.error || "Could not record your pick.");
-      }
-    } catch {
-      setError("Could not record your pick.");
     }
   }
 
@@ -769,6 +857,7 @@ export function DashboardPageClient() {
               tokensLimit={tokensLimit}
               tokensRemaining={tokensRemaining}
             />
+            <InstallAppButton />
             <div className="hidden sm:block">
               <ThemeToggle />
             </div>
@@ -881,34 +970,7 @@ export function DashboardPageClient() {
         {tab === "captions" ? (
           <>
             <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/80">
-              <div className="mb-4">
-                <p className="mb-2 text-sm text-zinc-600 dark:text-zinc-300">Start from a template</p>
-                <div
-                  className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 scrollbar-thin-x sm:-mx-1 sm:px-1"
-                  role="group"
-                  aria-label="Caption templates"
-                >
-                  {CAPTION_TEMPLATES.map((tpl) => {
-                    const active = topic === tpl.prompt;
-                    return (
-                      <button
-                        key={tpl.label}
-                        type="button"
-                        onClick={() => setTopic(tpl.prompt)}
-                        aria-pressed={active}
-                        className={`flex min-h-[40px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
-                          active
-                            ? "border-purple-500 bg-purple-600 text-white shadow-sm hover:bg-purple-500"
-                            : "border-zinc-200 bg-zinc-50 text-zinc-800 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:border-purple-500/60 dark:hover:bg-purple-950/40 dark:hover:text-purple-100"
-                        }`}
-                      >
-                        <span aria-hidden="true">{tpl.icon}</span>
-                        <span>{tpl.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              <IndustryTemplates topic={topic} onPick={setTopic} />
 
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <label className="block text-sm text-zinc-600 dark:text-zinc-300">
@@ -1212,26 +1274,100 @@ export function DashboardPageClient() {
 
         {tab === "trending" ? (
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/80">
-            <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">Ideas refreshed periodically — tap one to paste into topic.</p>
-            {trLoading ? (
-              <p className="text-zinc-500">Loading trends…</p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {trending.map((t) => (
-                  <li key={t}>
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+              <div className="min-w-0">
+                <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
+                  Trending right now
+                </h2>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  Tap any chip to drop it into your topic field and switch to Captions.
+                  {trendingGeneratedAt ? (
+                    <>
+                      {" "}
+                      <span className="text-xs text-zinc-500 dark:text-zinc-500">
+                        Updated{" "}
+                        {new Date(trendingGeneratedAt).toLocaleTimeString([], {
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </>
+                  ) : null}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={trLoading}
+                onClick={() => void loadTrending({ refresh: true })}
+                className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-lg border border-purple-300 bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-800 transition hover:bg-purple-100 disabled:opacity-50 dark:border-purple-700/60 dark:bg-purple-950/50 dark:text-purple-200 dark:hover:bg-purple-900/40"
+              >
+                <span aria-hidden>🔄</span>
+                <span>{trLoading ? "Refreshing…" : "Refresh"}</span>
+              </button>
+            </div>
+
+            <div className="mb-4 -mx-1 overflow-x-auto pb-1 hide-scrollbar">
+              <div className="flex min-w-max gap-1.5 px-1" role="tablist" aria-label="Platforms">
+                {TRENDING_PLATFORMS.map((p) => {
+                  const active = trendingPlatform.toLowerCase() === p.toLowerCase();
+                  return (
                     <button
+                      key={p}
                       type="button"
-                      className="block min-h-[52px] w-full rounded-xl border border-zinc-200 px-4 py-3 text-left text-sm leading-relaxed transition hover:bg-zinc-50 active:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800 dark:active:bg-zinc-800/80"
+                      role="tab"
+                      aria-selected={active}
                       onClick={() => {
-                        setTopic(t);
-                        setTab("captions");
+                        setTrendingPlatform(p);
+                        void loadTrending({ platform: p });
                       }}
+                      className={`inline-flex min-h-[36px] shrink-0 items-center justify-center rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                        active
+                          ? "border-purple-500 bg-purple-600 text-white"
+                          : "border-zinc-200 bg-white text-zinc-700 hover:border-purple-300 hover:bg-purple-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:border-purple-500/60 dark:hover:bg-purple-950/40"
+                      }`}
                     >
-                      {t}
+                      {p}
                     </button>
-                  </li>
+                  );
+                })}
+              </div>
+            </div>
+
+            {trLoading && trendingCategories.length === 0 ? (
+              <p className="text-sm text-zinc-500">Loading trends…</p>
+            ) : trendingCategories.length === 0 ? (
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                No trends yet. Tap Refresh to fetch fresh suggestions.
+              </p>
+            ) : (
+              <div className="space-y-5">
+                {trendingCategories.map((cat) => (
+                  <section key={cat.key}>
+                    <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-white">
+                      <span aria-hidden>{cat.icon}</span>
+                      <span>{cat.label}</span>
+                    </h3>
+                    <div className="-mx-1 flex flex-wrap gap-2 px-1">
+                      {cat.topics.map((t) => (
+                        <button
+                          key={`${cat.key}-${t}`}
+                          type="button"
+                          onClick={() => {
+                            setTopic(t);
+                            if (!platform.trim()) {
+                              setPlatform(trendingPlatform);
+                            }
+                            setTab("captions");
+                          }}
+                          className="inline-flex min-h-[36px] items-center rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-sm font-medium text-zinc-800 transition hover:border-purple-300 hover:bg-purple-50 hover:text-purple-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:border-purple-500/60 dark:hover:bg-purple-950/40 dark:hover:text-purple-100"
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </section>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
         ) : null}
@@ -1309,7 +1445,7 @@ export function DashboardPageClient() {
                 <div className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400">
-                      Variant A
+                      Variant A {abStyleA ? <span className="ml-1 text-[10px] font-medium normal-case tracking-normal text-purple-500 dark:text-purple-300">· {abStyleA}</span> : null}
                     </p>
                     <button
                       type="button"
@@ -1326,7 +1462,7 @@ export function DashboardPageClient() {
                 <div className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400">
-                      Variant B
+                      Variant B {abStyleB ? <span className="ml-1 text-[10px] font-medium normal-case tracking-normal text-purple-500 dark:text-purple-300">· {abStyleB}</span> : null}
                     </p>
                     <button
                       type="button"
@@ -1348,26 +1484,76 @@ export function DashboardPageClient() {
                 >
                   {abExpId ? "Experiment saved" : "Save experiment"}
                 </button>
+
                 {abExpId ? (
-                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                    <button
-                      type="button"
-                      className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-zinc-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 sm:w-auto dark:bg-zinc-700 dark:hover:bg-zinc-600"
-                      onClick={() => pickAb("a")}
-                    >
-                      A performed better
-                    </button>
-                    <button
-                      type="button"
-                      className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-zinc-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 sm:w-auto dark:bg-zinc-700 dark:hover:bg-zinc-600"
-                      onClick={() => pickAb("b")}
-                    >
-                      B performed better
-                    </button>
+                  <div className="rounded-xl border border-purple-200 bg-purple-50/40 p-4 dark:border-purple-800/60 dark:bg-purple-950/20">
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                      Mark winner
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+                      Once you&apos;ve posted both variants, come back and tell us which one performed better and how.
+                    </p>
+
+                    {abWinnerSaved ? (
+                      <p className="mt-3 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
+                        ✓ Winner recorded. We&apos;ll factor this into your Past Winners insights below.
+                      </p>
+                    ) : abWinnerSide === null ? (
+                      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                        <button
+                          type="button"
+                          className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-500"
+                          onClick={() => setAbWinnerSide("a")}
+                        >
+                          Variant A performed better
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-500"
+                          onClick={() => setAbWinnerSide("b")}
+                        >
+                          Variant B performed better
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="mt-3 space-y-2">
+                        <p className="text-sm text-zinc-700 dark:text-zinc-200">
+                          How did <span className="font-semibold">Variant {abWinnerSide.toUpperCase()}</span> perform better?
+                        </p>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {AB_METRIC_OPTIONS.map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              disabled={abMetricSaving}
+                              onClick={() => saveAbWinner(abWinnerSide!, opt.value)}
+                              className="inline-flex min-h-[44px] items-center justify-start gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-800 transition hover:border-purple-300 hover:bg-purple-50 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:border-purple-500/60 dark:hover:bg-purple-950/40"
+                            >
+                              <span aria-hidden>{opt.icon}</span>
+                              <span>{opt.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          className="text-xs font-medium text-zinc-500 underline-offset-2 hover:underline dark:text-zinc-400"
+                          onClick={() => setAbWinnerSide(null)}
+                          disabled={abMetricSaving}
+                        >
+                          ← Change winner
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : null}
               </div>
             ) : null}
+
+            <AbPastWinners
+              rows={abPastWinners}
+              loading={abPastLoading}
+              loaded={abPastLoaded}
+            />
           </div>
         ) : null}
 

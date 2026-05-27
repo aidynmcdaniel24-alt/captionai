@@ -36,6 +36,8 @@ export async function POST(req: Request) {
     const variantB = sanitizeText(body.variantB, { maxLength: 2000, allowLineBreaks: true });
     const label = sanitizeText(body.label, { maxLength: 120 }) || null;
     const platform = sanitizeText(body.platform, { maxLength: 80 }) || null;
+    const styleA = sanitizeText(body.styleA, { maxLength: 60 }) || null;
+    const styleB = sanitizeText(body.styleB, { maxLength: 60 }) || null;
     if (!variantA || !variantB) {
       return NextResponse.json({ error: "Both variants required." }, { status: 400 });
     }
@@ -47,6 +49,8 @@ export async function POST(req: Request) {
         variant_a: variantA,
         variant_b: variantB,
         platform,
+        style_a: styleA,
+        style_b: styleB,
       })
       .select("id")
       .single();
@@ -113,6 +117,59 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, picks_a: nextA, picks_b: nextB });
   }
 
+  // Mark a confirmed real-world winner with the performance metric the user
+  // observed. This is distinct from the lightweight "pick" counters above —
+  // those track quick A/B preferences, while winner / metric record actual
+  // post-publish outcomes for the Past Winners insights feature.
+  if (action === "winner") {
+    const id = sanitizeText(body.id, { maxLength: 64 });
+    const winner = sanitizeText(body.winner, { maxLength: 4 }).toLowerCase();
+    const metric = sanitizeText(body.metric, { maxLength: 40 }).toLowerCase();
+    const style = sanitizeText(body.style, { maxLength: 60 }) || null;
+
+    if (!id || (winner !== "a" && winner !== "b")) {
+      return NextResponse.json({ error: "Invalid winner." }, { status: 400 });
+    }
+    const allowedMetrics = new Set([
+      "likes",
+      "comments",
+      "shares",
+      "profile_visits",
+      "reach",
+    ]);
+    if (!allowedMetrics.has(metric)) {
+      return NextResponse.json({ error: "Invalid metric." }, { status: 400 });
+    }
+
+    const { data: exp } = await supabaseServer
+      .from("ab_experiments")
+      .select("id, user_id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!exp || exp.user_id !== userId) {
+      return NextResponse.json({ error: "Not found." }, { status: 404 });
+    }
+
+    const { error } = await supabaseServer
+      .from("ab_experiments")
+      .update({
+        winner,
+        winner_metric: metric,
+        winner_style: style,
+        winner_recorded_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+
+    if (error) {
+      return NextResponse.json(
+        { error: safeErrorMessage(error, "Could not save winner.") },
+        { status: 500 }
+      );
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   return NextResponse.json({ error: "Unknown action." }, { status: 400 });
 }
 
@@ -126,10 +183,12 @@ export async function GET(req: Request) {
 
   const { data, error } = await supabaseServer
     .from("ab_experiments")
-    .select("id, label, variant_a, variant_b, picks_a, picks_b, platform, created_at")
+    .select(
+      "id, label, variant_a, variant_b, picks_a, picks_b, platform, created_at, style_a, style_b, winner, winner_metric, winner_style, winner_recorded_at"
+    )
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
-    .limit(20);
+    .limit(50);
 
   if (error) {
     return NextResponse.json(

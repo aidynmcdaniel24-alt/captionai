@@ -11,6 +11,7 @@ import {
   parseCaptionModelJson,
   type ParsedCaptionResponse,
 } from "@/lib/parse-caption-response";
+import { maybeSendHighScoreEmail } from "@/lib/score-notifications";
 import {
   RATE_LIMITS,
   rateLimitByUser,
@@ -750,6 +751,16 @@ export async function POST(req: Request) {
         }
       }
     }
+
+    // Best-effort: send a celebration email if any caption scored 80+. Limited
+    // to once per UTC day per user inside the helper. Fire-and-forget so it
+    // never delays the API response.
+    void maybeSendHighScoreEmail({
+      userId,
+      captions,
+      scores: captionScores,
+      platform,
+    });
 
     return NextResponse.json({
       captions,
