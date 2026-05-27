@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { containsBlockedWord, getBlockedWordList } from "@/lib/blocked-words";
+import { auth } from "@clerk/nextjs/server";
+import { guardTopic } from "@/lib/content-moderation";
 import { getGroqClient } from "@/lib/groq-client";
 import { withGroqRetry } from "@/lib/groq-retry";
 import {
@@ -72,10 +73,14 @@ export async function POST(req: Request) {
     );
   }
 
-  const blocked = containsBlockedWord(topic, getBlockedWordList());
-  if (blocked) {
-    return NextResponse.json({ error: "That description contains a blocked word." }, { status: 400 });
-  }
+  // Demo endpoint is anonymous — pass whatever Clerk user id is available
+  // (if any) so we can correlate admin logs but never block on auth.
+  const { userId: maybeUserId } = await auth();
+  const moderation = await guardTopic(topic, {
+    userId: maybeUserId ?? null,
+    feature: "captions:demo",
+  });
+  if (!moderation.ok) return moderation.response;
 
   const groq = getGroqClient();
   if (!groq) {
@@ -112,11 +117,6 @@ export async function POST(req: Request) {
         { error: "Could not parse the AI response. Try again." },
         { status: 502 }
       );
-    }
-
-    const outBlocked = containsBlockedWord(caption, getBlockedWordList());
-    if (outBlocked) {
-      return NextResponse.json({ error: "Output was blocked by safety filters. Try different words." }, { status: 400 });
     }
 
     return NextResponse.json({ caption });

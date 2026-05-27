@@ -80,6 +80,23 @@ type SecurityTotals = {
   request_too_large: number;
 };
 
+type ModerationRow = {
+  id: string;
+  created_at: string;
+  topic: string;
+  reason: string;
+  confidence: "high" | "medium" | "low";
+  user_id: string | null;
+  feature: string;
+};
+
+type ModerationStats = {
+  blockedToday: number;
+  blockedAllTime: number;
+  topTopics: Array<{ topic: string; count: number }>;
+  topReasons: Array<{ reason: string; count: number }>;
+};
+
 export function AdminPanel({
   totalUsers,
   proCount,
@@ -107,6 +124,7 @@ export function AdminPanel({
     | "payouts"
     | "testimonials"
     | "security"
+    | "moderation"
   >("overview");
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [logLoading, setLogLoading] = useState(false);
@@ -128,12 +146,81 @@ export function AdminPanel({
   const [payoutError, setPayoutError] = useState("");
   const [payoutWarnings, setPayoutWarnings] = useState<string[]>([]);
   const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
+  const [moderationItems, setModerationItems] = useState<ModerationRow[]>([]);
+  const [moderationStats, setModerationStats] = useState<ModerationStats | null>(null);
+  const [moderationLoading, setModerationLoading] = useState(false);
+  const [moderationError, setModerationError] = useState("");
+  const [moderationWarnings, setModerationWarnings] = useState<string[]>([]);
+  const [moderationClearing, setModerationClearing] = useState(false);
   const [pendingTestimonials, setPendingTestimonials] = useState<AdminTestimonial[]>([]);
   const [rejectedTestimonials, setRejectedTestimonials] = useState<AdminTestimonial[]>([]);
   const [approvedTestimonials, setApprovedTestimonials] = useState<AdminTestimonial[]>([]);
   const [testimonialsLoading, setTestimonialsLoading] = useState(false);
   const [testimonialsError, setTestimonialsError] = useState("");
   const [testimonialActionId, setTestimonialActionId] = useState<string | null>(null);
+
+  const loadModeration = useCallback(async () => {
+    setModerationLoading(true);
+    setModerationError("");
+    try {
+      const res = await fetch("/api/admin/moderation");
+      const data = (await res.json()) as {
+        items?: ModerationRow[];
+        stats?: ModerationStats;
+        warnings?: string[];
+        error?: string;
+      };
+      if (!res.ok) {
+        setModerationError(data.error || "Could not load moderation events.");
+        setModerationItems([]);
+        setModerationStats(null);
+        setModerationWarnings([]);
+        return;
+      }
+      setModerationItems(data.items ?? []);
+      setModerationStats(data.stats ?? null);
+      setModerationWarnings(data.warnings ?? []);
+    } catch {
+      setModerationError("Could not load moderation events.");
+      setModerationItems([]);
+      setModerationStats(null);
+      setModerationWarnings([]);
+    } finally {
+      setModerationLoading(false);
+    }
+  }, []);
+
+  const clearModeration = useCallback(async () => {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(
+        "Clear all moderation logs? This permanently deletes every recorded blocked-content attempt."
+      )
+    ) {
+      return;
+    }
+    setModerationClearing(true);
+    setModerationError("");
+    try {
+      const res = await fetch("/api/admin/moderation", { method: "DELETE" });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setModerationError(data.error || "Could not clear moderation logs.");
+        return;
+      }
+      setModerationItems([]);
+      setModerationStats({
+        blockedToday: 0,
+        blockedAllTime: 0,
+        topTopics: [],
+        topReasons: [],
+      });
+    } catch {
+      setModerationError("Could not clear moderation logs.");
+    } finally {
+      setModerationClearing(false);
+    }
+  }, []);
 
   const loadSecurity = useCallback(async () => {
     setSecurityLoading(true);
@@ -369,6 +456,7 @@ export function AdminPanel({
             ["payouts", "Payouts"],
             ["testimonials", "Testimonials"],
             ["security", "Security"],
+            ["moderation", "Moderation"],
             ["errors", "Error logs"],
             ["logs", "All logs"],
           ] as const
@@ -395,6 +483,9 @@ export function AdminPanel({
               }
               if (id === "security") {
                 void loadSecurity();
+              }
+              if (id === "moderation") {
+                void loadModeration();
               }
             }}
             className={`rounded-lg px-4 py-2 text-sm font-medium ${
@@ -497,6 +588,18 @@ export function AdminPanel({
           warnings={securityWarnings}
           totals={securityTotals}
           logs={securityLogs}
+        />
+      ) : null}
+
+      {tab === "moderation" ? (
+        <ModerationSection
+          loading={moderationLoading}
+          error={moderationError}
+          warnings={moderationWarnings}
+          stats={moderationStats}
+          items={moderationItems}
+          clearing={moderationClearing}
+          onClear={clearModeration}
         />
       ) : null}
 
@@ -1093,6 +1196,163 @@ function SecuritySection({
                 </li>
               );
             })
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function ModerationSection({
+  loading,
+  error,
+  warnings,
+  stats,
+  items,
+  clearing,
+  onClear,
+}: {
+  loading: boolean;
+  error: string;
+  warnings: string[];
+  stats: ModerationStats | null;
+  items: ModerationRow[];
+  clearing: boolean;
+  onClear: () => void;
+}) {
+  const confidenceAccent: Record<ModerationRow["confidence"], string> = {
+    high: "text-rose-300",
+    medium: "text-amber-300",
+    low: "text-sky-300",
+  };
+
+  return (
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-white">Content moderation</h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Topics blocked by the AI content moderator. Showing the 50 most recent
+            attempts, newest first.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClear}
+          disabled={clearing || items.length === 0}
+          className="rounded-lg bg-rose-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-600 disabled:opacity-40"
+        >
+          {clearing ? "Clearing…" : "Clear all moderation logs"}
+        </button>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <StatCard
+          label="Blocked attempts today"
+          value={stats ? stats.blockedToday : "—"}
+        />
+        <StatCard
+          label="Blocked attempts all time"
+          value={stats ? stats.blockedAllTime : "—"}
+        />
+      </div>
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
+          <h3 className="text-sm font-semibold text-zinc-200">
+            Top 5 blocked topics
+          </h3>
+          {!stats || stats.topTopics.length === 0 ? (
+            <p className="mt-2 text-xs text-zinc-500">No blocked topics yet.</p>
+          ) : (
+            <ol className="mt-3 space-y-1 text-sm">
+              {stats.topTopics.map((row, i) => (
+                <li
+                  key={`${row.topic}-${i}`}
+                  className="flex items-baseline justify-between gap-3"
+                >
+                  <span className="truncate text-zinc-300">
+                    {i + 1}. {row.topic}
+                  </span>
+                  <span className="tabular-nums text-zinc-500">{row.count}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+        <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4">
+          <h3 className="text-sm font-semibold text-zinc-200">
+            Top 5 block reasons
+          </h3>
+          {!stats || stats.topReasons.length === 0 ? (
+            <p className="mt-2 text-xs text-zinc-500">No block reasons yet.</p>
+          ) : (
+            <ol className="mt-3 space-y-1 text-sm">
+              {stats.topReasons.map((row, i) => (
+                <li
+                  key={`${row.reason}-${i}`}
+                  className="flex items-baseline justify-between gap-3"
+                >
+                  <span className="truncate text-zinc-300">
+                    {i + 1}. {row.reason}
+                  </span>
+                  <span className="tabular-nums text-zinc-500">{row.count}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      </div>
+
+      {warnings.length > 0 ? (
+        <ul className="mt-4 space-y-1 text-xs text-amber-200/90">
+          {warnings.map((w) => (
+            <li key={w}>{w}</li>
+          ))}
+        </ul>
+      ) : null}
+
+      {loading ? (
+        <p className="mt-4 text-zinc-500">Loading…</p>
+      ) : error ? (
+        <p className="mt-4 text-amber-200/90">{error}</p>
+      ) : (
+        <ul className="mt-4 max-h-[520px] space-y-3 overflow-y-auto text-sm">
+          {items.length === 0 ? (
+            <li className="text-zinc-500">No moderation events recorded.</li>
+          ) : (
+            items.map((row) => (
+              <li
+                key={row.id}
+                className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-3"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500">
+                  <span className={confidenceAccent[row.confidence]}>
+                    {row.confidence} confidence
+                  </span>
+                  <span>{new Date(row.created_at).toLocaleString()}</span>
+                </div>
+                <p className="mt-1 text-zinc-200">
+                  <span className="text-zinc-500">Topic:</span>{" "}
+                  <span className="font-mono text-xs">
+                    {row.topic ? row.topic.slice(0, 50) : "(empty)"}
+                    {row.topic.length > 50 ? "…" : ""}
+                  </span>
+                </p>
+                <p className="text-zinc-400">
+                  <span className="text-zinc-500">Reason:</span> {row.reason}
+                </p>
+                <p className="text-xs text-zinc-500">
+                  Feature:{" "}
+                  <span className="font-mono text-zinc-400">{row.feature}</span>
+                  {" · "}
+                  User:{" "}
+                  <span className="font-mono">
+                    {row.user_id ?? "(anonymous)"}
+                  </span>
+                </p>
+              </li>
+            ))
           )}
         </ul>
       )}

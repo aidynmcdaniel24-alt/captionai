@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { containsBlockedWord, getBlockedWordList } from "@/lib/blocked-words";
+import { guardTopic } from "@/lib/content-moderation";
 import { getGroqClient } from "@/lib/groq-client";
 import { withGroqRetry } from "@/lib/groq-retry";
 import {
@@ -53,10 +53,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Topic is required." }, { status: 400 });
   }
 
-  const blocked = containsBlockedWord(topic, getBlockedWordList());
-  if (blocked) {
-    return NextResponse.json({ error: "Topic contains a blocked word.", word: blocked }, { status: 400 });
-  }
+  const moderation = await guardTopic(topic, {
+    userId,
+    feature: "tools:hashtags",
+  });
+  if (!moderation.ok) return moderation.response;
 
   const groq = getGroqClient();
   if (!groq) {

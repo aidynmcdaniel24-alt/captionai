@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { CaptionRatingKey } from "@/lib/caption-rating-styles";
-import { containsBlockedWord, getBlockedWordList } from "@/lib/blocked-words";
+import { guardTopic } from "@/lib/content-moderation";
 import { getGroqClient } from "@/lib/groq-client";
 import { extractJsonPayload } from "@/lib/groq-json";
 import { withGroqRetry } from "@/lib/groq-retry";
@@ -97,18 +97,12 @@ export async function POST(req: Request) {
     items.push({ caption, rating });
   }
 
-  const blockedList = getBlockedWordList();
-  for (const item of items) {
-    const blocked = containsBlockedWord(item.caption, blockedList);
-    if (blocked) {
-      return NextResponse.json({ error: "Caption contains a blocked word.", word: blocked }, { status: 400 });
-    }
-  }
   if (topic) {
-    const blocked = containsBlockedWord(topic, blockedList);
-    if (blocked) {
-      return NextResponse.json({ error: "Topic contains a blocked word.", word: blocked }, { status: 400 });
-    }
+    const moderation = await guardTopic(topic, {
+      userId,
+      feature: "tools:best-time-captions",
+    });
+    if (!moderation.ok) return moderation.response;
   }
 
   const groq = getGroqClient();

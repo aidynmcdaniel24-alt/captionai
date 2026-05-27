@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { containsBlockedWord, getBlockedWordList } from "@/lib/blocked-words";
+import { guardTopic } from "@/lib/content-moderation";
 import { getGroqClient } from "@/lib/groq-client";
 import { withGroqRetry } from "@/lib/groq-retry";
 import {
@@ -55,9 +55,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Topic is required." }, { status: 400 });
   }
 
-  if (containsBlockedWord(topic, getBlockedWordList())) {
-    return NextResponse.json({ error: "Topic contains a blocked word." }, { status: 400 });
-  }
+  const moderation = await guardTopic(topic, {
+    userId,
+    feature: "tools:ab-pair",
+  });
+  if (!moderation.ok) return moderation.response;
 
   const groq = getGroqClient();
   if (!groq) {
@@ -94,12 +96,6 @@ export async function POST(req: Request) {
     const pair = parsePair(content);
     if (!pair) {
       return NextResponse.json({ error: "Could not parse A/B pair." }, { status: 502 });
-    }
-    for (const t of [pair.a, pair.b]) {
-      const b = containsBlockedWord(t, getBlockedWordList());
-      if (b) {
-        return NextResponse.json({ error: "Output blocked by filter." }, { status: 400 });
-      }
     }
     return NextResponse.json({ ...pair, tokens: tokenInfoPayload(spend) });
   } catch (e) {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { logAdminEvent } from "@/lib/admin-log";
-import { containsBlockedWord, getBlockedWordList } from "@/lib/blocked-words";
 import { polishCaptions } from "@/lib/caption-formatter";
+import { guardTopic } from "@/lib/content-moderation";
 import { computeCaptionScores, type CaptionScore } from "@/lib/caption-score";
 import { getGroqClient } from "@/lib/groq-client";
 import { withGroqRetry } from "@/lib/groq-retry";
@@ -641,14 +641,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Topic is required." }, { status: 400 });
   }
 
-  const blockedList = getBlockedWordList();
-  const blockedTopic = containsBlockedWord(topic, blockedList);
-  if (blockedTopic) {
-    return NextResponse.json(
-      { error: "Your topic contains a blocked word. Please revise.", word: blockedTopic },
-      { status: 400 }
-    );
-  }
+  const moderation = await guardTopic(topic, {
+    userId,
+    feature: "captions:generate",
+  });
+  if (!moderation.ok) return moderation.response;
 
   // Auto-create the subscription row on first use so the token spend
   // helper has a plan to read. We don't need the row's value here — the
@@ -715,17 +712,6 @@ export async function POST(req: Request) {
     emojiPerCaption = parsed.emojiPerCaption;
     captionRatings = parsed.captionRatings;
     captionScores = computeCaptionScores(captions, platform, parsed.captionScores);
-
-    for (const cap of captions) {
-      const b = containsBlockedWord(cap, blockedList);
-      if (b) {
-        await logAdminEvent("warn", "blocked word in model output", { userId, word: b });
-        return NextResponse.json(
-          { error: "Generated text hit a safety filter. Try a different topic or tone.", word: b },
-          { status: 400 }
-        );
-      }
-    }
 
     const { data: inserted, error: historyError } = await supabaseServer
       .from("caption_history")

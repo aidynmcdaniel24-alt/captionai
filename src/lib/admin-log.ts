@@ -19,6 +19,8 @@ export const ADMIN_EVENTS = {
   RATE_LIMIT_HIT: "rate_limit_hit",
   AUTH_FAILURE: "auth_failure",
   REQUEST_TOO_LARGE: "request_too_large",
+  // content moderation
+  CONTENT_MODERATED: "content_moderated",
   // user lifecycle emails
   WELCOME_EMAIL_SENT: "welcome_email_sent",
   PRO_EMAIL_SENT: "pro_email_sent",
