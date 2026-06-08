@@ -86,37 +86,57 @@ export function AboutPage() {
 
         <section aria-labelledby="story" className="px-4 py-12 sm:px-6 sm:py-16">
           <div className="mx-auto max-w-3xl">
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{ duration: 0.45 }}
+              className="text-xs font-semibold uppercase tracking-[0.2em] text-purple-600 dark:text-purple-400"
+            >
+              The founder story
+            </motion.p>
             <motion.h2
               id="story"
               initial={{ opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
-              transition={{ duration: 0.45 }}
-              className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl dark:text-white"
+              transition={{ duration: 0.45, delay: 0.05 }}
+              className="mt-3 text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl dark:text-white"
             >
-              Our story
+              It started with one caption rewritten five times
             </motion.h2>
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
-              transition={{ duration: 0.5, delay: 0.05 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
               className="mt-5 space-y-5 text-[17px] leading-relaxed text-zinc-700 dark:text-zinc-300"
             >
               <p>
-                We built CaptionAI because we spent too much time writing captions and not enough
-                time creating. After spending an hour rewriting the same Instagram caption five
-                times, we asked the obvious question: <em>why am I doing this?</em>
+                CaptionAI didn&apos;t start as a company — it started as a frustration. Our founder was
+                running social for a small brand, juggling Instagram, TikTok, and LinkedIn at once,
+                and kept hitting the same wall: the content was done, the photo was good, and then
+                the cursor just sat there blinking in an empty caption box.
               </p>
               <p>
-                Most caption tools we tried sounded like every other brand on the internet. So we
-                built a generator that learns voice, tone, and platform-native style — captions
-                that feel like a real person wrote them at midnight on their phone, not a SaaS bot.
+                After spending an hour rewriting the same Instagram caption five different ways — and
+                still hating all five — the question became impossible to ignore:{" "}
+                <em>why am I doing this by hand?</em> The tools that existed didn&apos;t help. They
+                spat out generic, lifeless lines that sounded like every other brand on the internet,
+                stuffed with hashtags no human would ever type.
+              </p>
+              <p>
+                So we built the thing we actually wanted: a generator that learns voice, tone, and
+                the unwritten rules of each platform — captions that feel like a real person wrote
+                them at midnight on their phone, not a SaaS bot reading a marketing playbook. The
+                first version was a weekend project. The reaction from friends and fellow creators
+                made it clear it needed to be more than that.
               </p>
               <p>
                 Today, CaptionAI is used by Instagram creators, TikTok content makers, LinkedIn
-                thought leaders, and founders who&apos;d rather ship work than agonize over a caption
-                box.
+                thought leaders, small businesses, and founders who&apos;d rather ship work than
+                agonize over a caption box. The frustration that started it all is still the thing we
+                fight every single day.
               </p>
             </motion.div>
           </div>
@@ -137,6 +157,143 @@ export function AboutPage() {
               Every minute you spend rewriting captions is a minute you could have spent making the
               next thing. We&apos;re here to take that minute back — and give it to you, every day.
             </p>
+          </div>
+        </section>
+
+        <section aria-labelledby="vision" className="px-4 py-12 sm:px-6 sm:py-16">
+          <div className="mx-auto max-w-3xl">
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{ duration: 0.45 }}
+              className="text-xs font-semibold uppercase tracking-[0.2em] text-purple-600 dark:text-purple-400"
+            >
+              Where we&apos;re headed
+            </motion.p>
+            <motion.h2
+              id="vision"
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{ duration: 0.45, delay: 0.05 }}
+              className="mt-3 text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl dark:text-white"
+            >
+              Our vision
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="mt-5 text-[17px] leading-relaxed text-zinc-700 dark:text-zinc-300"
+            >
+              We believe the best ideas shouldn&apos;t get stuck at the caption box. Captions are just
+              the start — our long-term vision is to be the writing layer for every creator, handling
+              the words around your content so you can focus on the content itself.
+            </motion.p>
+            <motion.ul
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: "-60px" }}
+              variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.08 } } }}
+              className="mt-8 grid gap-4 sm:grid-cols-3"
+            >
+              {[
+                {
+                  title: "Sound like you",
+                  body: "AI that adapts to your voice instead of flattening everyone into the same tone.",
+                },
+                {
+                  title: "Every platform",
+                  body: "Native-feeling copy for wherever you post — today, and the platforms that come next.",
+                },
+                {
+                  title: "Creators first",
+                  body: "Fair, transparent pricing and a free tier that stays genuinely useful.",
+                },
+              ].map((v) => (
+                <motion.li
+                  key={v.title}
+                  variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.45 } } }}
+                  className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60"
+                >
+                  <h3 className="text-base font-semibold text-zinc-900 dark:text-white">{v.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{v.body}</p>
+                </motion.li>
+              ))}
+            </motion.ul>
+          </div>
+        </section>
+
+        <section aria-labelledby="team" className="px-4 py-12 sm:px-6 sm:py-16">
+          <div className="mx-auto max-w-4xl">
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{ duration: 0.45 }}
+              className="text-center"
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-purple-600 dark:text-purple-400">
+                The people behind it
+              </p>
+              <h2
+                id="team"
+                className="mt-3 text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl dark:text-white"
+              >
+                A small team that ships
+              </h2>
+              <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
+                We&apos;re a lean crew of creators, engineers, and writers who use CaptionAI every day
+                ourselves. Small team, fast feedback loop, and direct access — when you message us, you
+                reach the people actually building the product.
+              </p>
+            </motion.div>
+
+            <motion.ul
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: "-60px" }}
+              variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.08 } } }}
+              className="mt-10 grid gap-4 sm:grid-cols-3"
+            >
+              {[
+                {
+                  name: "Founder & CEO",
+                  role: "Product & creator strategy",
+                  blurb: "Ran social for a small brand, got tired of the caption box, and built the fix.",
+                  initials: "C",
+                },
+                {
+                  name: "Engineering",
+                  role: "Models & platform",
+                  blurb: "Makes the AI fast, reliable, and tuned to sound human across every platform.",
+                  initials: "E",
+                },
+                {
+                  name: "Content & Community",
+                  role: "Voice & support",
+                  blurb: "Keeps captions sounding real and makes sure every creator gets answers.",
+                  initials: "C",
+                },
+              ].map((m) => (
+                <motion.li
+                  key={m.name}
+                  variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.45 } } }}
+                  className="rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60"
+                >
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-purple-600 to-fuchsia-600 text-xl font-bold text-white">
+                    {m.initials}
+                  </div>
+                  <h3 className="mt-4 text-base font-semibold text-zinc-900 dark:text-white">{m.name}</h3>
+                  <p className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-purple-600 dark:text-purple-400">
+                    {m.role}
+                  </p>
+                  <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{m.blurb}</p>
+                </motion.li>
+              ))}
+            </motion.ul>
           </div>
         </section>
 

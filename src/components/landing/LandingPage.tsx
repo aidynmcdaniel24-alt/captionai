@@ -5,6 +5,7 @@ import { LandingHeader } from "./LandingHeader";
 import { HeroSection } from "./HeroSection";
 import { LiveCaptionsCounter } from "./LiveCaptionsCounter";
 import { FeaturesSection } from "./FeaturesSection";
+import { WhyCaptionAiSection } from "./WhyCaptionAiSection";
 import { LiveDemoSection } from "./LiveDemoSection";
 import { TestimonialsSection } from "./TestimonialsSection";
 import { StatsSection } from "./StatsSection";
@@ -26,6 +27,7 @@ export function LandingPage() {
         <LiveCaptionsCounter />
         <AuthContinueSection />
         <FeaturesSection />
+        <WhyCaptionAiSection />
         <LiveDemoSection />
         <StatsSection />
         <TestimonialsSection />
