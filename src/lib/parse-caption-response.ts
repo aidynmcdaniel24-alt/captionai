@@ -19,25 +19,52 @@ export type ParsedCaptionResponse = {
 
 const RATING_SET = new Set<CaptionRatingKey>(["worst", "medium", "best"]);
 
-function normalizeCaptionRatings(raw: unknown): CaptionRatingKey[] | null {
-  if (!Array.isArray(raw) || raw.length !== 3) {
-    return null;
-  }
-  const labels = raw.map((x) => String(x).trim().toLowerCase()) as CaptionRatingKey[];
-  const set = new Set(labels);
-  if (set.size !== 3) {
-    return null;
-  }
-  for (const r of RATING_SET) {
-    if (!set.has(r)) {
-      return null;
-    }
-  }
-  return labels;
+function isRatingKey(v: string): v is CaptionRatingKey {
+  return RATING_SET.has(v as CaptionRatingKey);
 }
 
-export function defaultCaptionRatings(): CaptionRatingKey[] {
-  return ["medium", "worst", "best"];
+/**
+ * Normalize the model's rating array to exactly `count` entries. For the
+ * classic 3-caption case we still require one of each (best/medium/worst);
+ * for the larger Pro (5) and Annual (7) sets we only require every entry to be
+ * a valid rating with at least one "best" present.
+ */
+function normalizeCaptionRatings(
+  raw: unknown,
+  count: number
+): CaptionRatingKey[] | null {
+  if (!Array.isArray(raw) || raw.length !== count) {
+    return null;
+  }
+  const labels = raw.map((x) => String(x).trim().toLowerCase());
+  if (!labels.every(isRatingKey)) {
+    return null;
+  }
+  const typed = labels as CaptionRatingKey[];
+
+  if (count === 3) {
+    const set = new Set(typed);
+    if (set.size !== 3) return null;
+    return typed;
+  }
+
+  if (!typed.includes("best")) {
+    return null;
+  }
+  return typed;
+}
+
+/**
+ * Deterministic fallback ratings for `count` captions: one "best", one
+ * "worst" (when there is room), and the remainder "medium".
+ */
+export function defaultCaptionRatings(count = 3): CaptionRatingKey[] {
+  if (count <= 1) return ["best"];
+  if (count === 2) return ["best", "worst"];
+  const ratings: CaptionRatingKey[] = new Array(count).fill("medium");
+  ratings[0] = "best";
+  ratings[count - 1] = "worst";
+  return ratings;
 }
 
 function captionTextFromItem(item: unknown): string {
@@ -54,22 +81,25 @@ function captionTextFromItem(item: unknown): string {
   return "";
 }
 
-function normalizeCaptions(raw: unknown): string[] | null {
+function normalizeCaptions(raw: unknown, count: number): string[] | null {
   if (!Array.isArray(raw)) {
     return null;
   }
   const captions = raw.map(captionTextFromItem).filter(Boolean);
-  if (captions.length >= 3) {
-    return captions.slice(0, 3);
+  // Always require at least 3 valid captions so a response is never empty; if
+  // the model returns more than requested, trim to the plan's caption count.
+  if (captions.length >= Math.min(count, 3)) {
+    return captions.slice(0, count);
   }
   return null;
 }
 
-function normalizeEmojiPerCaption(raw: unknown): string[][] {
+function normalizeEmojiPerCaption(raw: unknown, count: number): string[][] {
+  const empty = () => Array.from({ length: count }, () => [] as string[]);
   if (!Array.isArray(raw) || raw.length === 0) {
-    return [[], [], []];
+    return empty();
   }
-  const rows = raw.slice(0, 3).map((row) => {
+  const rows = raw.slice(0, count).map((row) => {
     if (Array.isArray(row)) {
       return row.map((e) => String(e).trim()).filter(Boolean);
     }
@@ -78,7 +108,7 @@ function normalizeEmojiPerCaption(raw: unknown): string[][] {
     }
     return [];
   });
-  while (rows.length < 3) {
+  while (rows.length < count) {
     rows.push([]);
   }
   return rows;
@@ -99,9 +129,12 @@ function numberOrUndefined(v: unknown): number | undefined {
   return undefined;
 }
 
-function normalizeCaptionScores(raw: unknown): (ParsedCaptionScore | null)[] {
-  if (!Array.isArray(raw)) return [null, null, null];
-  const rows = raw.slice(0, 3).map((row): ParsedCaptionScore | null => {
+function normalizeCaptionScores(
+  raw: unknown,
+  count: number
+): (ParsedCaptionScore | null)[] {
+  if (!Array.isArray(raw)) return Array.from({ length: count }, () => null);
+  const rows = raw.slice(0, count).map((row): ParsedCaptionScore | null => {
     if (!row || typeof row !== "object") return null;
     const r = row as Record<string, unknown>;
     const out: ParsedCaptionScore = {
@@ -119,24 +152,31 @@ function normalizeCaptionScores(raw: unknown): (ParsedCaptionScore | null)[] {
     };
     return out;
   });
-  while (rows.length < 3) rows.push(null);
+  while (rows.length < count) rows.push(null);
   return rows;
 }
 
-export function parseCaptionModelJson(raw: string): ParsedCaptionResponse | null {
+export function parseCaptionModelJson(
+  raw: string,
+  count = 3
+): ParsedCaptionResponse | null {
   const parsed = parseLenientJson<CaptionJsonShape>(raw);
   if (!parsed) {
     return null;
   }
 
-  const captions = normalizeCaptions(parsed.captions);
+  const captions = normalizeCaptions(parsed.captions, count);
   if (!captions) {
     return null;
   }
 
-  const emojiPerCaption = normalizeEmojiPerCaption(parsed.emojiPerCaption);
-  const captionRatings = normalizeCaptionRatings(parsed.captionRatings) ?? defaultCaptionRatings();
-  const captionScores = normalizeCaptionScores(parsed.captionScores);
+  // Align all per-caption arrays to the actual number of captions returned.
+  const actual = captions.length;
+  const emojiPerCaption = normalizeEmojiPerCaption(parsed.emojiPerCaption, actual);
+  const captionRatings =
+    normalizeCaptionRatings(parsed.captionRatings, actual) ??
+    defaultCaptionRatings(actual);
+  const captionScores = normalizeCaptionScores(parsed.captionScores, actual);
 
   return { captions, emojiPerCaption, captionRatings, captionScores };
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { isProPlan } from "@/lib/plan";
 import { useCallback, useEffect, useState } from "react";
 
 type Collection = {
@@ -19,7 +20,7 @@ type CollectionItem = {
 };
 
 type Props = {
-  plan: "free" | "pro" | null;
+  plan: "free" | "pro" | "annual" | null;
   checkoutLoading: boolean;
   onStartCheckout: (interval?: "month" | "year") => void;
 };
@@ -85,7 +86,7 @@ export function CollectionsTab({
   const [activeLoading, setActiveLoading] = useState(false);
   const [renameValue, setRenameValue] = useState("");
 
-  const isPro = plan === "pro";
+  const isPro = isProPlan(plan);
 
   const loadCollections = useCallback(async () => {
     setLoading(true);

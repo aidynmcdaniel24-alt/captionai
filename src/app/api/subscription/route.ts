@@ -31,6 +31,7 @@ export async function GET(req: Request) {
     );
   }
 
-  const plan = data?.plan === "pro" ? "pro" : "free";
+  const plan =
+    data?.plan === "annual" ? "annual" : data?.plan === "pro" ? "pro" : "free";
   return NextResponse.json({ plan });
 }

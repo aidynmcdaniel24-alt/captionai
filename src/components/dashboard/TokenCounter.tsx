@@ -1,7 +1,9 @@
 "use client";
 
+import { isProPlan } from "@/lib/plan";
+
 type Props = {
-  plan: "free" | "pro" | null;
+  plan: "free" | "pro" | "annual" | null;
   tokensRemaining: number | null;
   tokensLimit: number | null;
   className?: string;
@@ -21,7 +23,7 @@ export function TokenCounter({
   tokensLimit,
   className = "",
 }: Props) {
-  const unlimited = plan === "pro" || tokensLimit === null;
+  const unlimited = isProPlan(plan) || tokensLimit === null;
 
   if (unlimited) {
     return (

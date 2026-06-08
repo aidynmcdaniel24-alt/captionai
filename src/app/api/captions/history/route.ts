@@ -6,6 +6,7 @@ import {
   safeErrorMessage,
 } from "@/lib/security/api-guard";
 import { sanitizeText } from "@/lib/security/sanitize";
+import { isProPlan } from "@/lib/plan";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -42,7 +43,7 @@ export async function GET(req: Request) {
     .select("plan")
     .eq("user_id", userId)
     .maybeSingle();
-  const plan = subRow?.plan === "pro" ? "pro" : "free";
+  const plan = isProPlan(subRow?.plan) ? "pro" : "free";
   const limit = plan === "pro" ? PRO_HISTORY_LIMIT : FREE_HISTORY_LIMIT;
 
   // Total count is cheap (head: true) and lets the client show

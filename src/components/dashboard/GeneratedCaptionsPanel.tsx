@@ -5,12 +5,16 @@ import { CaptionBestTimeBadge } from "@/components/dashboard/CaptionBestTimeBadg
 import { CaptionScoreBar } from "@/components/dashboard/CaptionScoreBar";
 import { SaveToCollectionMenu } from "@/components/dashboard/SaveToCollectionMenu";
 import { useCaptionBestTimes } from "@/components/dashboard/useCaptionBestTimes";
+import { bestTimeForPlatform } from "@/lib/best-time-data";
 import type { CaptionScore } from "@/lib/caption-score";
 import {
   CAPTION_RATING_ACTIVE,
   CAPTION_RATING_LABELS,
   type CaptionRatingKey,
 } from "@/lib/caption-rating-styles";
+import { isProPlan } from "@/lib/plan";
+import { TOKEN_COSTS } from "@/lib/tokens-shared";
+import { useCallback, useState } from "react";
 
 type GeneratedCaptionsPanelProps = {
   captions: string[];
@@ -21,8 +25,10 @@ type GeneratedCaptionsPanelProps = {
   platform: string;
   tone: string;
   topic: string;
-  plan: "free" | "pro" | null;
+  plan: "free" | "pro" | "annual" | null;
   proBoost?: boolean;
+  qualityTier?: "standard" | "pro" | "elite";
+  brandToneActive?: boolean;
   copiedIndex: number | null;
   fav: Record<number, boolean>;
   checkoutLoading: boolean;
@@ -44,6 +50,8 @@ export function GeneratedCaptionsPanel({
   topic,
   plan,
   proBoost,
+  qualityTier,
+  brandToneActive,
   copiedIndex,
   fav,
   checkoutLoading,
@@ -55,6 +63,7 @@ export function GeneratedCaptionsPanel({
 }: GeneratedCaptionsPanelProps) {
   const displayPlatform = platform.trim() || "Instagram";
   const ratingsForTimes = captions.map((_, i) => captionRatings[i] ?? ("medium" as const));
+  const research = bestTimeForPlatform(displayPlatform);
 
   const { times, loading: timesLoading } = useCaptionBestTimes({
     captions,
@@ -65,11 +74,59 @@ export function GeneratedCaptionsPanel({
     enabled: captions.length > 0,
   });
 
+  const [optimizedByIndex, setOptimizedByIndex] = useState<
+    Record<number, { text: string; originalLength: number; optimizedLength: number }>
+  >({});
+  const [optimizingIndex, setOptimizingIndex] = useState<number | null>(null);
+  const [optimizeError, setOptimizeError] = useState("");
+
+  const optimizeLength = useCallback(
+    async (caption: string, index: number) => {
+      if (!isProPlan(plan)) return;
+      setOptimizeError("");
+      setOptimizingIndex(index);
+      try {
+        const res = await fetch("/api/tools/optimize-length", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ caption, platform: displayPlatform }),
+        });
+        const data = (await res.json()) as {
+          optimized?: string;
+          originalLength?: number;
+          optimizedLength?: number;
+          error?: string;
+          proRequired?: boolean;
+        };
+        if (!res.ok) {
+          setOptimizeError(data.error ?? "Could not optimize length.");
+          return;
+        }
+        if (data.optimized) {
+          setOptimizedByIndex((prev) => ({
+            ...prev,
+            [index]: {
+              text: data.optimized!,
+              originalLength: data.originalLength ?? caption.length,
+              optimizedLength: data.optimizedLength ?? data.optimized!.length,
+            },
+          }));
+        }
+      } catch {
+        setOptimizeError("Could not optimize length.");
+      } finally {
+        setOptimizingIndex(null);
+      }
+    },
+    [plan, displayPlatform]
+  );
+
   function isBestLockedForFree(index: number) {
-    return plan !== "pro" && captionRatings[index] === "best";
+    return !isProPlan(plan) && captionRatings[index] === "best";
   }
 
   const isProBoost = Boolean(proBoost);
+  const isElite = qualityTier === "elite" || plan === "annual";
   const showProUpsell = plan === "free" && !isProBoost;
 
   return (
@@ -79,13 +136,30 @@ export function GeneratedCaptionsPanel({
           <h2 className="text-lg font-semibold tracking-tight text-zinc-900 sm:text-xl dark:text-white">
             Your captions
           </h2>
-          {isProBoost ? (
+          {isElite ? (
+            <span
+              title="Elite Annual quality — viral-worthy captions with advanced copywriting."
+              className="inline-flex items-center gap-1 rounded-full border border-amber-400/70 bg-gradient-to-r from-amber-100 to-yellow-100 px-2.5 py-1 text-xs font-semibold text-amber-900 shadow-sm dark:border-amber-500/50 dark:from-amber-950/60 dark:to-yellow-950/60 dark:text-amber-200"
+            >
+              <span aria-hidden>👑</span>
+              Elite captions
+            </span>
+          ) : isProBoost ? (
             <span
               title="Generated with the Pro AI caption boost — viral hooks, deeper storytelling, advanced copywriting."
               className="inline-flex items-center gap-1 rounded-full border border-purple-400/70 bg-gradient-to-r from-purple-100 to-fuchsia-100 px-2.5 py-1 text-xs font-semibold text-purple-800 shadow-sm dark:border-purple-500/50 dark:from-purple-950/60 dark:to-fuchsia-950/60 dark:text-purple-200"
             >
               <span aria-hidden>✨</span>
               Pro captions
+            </span>
+          ) : null}
+          {brandToneActive ? (
+            <span
+              title="Your saved brand tone profile was applied to these captions."
+              className="inline-flex items-center gap-1 rounded-full border border-emerald-400/60 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-200"
+            >
+              <span aria-hidden>🎯</span>
+              Brand tone active
             </span>
           ) : null}
         </div>
@@ -149,7 +223,7 @@ export function GeneratedCaptionsPanel({
                   <span />
                 )}
                 <div className="flex items-center gap-2">
-                  {plan === "pro" && !locked ? (
+                  {isProPlan(plan) && !locked ? (
                     <SaveToCollectionMenu
                       captionText={caption}
                       platform={platform}
@@ -205,17 +279,52 @@ export function GeneratedCaptionsPanel({
                       </div>
                     </div>
                   ) : (
-                    <p className="whitespace-pre-wrap break-words leading-7 text-zinc-800 dark:text-zinc-200">
-                      {caption}
-                    </p>
+                    <>
+                      <p className="whitespace-pre-wrap break-words leading-7 text-zinc-800 dark:text-zinc-200">
+                        {optimizedByIndex[index]?.text ?? caption}
+                      </p>
+                      {optimizedByIndex[index] ? (
+                        <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-300">
+                          Length optimized: {optimizedByIndex[index]!.originalLength} →{" "}
+                          {optimizedByIndex[index]!.optimizedLength} characters
+                        </p>
+                      ) : null}
+                    </>
                   )}
                   {!locked ? (
                     <>
                       {captionScores?.[index] ? (
                         <CaptionScoreBar score={captionScores[index]!} />
                       ) : null}
-                      <CaptionBestTimeBadge time={times[index]} rating={rating} loading={timesLoading} />
-                      <p className="mt-2 text-xs text-zinc-500">{caption.length} characters</p>
+                      <CaptionBestTimeBadge
+                        time={times[index]}
+                        rating={rating}
+                        loading={timesLoading}
+                        reason={research?.reason}
+                      />
+                      <p className="mt-2 text-xs text-zinc-500">
+                        {(optimizedByIndex[index]?.text ?? caption).length} characters
+                      </p>
+                      {isProPlan(plan) ? (
+                        <button
+                          type="button"
+                          disabled={optimizingIndex === index}
+                          onClick={() =>
+                            void optimizeLength(
+                              optimizedByIndex[index]?.text ?? caption,
+                              index
+                            )
+                          }
+                          className="mt-2 inline-flex min-h-[32px] items-center gap-1 rounded-lg border border-zinc-300 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                        >
+                          {optimizingIndex === index
+                            ? "Optimizing…"
+                            : `Optimize length (${TOKEN_COSTS.optimizeLength} tokens)`}
+                        </button>
+                      ) : null}
+                      {optimizeError && optimizingIndex === null ? (
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{optimizeError}</p>
+                      ) : null}
                       {emojiPerCaption[index]?.length ? (
                         <div className="mt-2 flex flex-wrap gap-1">
                           {emojiPerCaption[index]!.map((em) => (

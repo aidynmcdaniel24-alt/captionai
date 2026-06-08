@@ -1,9 +1,14 @@
 import { supabaseServer } from "@/lib/supabase/server";
 
-/** Upsert Pro plan and optional Stripe customer id in one write. */
+/**
+ * Upsert a paid plan ("pro" or "annual") and optional Stripe customer id in
+ * one write. The plan is derived from the Stripe billing interval (year =>
+ * annual / Elite tier, month => pro).
+ */
 export async function upsertProSubscription(
   userId: string,
-  stripeCustomerId: string | null
+  stripeCustomerId: string | null,
+  plan: "pro" | "annual" = "pro"
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const row: {
     user_id: string;
@@ -12,7 +17,7 @@ export async function upsertProSubscription(
     stripe_customer_id?: string;
   } = {
     user_id: userId,
-    plan: "pro",
+    plan,
     updated_at: new Date().toISOString(),
   };
 

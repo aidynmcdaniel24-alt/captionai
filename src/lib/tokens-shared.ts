@@ -14,12 +14,21 @@ export const TOKEN_COSTS = {
   abTest: 15,
   trending: 3,
   image: 5,
+  // New AI tools
+  rewrite: 5,
+  translate: 5,
+  emoji: 3,
+  optimizeLength: 3,
+  hashtagStrategy: 8,
+  grade: 8,
+  competitor: 8,
+  calendar: 40,
 } as const;
 
 export type TokenCostKey = keyof typeof TOKEN_COSTS;
 
 export type TokenInfo = {
-  plan: "free" | "pro";
+  plan: "free" | "pro" | "annual";
   tokensUsed: number;
   tokensLimit: number | null;
   tokensRemaining: number | null;

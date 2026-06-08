@@ -107,8 +107,25 @@ async function sendProUpgradeEmailForUser(
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-async function setPlanPro(userId: string, stripeCustomerId: string | null) {
-  const result = await upsertProSubscription(userId, stripeCustomerId);
+/** Map a Stripe billing interval to our app plan tier. */
+function planFromInterval(
+  interval: "month" | "year" | "unknown" | undefined
+): "pro" | "annual" {
+  return interval === "year" ? "annual" : "pro";
+}
+
+/** Read the plan tier from a Stripe subscription's recurring interval. */
+function planFromSubscription(sub: Stripe.Subscription): "pro" | "annual" {
+  const interval = sub.items?.data?.[0]?.price?.recurring?.interval;
+  return interval === "year" ? "annual" : "pro";
+}
+
+async function setPlanPro(
+  userId: string,
+  stripeCustomerId: string | null,
+  plan: "pro" | "annual" = "pro"
+) {
+  const result = await upsertProSubscription(userId, stripeCustomerId, plan);
   if (!result.ok) {
     console.error("[stripe webhook] subscriptions upsert:", result.message);
     if (result.message.toLowerCase().includes("stripe_customer_id")) {
@@ -167,7 +184,8 @@ export async function POST(req: Request) {
 
     if (userId && checkoutSessionIsPaidSubscription(session)) {
       const cid = stripeCustomerIdFromCheckoutSession(session);
-      const errRes = await setPlanPro(userId, cid);
+      const interval = await intervalFromCheckoutSession(stripe, session);
+      const errRes = await setPlanPro(userId, cid, planFromInterval(interval));
       if (errRes) {
         return errRes;
       }
@@ -236,7 +254,7 @@ export async function POST(req: Request) {
         sub.status === "canceled" || sub.status === "unpaid" || sub.status === "incomplete_expired";
 
       if (isActive && !sub.cancel_at_period_end) {
-        const errRes = await setPlanPro(userId, cid);
+        const errRes = await setPlanPro(userId, cid, planFromSubscription(sub));
         if (errRes) {
           return errRes;
         }
@@ -261,7 +279,7 @@ export async function POST(req: Request) {
         const userId = await resolveUserIdFromSubscription(sub);
         if (userId && (sub.status === "active" || sub.status === "trialing")) {
           const cid = typeof sub.customer === "string" ? sub.customer : sub.customer?.id ?? null;
-          const errRes = await setPlanPro(userId, cid);
+          const errRes = await setPlanPro(userId, cid, planFromSubscription(sub));
           if (errRes) {
             return errRes;
           }

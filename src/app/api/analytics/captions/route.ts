@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isProPlan } from "@/lib/plan";
 import {
   RATE_LIMITS,
   rateLimitByUser,
@@ -62,10 +63,11 @@ export async function GET(req: Request) {
     .select("plan")
     .eq("user_id", userId)
     .maybeSingle();
-  const plan = subRow?.plan === "pro" ? "pro" : "free";
+  const plan: "free" | "pro" | "annual" =
+    subRow?.plan === "annual" ? "annual" : subRow?.plan === "pro" ? "pro" : "free";
 
   // Free users get the empty payload — the UI shows a blurred preview instead.
-  if (plan !== "pro") {
+  if (!isProPlan(plan)) {
     return NextResponse.json({
       plan,
       proRequired: true,
@@ -79,6 +81,9 @@ export async function GET(req: Request) {
       bestHourLabel: null,
       hourBuckets: [],
       favoritesCount: 0,
+      mostUsedPlatform: null,
+      favoriteTone: null,
+      topTopics: [],
     });
   }
 
@@ -128,19 +133,70 @@ export async function GET(req: Request) {
   const platforms = countBy(rows, "platform");
   const tones = countBy(rows, "tone");
   const languages = countBy(rows, "language");
+  const topics = countBy(rows, "topic");
 
-  // Top copied = captions that are favorited the most. We don't track raw
-  // copies (no client beacon), so favorites is the closest signal we have.
+  const mostUsedPlatform = platforms[0]?.name ?? null;
+  const favoriteTone = tones[0]?.name ?? null;
+  const topTopics = topics.slice(0, 5).map((t) => t.name);
+
+  // Caption Memory: prefer real copy events from caption_copies; fall back to favorites.
+  const { data: copyRows } = await supabaseServer
+    .from("caption_copies")
+    .select("caption_text, platform, tone, topic, score, copied_at")
+    .eq("user_id", userId)
+    .order("copied_at", { ascending: false })
+    .limit(500);
+
   const { data: favRows } = await supabaseServer
     .from("caption_favorites")
     .select("history_id, caption_index")
     .eq("user_id", userId);
 
   const favCount = favRows?.length ?? 0;
+  const copiesCount = copyRows?.length ?? 0;
+
+  // Personalize platform/tone from copies when we have enough history.
+  let memoryPlatform = mostUsedPlatform;
+  let memoryTone = favoriteTone;
+  if (copyRows && copyRows.length >= 3) {
+    const platMap = new Map<string, number>();
+    const toneMap = new Map<string, number>();
+    for (const c of copyRows) {
+      const p = (c.platform as string)?.trim();
+      const t = (c.tone as string)?.trim();
+      if (p) platMap.set(p, (platMap.get(p) ?? 0) + 1);
+      if (t) toneMap.set(t, (toneMap.get(t) ?? 0) + 1);
+    }
+    const topPlat = [...platMap.entries()].sort((a, b) => b[1] - a[1])[0];
+    const topTone = [...toneMap.entries()].sort((a, b) => b[1] - a[1])[0];
+    if (topPlat) memoryPlatform = topPlat[0];
+    if (topTone) memoryTone = topTone[0];
+  }
 
   const topCopied: { caption: string; platform: string; tone: string; favoriteCount: number }[] =
     [];
-  if (favRows && favRows.length > 0) {
+
+  if (copyRows && copyRows.length > 0) {
+    const counter = new Map<string, number>();
+    const example = new Map<string, { caption: string; platform: string; tone: string }>();
+    for (const row of copyRows) {
+      const text = (row.caption_text as string)?.trim();
+      if (!text) continue;
+      counter.set(text, (counter.get(text) ?? 0) + 1);
+      if (!example.has(text)) {
+        example.set(text, {
+          caption: text,
+          platform: (row.platform as string) ?? "—",
+          tone: (row.tone as string) ?? "—",
+        });
+      }
+    }
+    const sorted = [...counter.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+    for (const [text, count] of sorted) {
+      const ex = example.get(text);
+      if (ex) topCopied.push({ ...ex, favoriteCount: count });
+    }
+  } else if (favRows && favRows.length > 0) {
     const counter = new Map<string, number>();
     const example = new Map<
       string,
@@ -182,5 +238,9 @@ export async function GET(req: Request) {
     bestHourLabel,
     hourBuckets,
     favoritesCount: favCount,
+    copiesCount,
+    mostUsedPlatform: memoryPlatform,
+    favoriteTone: memoryTone,
+    topTopics,
   });
 }

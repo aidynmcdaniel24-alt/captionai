@@ -33,7 +33,8 @@ export async function GET(req: Request) {
     .eq("user_id", userId)
     .maybeSingle();
 
-  const plan = sub?.plan === "pro" ? "pro" : "free";
+  const plan: "free" | "pro" | "annual" =
+    sub?.plan === "annual" ? "annual" : sub?.plan === "pro" ? "pro" : "free";
 
   let totalCaptions = 0;
   const { count, error: countError } = await supabaseServer
@@ -85,7 +86,8 @@ export async function GET(req: Request) {
 
   const tokensUsed = Math.max(0, usageRow?.count ?? 0);
   const unlimited = hasUnlimitedTokens(userId);
-  const tokensLimit = unlimited || plan === "pro" ? null : FREE_DAILY_TOKENS;
+  const tokensLimit =
+    unlimited || plan === "pro" || plan === "annual" ? null : FREE_DAILY_TOKENS;
   const tokensRemaining =
     tokensLimit === null ? null : Math.max(0, tokensLimit - tokensUsed);
 

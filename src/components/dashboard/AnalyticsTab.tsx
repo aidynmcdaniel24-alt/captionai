@@ -1,5 +1,6 @@
 "use client";
 
+import { isProPlan } from "@/lib/plan";
 import { useCallback, useEffect, useState } from "react";
 
 type CountedItem = { name: string; value: number };
@@ -11,7 +12,7 @@ type CopiedItem = {
 };
 
 type AnalyticsResponse = {
-  plan: "free" | "pro";
+  plan: "free" | "pro" | "annual";
   proRequired?: boolean;
   total: number;
   thisWeek: number;
@@ -22,10 +23,14 @@ type AnalyticsResponse = {
   topCopied: CopiedItem[];
   bestHourLabel: string | null;
   favoritesCount: number;
+  copiesCount?: number;
+  mostUsedPlatform?: string | null;
+  favoriteTone?: string | null;
+  topTopics?: string[];
 };
 
 type Props = {
-  plan: "free" | "pro" | null;
+  plan: "free" | "pro" | "annual" | null;
   checkoutLoading: boolean;
   onStartCheckout: (interval?: "month" | "year") => void;
 };
@@ -153,9 +158,9 @@ function AnalyticsView({ data, blurred }: { data: AnalyticsResponse; blurred: bo
           hint={`${delta.label} vs last week`}
         />
         <StatCard
-          label="Favorites"
-          value={data.favoritesCount}
-          hint="Captions you starred"
+          label="Captions copied"
+          value={data.copiesCount ?? data.favoritesCount}
+          hint="Caption memory"
         />
         <StatCard
           label="Best hour"
@@ -163,6 +168,32 @@ function AnalyticsView({ data, blurred }: { data: AnalyticsResponse; blurred: bo
           hint="When you create most"
         />
       </div>
+
+      {data.mostUsedPlatform || data.favoriteTone || (data.topTopics?.length ?? 0) > 0 ? (
+        <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-800/40 dark:bg-emerald-950/20">
+          <h3 className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+            Caption memory insights
+          </h3>
+          <ul className="mt-2 space-y-1 text-sm text-emerald-800 dark:text-emerald-200">
+            {data.mostUsedPlatform ? (
+              <li>
+                <span className="font-medium">Your most used platform:</span> {data.mostUsedPlatform}
+              </li>
+            ) : null}
+            {data.favoriteTone ? (
+              <li>
+                <span className="font-medium">Your favorite tone:</span> {data.favoriteTone}
+              </li>
+            ) : null}
+            {data.topTopics && data.topTopics.length > 0 ? (
+              <li>
+                <span className="font-medium">Best performing topics:</span>{" "}
+                {data.topTopics.join(", ")}
+              </li>
+            ) : null}
+          </ul>
+        </div>
+      ) : null}
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
@@ -267,7 +298,7 @@ export function AnalyticsTab({ plan, checkoutLoading, onStartCheckout }: Props) 
     void load();
   }, [load]);
 
-  const isFree = plan !== "pro";
+  const isFree = !isProPlan(plan);
   const empty =
     data && !data.proRequired && data.total === 0;
 

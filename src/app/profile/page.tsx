@@ -1,6 +1,7 @@
 "use client";
 
 import { BestTimeCard } from "@/components/dashboard/BestTimeCard";
+import { BrandToneSection } from "@/components/profile/BrandToneSection";
 import { WelcomeOnboardingModal } from "@/components/dashboard/WelcomeOnboardingModal";
 import { ChangePhotoButton } from "@/components/ChangePhotoButton";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -10,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 type BillingInfo = {
-  plan: "free" | "pro";
+  plan: "free" | "pro" | "annual";
   priceLabel: string | null;
   nextBillingDate: string | null;
   cancelAtPeriodEnd: boolean;
@@ -30,7 +31,7 @@ function formatBillingDate(iso: string | null): string {
 export default function ProfilePage() {
   const router = useRouter();
   const { user, isLoaded, isSignedIn } = useUser();
-  const [plan, setPlan] = useState<"free" | "pro" | null>(null);
+  const [plan, setPlan] = useState<"free" | "pro" | "annual" | null>(null);
   const [billing, setBilling] = useState<BillingInfo | null>(null);
   const [billingLoading, setBillingLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -59,7 +60,9 @@ export default function ProfilePage() {
         abSummary?: { experiments: number; totalPicks: number };
         isAdmin?: boolean;
       };
-      setPlan(data.plan === "pro" ? "pro" : "free");
+      setPlan(
+        data.plan === "annual" ? "annual" : data.plan === "pro" ? "pro" : "free"
+      );
       setTotalCaptions(typeof data.totalCaptions === "number" ? data.totalCaptions : 0);
       if (typeof data.usageToday === "number") {
         setUsageToday(data.usageToday);
@@ -88,7 +91,8 @@ export default function ProfilePage() {
         return;
       }
       const data = (await res.json()) as BillingInfo & { error?: string };
-      const resolvedPlan = data.plan === "pro" ? "pro" : "free";
+      const resolvedPlan: "free" | "pro" | "annual" =
+        data.plan === "annual" ? "annual" : data.plan === "pro" ? "pro" : "free";
       setBilling({
         plan: resolvedPlan,
         priceLabel: data.priceLabel ?? null,
@@ -166,7 +170,8 @@ export default function ProfilePage() {
     "—";
 
   const subscriptionPlan = billing?.plan ?? plan;
-  const isPro = subscriptionPlan === "pro";
+  const isPro = subscriptionPlan === "pro" || subscriptionPlan === "annual";
+  const isAnnual = subscriptionPlan === "annual";
 
   return (
     <main className="min-h-screen bg-zinc-50 px-4 py-6 text-zinc-900 sm:py-10 dark:bg-gradient-to-b dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900 dark:text-white">
@@ -250,7 +255,11 @@ export default function ProfilePage() {
                 <div>
                   <dt className="text-xs uppercase tracking-wide text-zinc-500">Current plan</dt>
                   <dd className="mt-1">
-                    {isPro ? (
+                    {isAnnual ? (
+                      <span className="rounded-lg border border-amber-600/80 bg-amber-50 px-2 py-1 text-sm text-amber-900 dark:border-amber-700/80 dark:bg-amber-950/40 dark:text-amber-200">
+                        Annual Elite
+                      </span>
+                    ) : isPro ? (
                       <span className="rounded-lg border border-emerald-700/80 bg-emerald-50 px-2 py-1 text-sm text-emerald-800 dark:border-emerald-800/80 dark:bg-emerald-950/40 dark:text-emerald-300">
                         Pro
                       </span>
@@ -296,6 +305,8 @@ export default function ProfilePage() {
               ) : null}
             </div>
           </section>
+
+          <BrandToneSection plan={subscriptionPlan} />
 
           <div className="mt-6">
             <BestTimeCard platform="Instagram" />

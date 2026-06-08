@@ -6,6 +6,11 @@ import {
   type AbWinnerMetric,
 } from "@/components/dashboard/AbPastWinners";
 import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
+import { CalendarTab } from "@/components/dashboard/CalendarTab";
+import { EmojisTab } from "@/components/dashboard/EmojisTab";
+import { GraderTab } from "@/components/dashboard/GraderTab";
+import { HashtagAnalyzerTab } from "@/components/dashboard/HashtagAnalyzerTab";
+import { RewriterTab } from "@/components/dashboard/RewriterTab";
 import { BrandLogo } from "@/components/BrandLogo";
 import { CaptionLoadingState } from "@/components/dashboard/CaptionLoadingState";
 import { CollectionsTab } from "@/components/dashboard/CollectionsTab";
@@ -19,6 +24,7 @@ import { TokenCounter } from "@/components/dashboard/TokenCounter";
 import { TokenUpgradeModal } from "@/components/dashboard/TokenUpgradeModal";
 import type { CaptionRatingKey } from "@/lib/caption-rating-styles";
 import type { CaptionScore } from "@/lib/caption-score";
+import { isAnnualPlan, isProPlan } from "@/lib/plan";
 import { TOKEN_COSTS, type TokenInfo } from "@/lib/tokens-shared";
 import {
   hasSeenOnboarding,
@@ -45,6 +51,11 @@ const LANGUAGES = [
 
 type Tab =
   | "captions"
+  | "rewriter"
+  | "emojis"
+  | "hashtagAnalyzer"
+  | "grader"
+  | "calendar"
   | "hashtags"
   | "bio"
   | "trending"
@@ -110,8 +121,10 @@ type ApiResult = {
   captionRatings?: CaptionRatingKey[];
   captionScores?: CaptionScore[];
   historyId?: string;
-  plan?: "free" | "pro";
+  plan?: "free" | "pro" | "annual";
   proBoost?: boolean;
+  qualityTier?: "standard" | "pro" | "elite";
+  brandToneActive?: boolean;
   tokens?: TokenInfo;
   error?: string;
   details?: string;
@@ -127,7 +140,7 @@ export function DashboardPageClient() {
   const [captions, setCaptions] = useState<string[]>([]);
   const [emojiPerCaption, setEmojiPerCaption] = useState<string[][]>([]);
   const [historyId, setHistoryId] = useState<string | null>(null);
-  const [plan, setPlan] = useState<"free" | "pro" | null>(null);
+  const [plan, setPlan] = useState<"free" | "pro" | "annual" | null>(null);
   const [tokensUsed, setTokensUsed] = useState<number | null>(null);
   const [tokensLimit, setTokensLimit] = useState<number | null>(null);
   const [tokensRemaining, setTokensRemaining] = useState<number | null>(null);
@@ -141,6 +154,8 @@ export function DashboardPageClient() {
   const [captionRatings, setCaptionRatings] = useState<CaptionRatingKey[]>([]);
   const [captionScores, setCaptionScores] = useState<CaptionScore[]>([]);
   const [proBoost, setProBoost] = useState(false);
+  const [qualityTier, setQualityTier] = useState<"standard" | "pro" | "elite">("standard");
+  const [brandToneActive, setBrandToneActive] = useState(false);
   const [fav, setFav] = useState<Record<number, boolean>>({});
 
   // Image-to-caption (Feature 3)
@@ -185,7 +200,7 @@ export function DashboardPageClient() {
 
   const applyTokenInfo = useCallback((info?: TokenInfo | null) => {
     if (!info) return;
-    if (info.plan === "free" || info.plan === "pro") {
+    if (info.plan === "free" || info.plan === "pro" || info.plan === "annual") {
       setPlan(info.plan);
     }
     if (typeof info.tokensUsed === "number") setTokensUsed(info.tokensUsed);
@@ -208,11 +223,12 @@ export function DashboardPageClient() {
         tokensRemaining?: number | null;
         resetAt?: string;
       };
-      const planValue = data.plan === "pro" ? "pro" : "free";
+      const planValue: "free" | "pro" | "annual" =
+        data.plan === "annual" ? "annual" : data.plan === "pro" ? "pro" : "free";
       setPlan(planValue);
       if (typeof data.tokensUsed === "number") setTokensUsed(data.tokensUsed);
       setTokensLimit(
-        planValue === "pro" || data.tokensLimit === null
+        isProPlan(planValue) || data.tokensLimit === null
           ? null
           : data.tokensLimit ?? null
       );
@@ -235,7 +251,7 @@ export function DashboardPageClient() {
    */
   const ensureTokensOrShowModal = useCallback(
     (cost: number, message?: string): boolean => {
-      if (plan === "pro" || tokensRemaining === null || tokensLimit === null) {
+      if (isProPlan(plan) || tokensRemaining === null || tokensLimit === null) {
         return true;
       }
       if (tokensRemaining < cost) {
@@ -303,7 +319,7 @@ export function DashboardPageClient() {
   }
 
   function isBestLockedForFree(index: number) {
-    return plan !== "pro" && captionRatings[index] === "best";
+    return !isProPlan(plan) && captionRatings[index] === "best";
   }
 
   function captionsForExport(): string[] {
@@ -317,6 +333,8 @@ export function DashboardPageClient() {
     setCaptionRatings([]);
     setCaptionScores([]);
     setProBoost(false);
+    setQualityTier("standard");
+    setBrandToneActive(false);
     setFav({});
 
     try {
@@ -356,7 +374,9 @@ export function DashboardPageClient() {
       setCaptionScores(data.captionScores ?? []);
       setHistoryId(data.historyId ?? null);
       setProBoost(Boolean(data.proBoost));
-      if (data.plan === "pro" || data.plan === "free") {
+      setQualityTier(data.qualityTier ?? (data.plan === "annual" ? "elite" : data.plan === "pro" ? "pro" : "standard"));
+      setBrandToneActive(Boolean(data.brandToneActive));
+      if (data.plan === "annual" || data.plan === "pro" || data.plan === "free") {
         setPlan(data.plan);
       }
       applyTokenInfo(data.tokens);
@@ -377,6 +397,21 @@ export function DashboardPageClient() {
     await navigator.clipboard.writeText(caption);
     setCopiedIndex(index);
     setTimeout(() => setCopiedIndex(null), 2000);
+
+    // Caption Memory: fire-and-forget copy tracking for Pro+ users.
+    if (isProPlan(plan)) {
+      void fetch("/api/captions/copy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          captionText: caption,
+          platform: resolvedPlatform,
+          tone: resolvedTone,
+          topic,
+          score: captionScores[index]?.total ?? null,
+        }),
+      });
+    }
   }
 
   async function copyAll() {
@@ -924,37 +959,50 @@ export function DashboardPageClient() {
           <div className="flex min-w-max gap-1.5 sm:gap-2">
             {(
               [
-                ["captions", "Captions", false],
-                ["hashtags", "Hashtags", false],
-                ["bio", "Bio", false],
-                ["trending", "Trending", false],
-                ["ab", "A/B test", false],
-                ["favorites", "Favorites", false],
-                ["collections", "Collections", true],
-                ["hookLibrary", "Hook Library", false],
-                ["analytics", "Analytics", true],
+                ["captions", "Captions", "free" as const],
+                ["rewriter", "Rewriter", "pro" as const],
+                ["emojis", "Emojis", "pro" as const],
+                ["hashtagAnalyzer", "Hashtags+", "annual" as const],
+                ["grader", "Grader", "annual" as const],
+                ["calendar", "Calendar", "annual" as const],
+                ["hashtags", "Hashtags", "free" as const],
+                ["bio", "Bio", "free" as const],
+                ["trending", "Trending", "free" as const],
+                ["ab", "A/B test", "free" as const],
+                ["favorites", "Favorites", "free" as const],
+                ["collections", "Collections", "pro" as const],
+                ["hookLibrary", "Hook Library", "free" as const],
+                ["analytics", "Analytics", "pro" as const],
               ] as const
-            ).map(([id, label, proOnly]) => (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                aria-selected={tab === id}
-                onClick={() => setTab(id)}
-                className={`inline-flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition ${
-                  tab === id
-                    ? "bg-purple-600 text-white shadow-sm"
-                    : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                }`}
-              >
-                {label}
-                {proOnly && plan !== "pro" ? (
-                  <span aria-hidden className="text-[11px] opacity-70">
-                    🔒
-                  </span>
-                ) : null}
-              </button>
-            ))}
+            ).map(([id, label, tier]) => {
+              const locked =
+                tier === "pro"
+                  ? !isProPlan(plan)
+                  : tier === "annual"
+                    ? !isAnnualPlan(plan)
+                    : false;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === id}
+                  onClick={() => setTab(id)}
+                  className={`inline-flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition ${
+                    tab === id
+                      ? "bg-purple-600 text-white shadow-sm"
+                      : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                  }`}
+                >
+                  {label}
+                  {locked ? (
+                    <span aria-hidden className="text-[11px] opacity-70">
+                      🔒
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -980,7 +1028,7 @@ export function DashboardPageClient() {
                   preview={imagePreview}
                   analyzing={imageAnalyzing}
                   cost={TOKEN_COSTS.image}
-                  isPro={plan === "pro"}
+                  isPro={isProPlan(plan)}
                   onUpload={handleImageUpload}
                   onRemove={handleImageRemove}
                 />
@@ -1040,13 +1088,13 @@ export function DashboardPageClient() {
                   {isLoading ? "Generating..." : "Generate captions"}
                 </button>
                 <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-                  {plan === "pro" ? (
+                  {isProPlan(plan) ? (
                     <span
-                      title="Pro subscribers get priority placement in the AI generation queue."
+                      title="Pro and Annual subscribers get priority placement in the AI generation queue."
                       className="inline-flex items-center gap-1 text-xs font-medium text-purple-600 dark:text-purple-300"
                     >
                       <span aria-hidden>⚡</span>
-                      <span>Priority generation</span>
+                      <span>{isAnnualPlan(plan) ? "Elite priority" : "Priority generation"}</span>
                     </span>
                   ) : (
                     <span aria-hidden />
@@ -1063,9 +1111,11 @@ export function DashboardPageClient() {
             {isLoading ? (
               <CaptionLoadingState
                 subject={
-                  plan === "pro"
-                    ? `⚡ Pro priority generation for ${resolvedPlatform}`
-                    : `Generating for ${resolvedPlatform}`
+                  isAnnualPlan(plan)
+                    ? `👑 Elite generation for ${resolvedPlatform}`
+                    : isProPlan(plan)
+                      ? `⚡ Pro priority generation for ${resolvedPlatform}`
+                      : `Generating for ${resolvedPlatform}`
                 }
               />
             ) : null}
@@ -1082,6 +1132,8 @@ export function DashboardPageClient() {
                 topic={topic}
                 plan={plan}
                 proBoost={proBoost}
+                qualityTier={qualityTier}
+                brandToneActive={brandToneActive}
                 copiedIndex={copiedIndex}
                 fav={fav}
                 checkoutLoading={checkoutLoading}
@@ -1094,6 +1146,61 @@ export function DashboardPageClient() {
             ) : null}
 
           </>
+        ) : null}
+
+        {tab === "rewriter" ? (
+          <RewriterTab
+            plan={plan}
+            tokensRemaining={tokensRemaining}
+            tokensLimit={tokensLimit}
+            checkoutLoading={checkoutLoading}
+            onStartCheckout={startCheckout}
+            onApplyTokenInfo={applyTokenInfo}
+          />
+        ) : null}
+
+        {tab === "emojis" ? (
+          <EmojisTab
+            plan={plan}
+            tokensRemaining={tokensRemaining}
+            tokensLimit={tokensLimit}
+            checkoutLoading={checkoutLoading}
+            onStartCheckout={startCheckout}
+            onApplyTokenInfo={applyTokenInfo}
+          />
+        ) : null}
+
+        {tab === "hashtagAnalyzer" ? (
+          <HashtagAnalyzerTab
+            plan={plan}
+            tokensRemaining={tokensRemaining}
+            tokensLimit={tokensLimit}
+            checkoutLoading={checkoutLoading}
+            onStartCheckout={startCheckout}
+            onApplyTokenInfo={applyTokenInfo}
+          />
+        ) : null}
+
+        {tab === "grader" ? (
+          <GraderTab
+            plan={plan}
+            tokensRemaining={tokensRemaining}
+            tokensLimit={tokensLimit}
+            checkoutLoading={checkoutLoading}
+            onStartCheckout={startCheckout}
+            onApplyTokenInfo={applyTokenInfo}
+          />
+        ) : null}
+
+        {tab === "calendar" ? (
+          <CalendarTab
+            plan={plan}
+            tokensRemaining={tokensRemaining}
+            tokensLimit={tokensLimit}
+            checkoutLoading={checkoutLoading}
+            onStartCheckout={startCheckout}
+            onApplyTokenInfo={applyTokenInfo}
+          />
         ) : null}
 
         {tab === "hashtags" ? (
@@ -1570,20 +1677,20 @@ export function DashboardPageClient() {
                 <button
                   type="button"
                   className={`inline-flex min-h-[40px] items-center justify-center rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
-                    plan === "pro"
+                    isProPlan(plan)
                       ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200 dark:hover:bg-emerald-950/60"
                       : "border-zinc-300 bg-zinc-100 text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-500"
                   }`}
                   onClick={() => {
-                    if (plan !== "pro") {
+                    if (!isProPlan(plan)) {
                       setShowUpgradeModal(true);
                       return;
                     }
                     window.location.href = "/api/captions/favorites/export";
                   }}
-                  title={plan !== "pro" ? "Pro feature — upgrade to export" : "Download favorites as CSV"}
+                  title={!isProPlan(plan) ? "Pro feature — upgrade to export" : "Download favorites as CSV"}
                 >
-                  {plan === "pro" ? "Export favorites to CSV" : "Export favorites — Pro"}
+                  {isProPlan(plan) ? "Export favorites to CSV" : "Export favorites — Pro"}
                 </button>
                 <button
                   type="button"

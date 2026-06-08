@@ -25,8 +25,14 @@ import {
 } from "@/lib/security/request-size";
 import { supabaseServer } from "@/lib/supabase/server";
 import { spendTokens, TOKEN_COSTS, tokenInfoPayload } from "@/lib/tokens";
+import { captionCountForPlan, isAnnualPlan } from "@/lib/plan";
+import {
+  brandVoicePromptBlock,
+  getBrandVoice,
+  type BrandVoice,
+} from "@/lib/brand-voice";
 
-type Plan = "free" | "pro";
+type Plan = "free" | "pro" | "annual";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -328,22 +334,49 @@ Pull from these advanced techniques across the three captions (do NOT use them a
 
 Tone of voice should feel like a confident, slightly mischievous insider who knows the niche cold. Each caption should be the kind of post a creator would screenshot and study.`;
 
+const ELITE_AMPLIFIERS = `ELITE MODE — VIRAL-WORTHY COPYWRITING (Annual / top tier):
+You are now the best social copywriter alive, writing for a creator who pays a premium for captions that go viral. Everything in PRO BOOST applies, plus:
+  • EVERY caption must be screenshot-worthy on its own. No filler captions, no "safe" options — each one should be postable as the hero caption.
+  • MASTER-LEVEL HOOKS: layer a curiosity gap or open loop with a specific, concrete detail in the FIRST 5 words. The reader should feel they MUST keep reading.
+  • ADVANCED COPYWRITING FRAMEWORKS: rotate through proven structures across the set — AIDA, PAS (problem-agitate-solve), before/after/bridge, the "but here's the thing" pivot, the listicle tease, the contrarian reframe. Never repeat a framework twice in the same set.
+  • NICHE-SPECIFIC LANGUAGE: write with the exact vocabulary, references, and in-jokes a true insider of this niche would use. An outsider should feel they're reading from someone who lives in this world.
+  • EMOTIONAL PRECISION: target a specific, nameable emotion per caption (nostalgia, righteous anger, hope, FOMO, belonging, relief) rather than generic "inspiration".
+  • RHYTHM & SOUND: vary sentence length deliberately for cadence. Use a short punchy line to land the point. Read it aloud in your head — it must sound effortless.
+  • Each caption should be good enough that a competitor would screenshot it to study. If a caption is merely "good", rewrite it until it's exceptional.`;
+
 function buildPrompt({
   topic,
   platform,
   tone,
   language,
   plan,
+  count,
+  brandVoiceBlock,
 }: {
   topic: string;
   platform: string;
   tone: string;
   language: string;
   plan: Plan;
+  count: number;
+  brandVoiceBlock: string | null;
 }): string {
   const profile = profileForPlatform(platform);
   const briefing = formatPlatformBriefing(profile);
-  const isPro = plan === "pro";
+  const isElite = plan === "annual";
+  const isPro = plan === "pro" || isElite;
+  const amplifier = isElite
+    ? ELITE_AMPLIFIERS
+    : isPro
+      ? PRO_AMPLIFIERS
+      : "STANDARD MODE: write good, clean captions. Keep them grounded and natural. Use one strong technique per caption rather than stacking many.";
+
+  const countInstruction = `OUTPUT COUNT — you MUST return EXACTLY ${count} distinct captions (not 3, not fewer — exactly ${count}). Each must be meaningfully different from every other one in opener style, rhythm, sentence length, vocabulary, and emotional register. Think of them as written by ${count} different talented writers. If any two feel similar, rewrite one.`;
+
+  const ratingInstruction =
+    count === 3
+      ? `Assign labels: the highest-scoring caption gets "best", the lowest gets "worst", and the remaining one gets "medium". Use each of "best", "medium", and "worst" EXACTLY once across the three.`
+      : `Assign labels across the ${count} captions: give the single strongest caption "best", the single weakest "worst", and label every other caption "medium". There must be exactly one "best" and exactly one "worst"; all others are "medium".`;
 
   return `You are a top 1% social media copywriter who writes captions that real creators screenshot, save, and study. Your captions sound HUMAN, never AI-generated.
 
@@ -360,13 +393,18 @@ ${FORMATTING_RULES}
 
 ${QUALITY_RULES}
 
-THREE DISTINCT CAPTIONS
+${countInstruction}
+
+DISTINCT CAPTION ANGLES (use these as the first three archetypes, then extend with additional fresh, distinct angles for any remaining captions):
 ${CAPTION_ARCHETYPES}
 
 ${RATING_RUBRIC}
 
+RATING LABELS FOR THIS REQUEST: ${ratingInstruction}
+
 ${SCORE_RUBRIC}
-${isPro ? `\n${PRO_AMPLIFIERS}\n` : "\nSTANDARD MODE: write good, clean captions. Keep them grounded and natural. Use one strong technique per caption rather than stacking many.\n"}
+${brandVoiceBlock ? `\n${brandVoiceBlock}\n` : ""}
+${`\n${amplifier}\n`}
 BEFORE YOU RETURN, SELF-CHECK each caption against this checklist:
   1. Does it strictly match the ${platform} LENGTH rule above? (TikTok: 1-3 lines. Instagram: 3-5 sentences + hashtags on a new line. LinkedIn: 3-5 short paragraphs. Twitter/X: \u2264 280 characters total. Facebook: 2-3 sentences.)
   2. Does it strictly match the ${platform} HASHTAG count and placement rule? (TikTok 3-5, Instagram 8-12 on a NEW LINE with a blank line before them and ZERO hashtags inside the body copy, LinkedIn \u2264 2, Twitter/X 0-1, Facebook 0-3.)
@@ -374,27 +412,25 @@ BEFORE YOU RETURN, SELF-CHECK each caption against this checklist:
   4. LINKEDIN SPECIFIC: (a) contains ZERO markdown characters (no **, no *, no _, no \`, no ###); (b) contains ZERO TikTok-style openers ("POV:", "Tell me why", "Not me", "This is your sign", "Stop scrolling", "no one talks about", "wait for it", "the way I…", "I was today years old"); AND (c) is laid out as EXACTLY 3-5 SHORT paragraphs of 1-2 sentences MAXIMUM each, with a LITERAL BLANK LINE (a \\n\\n line break) between every paragraph. The caption MUST NOT be one long paragraph or a wall of text. If the draft is a single block, BREAK IT into 3-5 short paragraphs separated by blank lines. If markdown, a TikTok opener, OR a single-block / wall-of-text layout is present, REWRITE.
   5. Does it end with a platform-appropriate question or CTA (where the platform calls for one)?
   6. Does it sound like a real human wrote it from their phone \u2014 not an AI? No "in a world where...", no "let's dive in", no "buckle up", no generic hype.
-  7. Are the three captions MEANINGFULLY DIFFERENT from each other in style, rhythm, opener, and vocabulary?
+  7. Are ALL ${count} captions MEANINGFULLY DIFFERENT from each other in style, rhythm, opener, and vocabulary? Did you return EXACTLY ${count} captions?
   8. Did you apply the RATING RUBRIC honestly \u2014 NOT defaulting to "Caption 1 = best", NOT defaulting to "loudest opener = best", and genuinely picking the most engaging caption as "best"?
   9. FORMATTING — every sentence ends with proper punctuation; no double spaces; no random ALL CAPS words; emoji are placed naturally (not scattered); straight quotes only; consistent spacing; no leftover dashes that look like the sentence was cut off.
 If any answer is no, rewrite that caption (or re-rate) before returning.
 
-FINAL OUTPUT \u2014 return STRICT JSON ONLY, no markdown fences, no commentary, with this exact shape:
+FINAL OUTPUT \u2014 return STRICT JSON ONLY, no markdown fences, no commentary, with this exact shape (every array MUST have exactly ${count} entries, one per caption, in the same order):
 {
-  "captions": ["caption 1 text", "caption 2 text", "caption 3 text"],
-  "emojiPerCaption": [["emoji","emoji"], ["emoji"], ["emoji","emoji","emoji"]],
-  "captionRatings": ["best"|"medium"|"worst", "best"|"medium"|"worst", "best"|"medium"|"worst"],
+  "captions": [${Array.from({ length: count }, (_, i) => `"caption ${i + 1} text"`).join(", ")}],
+  "emojiPerCaption": [${Array.from({ length: count }, () => `["emoji","emoji"]`).join(", ")}],
+  "captionRatings": [${Array.from({ length: count }, () => `"best"|"medium"|"worst"`).join(", ")}],
   "captionScores": [
-    {"hook": 0-25, "emotion": 0-25, "cta": 0-20, "platformFit": 0-20, "originality": 0-10, "explanation": "one short line"},
-    {"hook": 0-25, "emotion": 0-25, "cta": 0-20, "platformFit": 0-20, "originality": 0-10, "explanation": "one short line"},
-    {"hook": 0-25, "emotion": 0-25, "cta": 0-20, "platformFit": 0-20, "originality": 0-10, "explanation": "one short line"}
+${Array.from({ length: count }, () => `    {"hook": 0-25, "emotion": 0-25, "cta": 0-20, "platformFit": 0-20, "originality": 0-10, "explanation": "one short line"}`).join(",\n")}
   ]
 }
 
 Requirements:
-- captions has exactly 3 strings; each is the FULL caption text INCLUDING hashtags where the platform calls for them (Instagram hashtags on a new line at the end).
-- captionRatings[i] rates captions[i]. Use "best", "medium", "worst" exactly once each across the three.
-- emojiPerCaption has exactly 3 arrays of 2-4 single emoji characters (not words, not text) that fit each caption.
+- captions has exactly ${count} strings; each is the FULL caption text INCLUDING hashtags where the platform calls for them (Instagram hashtags on a new line at the end).
+- captionRatings[i] rates captions[i]. ${ratingInstruction}
+- emojiPerCaption has exactly ${count} arrays of 2-4 single emoji characters (not words, not text) that fit each caption.
 - captionScores[i] scores captions[i] using the SCORE RUBRIC above. Every numeric field must be an INTEGER inside the allowed range. The explanation must be \u2264 110 characters and must reflect the strongest and weakest dimensions in plain English (e.g. "Strong hook but weak CTA.").
 - Write all caption text in ${language}.`;
 }
@@ -550,11 +586,14 @@ async function fetchCaptionsFromGroq(
   tone: string,
   language: string,
   plan: Plan,
+  count: number,
+  brandVoiceBlock: string | null,
   attempt: number
 ): Promise<string> {
   const strict = attempt > 0;
-  const isPro = plan === "pro";
-  const temperature = strict ? 0.5 : isPro ? 0.95 : 0.85;
+  const isElite = plan === "annual";
+  const isPro = plan === "pro" || isElite;
+  const temperature = strict ? 0.5 : isElite ? 0.97 : isPro ? 0.95 : 0.85;
   const completion = await withGroqRetry(() =>
     groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
@@ -567,7 +606,15 @@ async function fetchCaptionsFromGroq(
         },
         {
           role: "user",
-          content: buildPrompt({ topic, platform, tone, language, plan }),
+          content: buildPrompt({
+            topic,
+            platform,
+            tone,
+            language,
+            plan,
+            count,
+            brandVoiceBlock,
+          }),
         },
       ],
     })
@@ -582,6 +629,8 @@ async function generateParsedCaptions(
   tone: string,
   language: string,
   plan: Plan,
+  count: number,
+  brandVoiceBlock: string | null,
   userId: string
 ): Promise<ParsedCaptionResponse | null> {
   for (let attempt = 0; attempt < PARSE_RETRY_ATTEMPTS; attempt++) {
@@ -592,9 +641,11 @@ async function generateParsedCaptions(
       tone,
       language,
       plan,
+      count,
+      brandVoiceBlock,
       attempt
     );
-    const parsed = parseCaptionModelJson(content);
+    const parsed = parseCaptionModelJson(content, count);
     if (parsed) {
       return parsed;
     }
@@ -671,7 +722,19 @@ export async function POST(req: Request) {
   }
 
   const plan: Plan = spend.plan;
-  const proBoost = plan === "pro";
+  const proBoost = plan === "pro" || plan === "annual";
+  const qualityTier: "standard" | "pro" | "elite" =
+    plan === "annual" ? "elite" : plan === "pro" ? "pro" : "standard";
+  const count = captionCountForPlan(plan);
+
+  // Brand Tone Profiles are an Annual feature. Reading is fully defensive so a
+  // missing table or read error never blocks caption generation.
+  let brandVoice: BrandVoice | null = null;
+  if (isAnnualPlan(plan)) {
+    brandVoice = await getBrandVoice(userId);
+  }
+  const brandVoiceBlock = brandVoice ? brandVoicePromptBlock(brandVoice) : null;
+  const brandToneActive = Boolean(brandVoiceBlock);
 
   const groq = getGroqClient();
   if (!groq) {
@@ -686,8 +749,8 @@ export async function POST(req: Request) {
   }
 
   let captions: string[] = [];
-  let emojiPerCaption: string[][] = [[], [], []];
-  let captionRatings: CaptionRatingKey[] = defaultCaptionRatings();
+  let emojiPerCaption: string[][] = Array.from({ length: count }, () => []);
+  let captionRatings: CaptionRatingKey[] = defaultCaptionRatings(count);
   let captionScores: CaptionScore[] = [];
 
   try {
@@ -698,6 +761,8 @@ export async function POST(req: Request) {
       tone,
       language,
       plan,
+      count,
+      brandVoiceBlock,
       userId
     );
 
@@ -735,7 +800,7 @@ export async function POST(req: Request) {
     const historyId = inserted?.id as string | undefined;
 
     if (historyId) {
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < captions.length; i++) {
         const { error: rateErr } = await supabaseServer.from("caption_ratings").upsert(
           {
             user_id: userId,
@@ -770,6 +835,8 @@ export async function POST(req: Request) {
       historyId,
       plan,
       proBoost,
+      qualityTier,
+      brandToneActive,
       tokens: tokenInfoPayload(spend),
     });
   } catch (error) {

@@ -20,7 +20,7 @@ import {
  * no destructive change required.
  */
 
-export type Plan = "free" | "pro";
+export type Plan = "free" | "pro" | "annual";
 
 export {
   FREE_DAILY_TOKENS,
@@ -34,13 +34,20 @@ export function todayDateString(): string {
   return new Date().toISOString().split("T")[0]!;
 }
 
+/** Plans with unlimited tokens (no daily cap). */
+function planHasUnlimitedTokens(plan: Plan): boolean {
+  return plan === "pro" || plan === "annual";
+}
+
 export async function getPlan(userId: string): Promise<Plan> {
   const { data } = await supabaseServer
     .from("subscriptions")
     .select("plan")
     .eq("user_id", userId)
     .maybeSingle();
-  return data?.plan === "pro" ? "pro" : "free";
+  if (data?.plan === "annual") return "annual";
+  if (data?.plan === "pro") return "pro";
+  return "free";
 }
 
 export type TokenUsage = {
@@ -67,7 +74,8 @@ export async function getTokenUsage(
 
   const tokensUsed = Math.max(0, data?.count ?? 0);
   const unlimited = hasUnlimitedTokens(userId);
-  const tokensLimit = unlimited || plan === "pro" ? null : FREE_DAILY_TOKENS;
+  const tokensLimit =
+    unlimited || planHasUnlimitedTokens(plan) ? null : FREE_DAILY_TOKENS;
   const tokensRemaining =
     tokensLimit === null ? null : Math.max(0, tokensLimit - tokensUsed);
 
@@ -207,7 +215,7 @@ export async function spendTokens(
     };
   }
 
-  const tokensLimit = plan === "pro" ? null : FREE_DAILY_TOKENS;
+  const tokensLimit = planHasUnlimitedTokens(plan) ? null : FREE_DAILY_TOKENS;
   const tokensRemaining =
     tokensLimit === null ? null : Math.max(0, tokensLimit - tokensUsedAfter);
 

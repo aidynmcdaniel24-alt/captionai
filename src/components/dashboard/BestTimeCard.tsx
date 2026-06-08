@@ -1,47 +1,54 @@
 "use client";
 
+import { bestTimeForPlatform } from "@/lib/best-time-data";
 import { useEffect, useMemo, useState } from "react";
 
-const TIPS: Record<string, string> = {
-  Instagram: "Weekdays 10am–2pm & 7pm–9pm (your audience’s timezone). Reels often spike early evening.",
-  TikTok: "Evenings 6pm–10pm and lunch 12pm–2pm — test Tue–Thu for consistency.",
-  "Twitter/X": "Weekday mornings 8–10am and lunch; breaking topics anytime.",
-  LinkedIn: "Tue–Thu 8–11am and 12–1pm — weekday business hours peak engagement.",
-  Default: "Post when your audience is awake — experiment for a week and compare saves/clicks.",
-};
-
-function resolvePlatformKey(platform: string): string {
-  const p = platform.trim();
-  if (p in TIPS && p !== "Default") {
-    return p;
-  }
-  const match = Object.keys(TIPS).find((k) => p.toLowerCase().includes(k.toLowerCase()));
-  return match ?? "Default";
-}
-
-function fallbackTip(platform: string): string {
-  const key = resolvePlatformKey(platform);
-  return TIPS[key] ?? TIPS.Default;
-}
-
 const DEBOUNCE_MS = 500;
+
+type PersonalData = {
+  windows: string[];
+  reason: string | null;
+  badge: string | null;
+  hasEnoughHistory: boolean;
+  personalBestHour: string | null;
+};
 
 export function BestTimeCard({ platform, topic = "" }: { platform: string; topic?: string }) {
   const trimmedTopic = topic.trim();
   const [aiText, setAiText] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [usedAi, setUsedAi] = useState(false);
+  const [personal, setPersonal] = useState<PersonalData | null>(null);
 
   const displayPlatform = platform.trim() || "Instagram";
 
-  const staticText = useMemo(() => fallbackTip(displayPlatform), [displayPlatform]);
+  // Research-backed window for this platform (data-driven, all users).
+  const research = useMemo(() => bestTimeForPlatform(displayPlatform), [displayPlatform]);
 
-  const displayAiText = trimmedTopic ? aiText : null;
-  const displayLoading = trimmedTopic ? loading : false;
-  const displayUsedAi = trimmedTopic ? usedAi : false;
+  // Pull the user's personal posting patterns (10+ captions) for this platform.
+  useEffect(() => {
+    const ac = new AbortController();
+    void (async () => {
+      try {
+        const res = await fetch(
+          `/api/tools/personal-best-time?platform=${encodeURIComponent(displayPlatform)}`,
+          { signal: ac.signal }
+        );
+        if (!res.ok || ac.signal.aborted) return;
+        const data = (await res.json()) as PersonalData;
+        if (!ac.signal.aborted) setPersonal(data);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => ac.abort();
+  }, [displayPlatform]);
 
+  // Optional AI refinement based on the topic.
   useEffect(() => {
     if (!trimmedTopic) {
+      setAiText(null);
+      setUsedAi(false);
       return;
     }
 
@@ -58,9 +65,7 @@ export function BestTimeCard({ platform, topic = "" }: { platform: string; topic
             signal: ac.signal,
           });
           const data = (await res.json()) as { bestTime?: string; error?: string };
-          if (ac.signal.aborted) {
-            return;
-          }
+          if (ac.signal.aborted) return;
           if (res.ok && data.bestTime) {
             setAiText(data.bestTime);
             setUsedAi(true);
@@ -69,17 +74,13 @@ export function BestTimeCard({ platform, topic = "" }: { platform: string; topic
             setUsedAi(false);
           }
         } catch (e) {
-          if (e instanceof DOMException && e.name === "AbortError") {
-            return;
-          }
+          if (e instanceof DOMException && e.name === "AbortError") return;
           if (!ac.signal.aborted) {
             setAiText(null);
             setUsedAi(false);
           }
         } finally {
-          if (!ac.signal.aborted) {
-            setLoading(false);
-          }
+          if (!ac.signal.aborted) setLoading(false);
         }
       })();
     }, DEBOUNCE_MS);
@@ -90,28 +91,65 @@ export function BestTimeCard({ platform, topic = "" }: { platform: string; topic
     };
   }, [trimmedTopic, displayPlatform]);
 
-  const text =
-    trimmedTopic && displayLoading
-      ? "Analyzing your topic…"
-      : displayAiText
-        ? displayAiText
-        : staticText;
-
-  const footnote = displayUsedAi && displayAiText
-    ? "Suggested from your topic with AI — pair with your analytics for best results."
-    : "Heuristic guide — pair with your analytics for best results.";
+  const windows = personal?.windows?.length ? personal.windows : research?.windows ?? [];
+  const reason = personal?.reason ?? research?.reason ?? null;
+  const personalLine =
+    personal?.hasEnoughHistory && personal.personalBestHour
+      ? `Based on your posting patterns and ${displayPlatform} data, around ${personal.personalBestHour} works best for you — pair it with the peak days above.`
+      : null;
 
   return (
     <div className="rounded-2xl border border-purple-200 bg-purple-50 p-4 dark:border-purple-500/25 dark:bg-purple-950/20">
       <p className="text-xs font-semibold uppercase tracking-wider text-purple-700 dark:text-purple-300">
-        Best time to post
+        Best time to post · {displayPlatform}
       </p>
-      <p
-        className={`mt-2 text-sm leading-relaxed text-zinc-800 dark:text-zinc-200 ${displayLoading ? "animate-pulse" : ""}`}
-      >
-        {text}
+
+      {windows.length > 0 ? (
+        <ul className="mt-2 flex flex-col gap-1">
+          {windows.map((w) => (
+            <li
+              key={w}
+              className="flex items-start gap-2 text-sm font-medium text-zinc-800 dark:text-zinc-200"
+            >
+              <span aria-hidden>⏰</span>
+              <span>{w}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
+          Post when your audience is awake — test for a week and compare saves/clicks.
+        </p>
+      )}
+
+      {reason ? (
+        <p className="mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">{reason}</p>
+      ) : null}
+
+      {personalLine ? (
+        <p className="mt-3 rounded-lg border border-purple-300/60 bg-white/60 px-3 py-2 text-xs font-medium text-purple-900 dark:border-purple-500/30 dark:bg-purple-950/40 dark:text-purple-100">
+          <span aria-hidden>📊 </span>
+          {personalLine}
+        </p>
+      ) : null}
+
+      {trimmedTopic ? (
+        <p
+          className={`mt-3 border-t border-purple-200/70 pt-3 text-sm leading-relaxed text-zinc-700 dark:border-purple-500/20 dark:text-zinc-300 ${
+            loading ? "animate-pulse" : ""
+          }`}
+        >
+          {loading
+            ? "Analyzing your topic…"
+            : usedAi && aiText
+              ? aiText
+              : "Add a topic to get an AI-refined window for your specific content."}
+        </p>
+      ) : null}
+
+      <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-500">
+        Source: Later &amp; Sprout Social engagement research{usedAi ? " + AI topic analysis" : ""}.
       </p>
-      <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-500">{footnote}</p>
     </div>
   );
 }

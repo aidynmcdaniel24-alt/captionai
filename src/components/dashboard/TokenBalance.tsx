@@ -1,9 +1,10 @@
 "use client";
 
+import { isAnnualPlan, isProPlan } from "@/lib/plan";
 import { LOW_TOKEN_WARNING_THRESHOLD } from "@/lib/tokens-shared";
 
 type Props = {
-  plan: "free" | "pro" | null;
+  plan: "free" | "pro" | "annual" | null;
   tokensUsed: number | null;
   tokensLimit: number | null;
   tokensRemaining: number | null;
@@ -21,7 +22,7 @@ export function TokenBalance({
   tokensLimit,
   tokensRemaining,
 }: Props) {
-  const unlimited = plan === "pro" || tokensLimit === null;
+  const unlimited = isProPlan(plan) || tokensLimit === null;
 
   if (unlimited) {
     return (
@@ -29,8 +30,10 @@ export function TokenBalance({
         className="inline-flex items-center gap-2 rounded-full border border-purple-300/70 bg-gradient-to-r from-purple-100 to-fuchsia-100 px-3 py-1.5 text-xs font-semibold text-purple-900 shadow-sm dark:border-purple-500/40 dark:from-purple-950/60 dark:to-fuchsia-950/60 dark:text-purple-100"
         aria-label="Unlimited tokens"
       >
-        <span aria-hidden>✨</span>
-        <span>{plan === "pro" ? "Pro — Unlimited" : "Unlimited tokens"}</span>
+        <span aria-hidden>{isAnnualPlan(plan) ? "👑" : "✨"}</span>
+        <span>
+          {isAnnualPlan(plan) ? "Annual — Unlimited" : isProPlan(plan) ? "Pro — Unlimited" : "Unlimited tokens"}
+        </span>
       </div>
     );
   }

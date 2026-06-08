@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isProPlan } from "@/lib/plan";
 import {
   RATE_LIMITS,
   rateLimitByUser,
@@ -47,7 +48,7 @@ export async function GET(req: Request) {
     .select("plan")
     .eq("user_id", userId)
     .maybeSingle();
-  if (subRow?.plan !== "pro") {
+  if (!isProPlan(subRow?.plan)) {
     return NextResponse.json(
       {
         error: "CSV export is a Pro feature.",

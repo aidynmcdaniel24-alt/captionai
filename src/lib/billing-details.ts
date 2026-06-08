@@ -5,7 +5,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 export type BillingInterval = "month" | "year" | null;
 
 export type SubscriptionBillingInfo = {
-  plan: "free" | "pro";
+  plan: "free" | "pro" | "annual";
   interval: BillingInterval;
   priceLabel: string | null;
   nextBillingDate: string | null;
@@ -68,7 +68,8 @@ export async function getSubscriptionBillingInfo(
     throw new Error(error.message);
   }
 
-  const plan = row?.plan === "pro" ? "pro" : "free";
+  const plan: "free" | "pro" | "annual" =
+    row?.plan === "annual" ? "annual" : row?.plan === "pro" ? "pro" : "free";
 
   const customerId = await resolveStripeCustomerId(
     stripe,
@@ -116,8 +117,16 @@ export async function getSubscriptionBillingInfo(
     null;
   const periodEnd = periodEndUnix ? new Date(periodEndUnix * 1000).toISOString() : null;
 
+  const subActive = ["active", "trialing", "past_due"].includes(sub.status);
+  // Active yearly subscription => Annual (Elite) tier; otherwise Pro.
+  const resolvedPlan: "free" | "pro" | "annual" = subActive
+    ? interval === "year"
+      ? "annual"
+      : "pro"
+    : plan;
+
   return {
-    plan: plan === "pro" || ["active", "trialing", "past_due"].includes(sub.status) ? "pro" : plan,
+    plan: resolvedPlan,
     interval,
     priceLabel: priceLabelForInterval(interval),
     nextBillingDate: periodEnd,

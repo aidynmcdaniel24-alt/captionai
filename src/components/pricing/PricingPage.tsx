@@ -62,20 +62,20 @@ type FeatureRow = {
 };
 
 const FEATURES: FeatureRow[] = [
-  { label: "Daily caption generations", free: "5 / day", monthly: "Unlimited", annual: "Unlimited" },
+  { label: "Daily tokens", free: "200 / day", monthly: "Unlimited", annual: "Unlimited" },
+  { label: "Caption options per generation", free: "3", monthly: "5", annual: "7" },
+  { label: "Caption quality tier", free: "Standard", monthly: "Pro Boost", annual: "Elite" },
   { label: "All platforms (IG, TikTok, LinkedIn, X, FB…)", free: true, monthly: true, annual: true },
-  { label: "All tones (funny, professional, hype, etc.)", free: true, monthly: true, annual: true },
-  { label: "Hashtags built into every caption", free: true, monthly: true, annual: true },
-  { label: "Caption scoring + AI ratings", free: "Limited", monthly: true, annual: true },
-  { label: "Pro Boost — elite copywriting mode", free: false, monthly: true, annual: true },
-  { label: "Viral Hook Library", free: false, monthly: true, annual: true },
-  { label: "Best-time-to-post insights", free: false, monthly: true, annual: true },
-  { label: "Brand voice memory", free: false, monthly: true, annual: true },
-  { label: "Bio generator", free: true, monthly: true, annual: true },
-  { label: "A/B test captions", free: true, monthly: true, annual: true },
-  { label: "Save favorites + history", free: true, monthly: true, annual: true },
-  { label: "Buffer scheduling", free: false, monthly: true, annual: true },
-  { label: "Stripe-managed billing & portal", free: false, monthly: true, annual: true },
+  { label: "Smart best-time-to-post (research-backed)", free: true, monthly: true, annual: true },
+  { label: "Caption Rewriter + Translator", free: false, monthly: true, annual: true },
+  { label: "Emoji Suggester + Length Optimizer", free: false, monthly: true, annual: true },
+  { label: "Caption Memory + Analytics", free: false, monthly: true, annual: true },
+  { label: "Hashtag Analyzer (full strategy)", free: false, monthly: false, annual: true },
+  { label: "Caption Grader + Competitor Analyzer", free: false, monthly: false, annual: true },
+  { label: "Caption Calendar (7-day + CSV)", free: false, monthly: false, annual: true },
+  { label: "Brand Tone Profiles", free: false, monthly: false, annual: true },
+  { label: "History limit", free: "20", monthly: "Unlimited", annual: "Unlimited" },
+  { label: "Priority generation", free: false, monthly: true, annual: "Elite priority" },
   { label: "Effective monthly cost", free: "Free", monthly: "$9", annual: "$6.58" },
 ];
 

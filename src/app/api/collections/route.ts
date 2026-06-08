@@ -10,6 +10,7 @@ import {
   REQUEST_SIZE_LIMITS,
 } from "@/lib/security/request-size";
 import { sanitizeText } from "@/lib/security/sanitize";
+import { isProPlan } from "@/lib/plan";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -21,7 +22,7 @@ async function userIsPro(userId: string): Promise<boolean> {
     .select("plan")
     .eq("user_id", userId)
     .maybeSingle();
-  return data?.plan === "pro";
+  return isProPlan(data?.plan);
 }
 
 function proRequiredResponse(): NextResponse {

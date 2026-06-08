@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { bestTimeResearchBlock } from "@/lib/best-time-data";
 import type { CaptionRatingKey } from "@/lib/caption-rating-styles";
 import { guardTopic } from "@/lib/content-moderation";
 import { getGroqClient } from "@/lib/groq-client";
@@ -126,15 +127,17 @@ export async function POST(req: Request) {
         messages: [
           {
             role: "system",
-            content: `You recommend optimal posting windows for individual social media captions. Reply with strict JSON only: {"times":["...","..."]}.
+            content: `You recommend optimal posting windows for individual social media captions, grounded in real engagement research. Reply with strict JSON only: {"times":["...","..."]}.
+
+INDUSTRY ENGAGEMENT RESEARCH (Later, Sprout Social, Hootsuite) — use these as the foundation:
+${bestTimeResearchBlock()}
 
 Rules:
 - Return exactly ${items.length} strings in "times", same order as the captions.
 - Each string is SHORT for a UI badge: a day or day-range plus a time window, e.g. "Tuesday 7pm – 9pm" or "Weekday 9am – 11am". No sentences, no timezone lectures.
-- Use the caption content/topic to infer when the audience cares (morning coffee, weekend adventure, work tips, etc.).
-- Platform: ${platform} — respect its norms (LinkedIn weekday mornings; TikTok/Instagram evenings for lifestyle; Twitter/X mornings and lunch).
+- Start from the research windows for ${platform}, then fine-tune using the caption content/topic to infer when that audience cares.
 - Tone: ${tone} — funny/hype/inspirational skew evenings and weekends; professional skew weekday business hours.
-- Rating: "best" captions get prime peak-engagement slots; "medium" get solid but not peak; "worst" get off-peak or experimental slots.
+- Rating: "best" captions get the prime peak-engagement slot from the research; "medium" get solid but secondary windows; "worst" get off-peak or experimental slots.
 - Use en-dash (–) between times. English only.`,
           },
           {
