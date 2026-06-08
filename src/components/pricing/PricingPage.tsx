@@ -36,7 +36,7 @@ const PLANS: {
     name: "Pro monthly",
     price: "$9",
     period: "/month",
-    blurb: "Unlimited captions, every advanced tool, cancel anytime.",
+    blurb: "1,000 tokens/day, every advanced tool, cancel anytime.",
     ctaSignedOut: { label: "Get started", href: "/sign-up" },
     ctaSignedIn: { label: "Upgrade monthly", href: "/upgrade?billing=month" },
     highlight: true,
@@ -47,7 +47,7 @@ const PLANS: {
     name: "Pro annual",
     price: "$79",
     period: "/year",
-    blurb: "Best value — save ~27% vs. monthly. Two months free.",
+    blurb: "Unlimited tokens. Best value — save ~27% vs. monthly.",
     ctaSignedOut: { label: "Get started", href: "/sign-up" },
     ctaSignedIn: { label: "Upgrade annual", href: "/upgrade?billing=annual" },
     accent: "border-emerald-300/60 dark:border-emerald-500/30",
@@ -62,7 +62,7 @@ type FeatureRow = {
 };
 
 const FEATURES: FeatureRow[] = [
-  { label: "Daily tokens", free: "200 / day", monthly: "Unlimited", annual: "Unlimited" },
+  { label: "Daily tokens", free: "200 / day", monthly: "1,000 / day", annual: "Unlimited" },
   { label: "Caption options per generation", free: "3", monthly: "5", annual: "7" },
   { label: "Caption quality tier", free: "Standard", monthly: "Pro Boost", annual: "Elite" },
   { label: "All platforms (IG, TikTok, LinkedIn, X, FB…)", free: true, monthly: true, annual: true },
@@ -82,7 +82,7 @@ const FEATURES: FeatureRow[] = [
 const FAQS: { q: string; a: string }[] = [
   {
     q: "Is there a free plan?",
-    a: "Yes — every account gets 5 free AI caption generations per day, every platform, every tone, with hashtags. No credit card needed.",
+    a: "Yes — every account gets 200 free tokens per day to spend across captions and tools, every platform, every tone, with hashtags. No credit card needed.",
   },
   {
     q: "What is the 30-day money back guarantee?",
@@ -90,7 +90,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "What's the difference between monthly and annual?",
-    a: "Both unlock unlimited generations and all Pro features. Pro monthly is $9/month, billed every month. Pro annual is $79/year (about $6.58/month), billed once a year.",
+    a: "Pro monthly is $9/month and gives you 1,000 tokens per day plus all Pro tools. Pro annual is $79/year (about $6.58/month) and adds truly unlimited tokens — no daily cap — plus the Annual-only tools.",
   },
   {
     q: "Can I cancel anytime?",
@@ -254,7 +254,7 @@ export function PricingPage() {
               transition={{ duration: 0.5, delay: 0.1 }}
               className="mx-auto mt-4 max-w-2xl text-base text-zinc-600 sm:text-lg dark:text-zinc-400"
             >
-              Start free. Upgrade when you&apos;re posting every day and need unlimited captions
+              Start free. Upgrade when you&apos;re posting every day and need more daily tokens
               and the full Pro toolkit.
             </motion.p>
             <div className="mt-6 flex justify-center">
@@ -284,8 +284,8 @@ export function PricingPage() {
                 Compare what each plan includes
               </h2>
               <p className="mt-3 text-base text-zinc-600 dark:text-zinc-400">
-                Everything on Free is also on Pro — Pro just removes the daily cap and unlocks the
-                advanced tools.
+                Everything on Free is also on Pro — Pro raises your daily tokens to 1,000 and
+                unlocks the advanced tools. Annual makes tokens truly unlimited.
               </p>
             </motion.div>
 

@@ -19,7 +19,7 @@ export function PricingSection() {
         >
           <h2 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-4xl dark:text-white">Simple pricing</h2>
           <p className="mt-3 text-base text-zinc-600 sm:mt-4 sm:text-lg dark:text-zinc-400">
-            Start free. Upgrade when you are posting every day and need unlimited generations.
+            Start free with 200 tokens a day. Upgrade for 1,000 a day on Pro, or unlimited on Annual.
           </p>
           <div className="mt-5 flex justify-center">
             <MoneyBackBadge />
@@ -51,7 +51,7 @@ export function PricingSection() {
             <ul className="mt-8 flex flex-1 flex-col gap-4 text-sm text-zinc-700 dark:text-zinc-300">
               <li className="flex gap-3">
                 <span className="text-purple-600 dark:text-purple-400">✓</span>
-                <span>5 AI caption generations per day</span>
+                <span>200 tokens per day</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-purple-600 dark:text-purple-400">✓</span>
@@ -95,16 +95,16 @@ export function PricingSection() {
                 $9<span className="text-lg font-normal text-zinc-500 dark:text-zinc-400">/month</span>
               </p>
               <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-                Unlimited captions. Cancel anytime from your account.
+                1,000 tokens per day. Cancel anytime from your account.
               </p>
               <ul className="mt-8 flex flex-1 flex-col gap-4 text-sm text-zinc-800 dark:text-zinc-200">
                 <li className="flex gap-3">
                   <span className="text-purple-600 dark:text-purple-400">✓</span>
-                  <span>Unlimited generations</span>
+                  <span>1,000 tokens per day</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="text-purple-600 dark:text-purple-400">✓</span>
-                  <span>Same studio workflow—no limits</span>
+                  <span>Every advanced Pro tool</span>
                 </li>
                 <li className="flex gap-3">
                   <span className="text-purple-600 dark:text-purple-400">✓</span>
@@ -143,16 +143,16 @@ export function PricingSection() {
               $79<span className="text-lg font-normal text-zinc-500 dark:text-zinc-400">/year</span>
             </p>
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-              Best value for daily creators. Uses Stripe annual price when configured.
+              Unlimited tokens. Best value for daily creators.
             </p>
             <ul className="mt-8 flex flex-1 flex-col gap-4 text-sm text-zinc-800 dark:text-zinc-200">
               <li className="flex gap-3">
                 <span className="text-emerald-600 dark:text-emerald-400">✓</span>
-                <span>Unlimited generations</span>
+                <span>Unlimited tokens — no daily cap</span>
               </li>
               <li className="flex gap-3">
                 <span className="text-emerald-600 dark:text-emerald-400">✓</span>
-                <span>One payment per year — your team can enable this in billing</span>
+                <span>One payment per year — every Pro &amp; Annual tool</span>
               </li>
             </ul>
             {!isLoaded ? (

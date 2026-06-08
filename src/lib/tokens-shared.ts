@@ -5,7 +5,31 @@
  */
 
 export const FREE_DAILY_TOKENS = 200;
+export const PRO_DAILY_TOKENS = 1000;
+
+/** Free-plan low-balance warning threshold (tokens remaining). */
 export const LOW_TOKEN_WARNING_THRESHOLD = 50;
+/** Pro-plan low-balance warning threshold (tokens remaining). */
+export const PRO_LOW_TOKEN_WARNING_THRESHOLD = 200;
+
+export type PlanName = "free" | "pro" | "annual";
+
+/**
+ * Daily token cap for a plan. Annual is uncapped (returns `null`). Admin
+ * overrides are handled separately at the call site via `hasUnlimitedTokens`.
+ */
+export function dailyTokenLimitForPlan(plan: PlanName | null | undefined): number | null {
+  if (plan === "annual") return null;
+  if (plan === "pro") return PRO_DAILY_TOKENS;
+  return FREE_DAILY_TOKENS;
+}
+
+/** Tokens-remaining threshold under which we nudge the user to upgrade. */
+export function lowTokenWarningThreshold(plan: PlanName | null | undefined): number {
+  return plan === "pro"
+    ? PRO_LOW_TOKEN_WARNING_THRESHOLD
+    : LOW_TOKEN_WARNING_THRESHOLD;
+}
 
 export const TOKEN_COSTS = {
   caption: 10,

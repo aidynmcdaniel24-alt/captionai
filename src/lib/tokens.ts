@@ -6,14 +6,17 @@ import { logAdminEvent } from "@/lib/admin-log";
 import { safeErrorMessage } from "@/lib/security/api-guard";
 import { supabaseServer } from "@/lib/supabase/server";
 import {
-  FREE_DAILY_TOKENS,
+  dailyTokenLimitForPlan,
   TOKEN_COSTS,
 } from "@/lib/tokens-shared";
 
 /**
- * The token system replaces the old "captions per day" limit. Free users
- * get a daily allowance shared across every AI-powered tool. Pro users
- * have no limit but we still record their usage so analytics keep working.
+ * The token system replaces the old "captions per day" limit. Each plan gets
+ * a daily allowance shared across every AI-powered tool:
+ *   - Free   : 200 tokens/day
+ *   - Pro    : 1000 tokens/day
+ *   - Annual : unlimited (no daily cap)
+ * Admin accounts always bypass the cap regardless of plan.
  *
  * The `usage` table's `count` column is reused as "tokens spent today".
  * Old rows simply look like very small balances after the migration —
@@ -24,8 +27,12 @@ export type Plan = "free" | "pro" | "annual";
 
 export {
   FREE_DAILY_TOKENS,
+  PRO_DAILY_TOKENS,
   LOW_TOKEN_WARNING_THRESHOLD,
+  PRO_LOW_TOKEN_WARNING_THRESHOLD,
   TOKEN_COSTS,
+  dailyTokenLimitForPlan,
+  lowTokenWarningThreshold,
 } from "@/lib/tokens-shared";
 
 export type TokenCostKey = keyof typeof TOKEN_COSTS;
@@ -34,9 +41,9 @@ export function todayDateString(): string {
   return new Date().toISOString().split("T")[0]!;
 }
 
-/** Plans with unlimited tokens (no daily cap). */
+/** Plans with unlimited tokens (no daily cap). Only Annual qualifies now. */
 function planHasUnlimitedTokens(plan: Plan): boolean {
-  return plan === "pro" || plan === "annual";
+  return plan === "annual";
 }
 
 export async function getPlan(userId: string): Promise<Plan> {
@@ -74,8 +81,7 @@ export async function getTokenUsage(
 
   const tokensUsed = Math.max(0, data?.count ?? 0);
   const unlimited = hasUnlimitedTokens(userId);
-  const tokensLimit =
-    unlimited || planHasUnlimitedTokens(plan) ? null : FREE_DAILY_TOKENS;
+  const tokensLimit = unlimited ? null : dailyTokenLimitForPlan(plan);
   const tokensRemaining =
     tokensLimit === null ? null : Math.max(0, tokensLimit - tokensUsed);
 
@@ -111,9 +117,10 @@ export type SpendTokensResult = SpendOk | SpendErr;
 
 /**
  * Atomically (best-effort) verify that a user can afford a feature, then
- * record the spend. Free users that would exceed the daily limit get a
- * structured 402 response that the client uses to render the Pro
- * upgrade modal. Pro users have no limit, but we still record the spend.
+ * record the spend. Free (200/day) and Pro (1000/day) users that would
+ * exceed their daily limit get a structured 402 response that the client
+ * uses to render the upgrade modal (Pro upsell for Free, Annual upsell for
+ * Pro). Annual users are uncapped, but we still record the spend.
  */
 export async function spendTokens(
   userId: string,
@@ -164,26 +171,24 @@ export async function spendTokens(
 
   const tokensUsedBefore = Math.max(0, usageRow?.count ?? 0);
 
-  if (plan === "free") {
-    const limit = FREE_DAILY_TOKENS;
-    if (tokensUsedBefore + cost > limit) {
-      return {
-        ok: false,
-        response: NextResponse.json(
-          {
-            error: "Daily token limit reached.",
-            paywall: true,
-            plan: "free" as const,
-            cost,
-            tokensUsed: tokensUsedBefore,
-            tokensLimit: limit,
-            tokensRemaining: Math.max(0, limit - tokensUsedBefore),
-            resetAt: nextResetIso(),
-          },
-          { status: 402 }
-        ),
-      };
-    }
+  const limit = planHasUnlimitedTokens(plan) ? null : dailyTokenLimitForPlan(plan);
+  if (limit !== null && tokensUsedBefore + cost > limit) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        {
+          error: "Daily token limit reached.",
+          paywall: true,
+          plan,
+          cost,
+          tokensUsed: tokensUsedBefore,
+          tokensLimit: limit,
+          tokensRemaining: Math.max(0, limit - tokensUsedBefore),
+          resetAt: nextResetIso(),
+        },
+        { status: 402 }
+      ),
+    };
   }
 
   const tokensUsedAfter = tokensUsedBefore + cost;
@@ -215,7 +220,7 @@ export async function spendTokens(
     };
   }
 
-  const tokensLimit = planHasUnlimitedTokens(plan) ? null : FREE_DAILY_TOKENS;
+  const tokensLimit = planHasUnlimitedTokens(plan) ? null : dailyTokenLimitForPlan(plan);
   const tokensRemaining =
     tokensLimit === null ? null : Math.max(0, tokensLimit - tokensUsedAfter);
 

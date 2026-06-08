@@ -1,6 +1,6 @@
 "use client";
 
-import { isProPlan } from "@/lib/plan";
+import { isAnnualPlan } from "@/lib/plan";
 
 type Props = {
   plan: "free" | "pro" | "annual" | null;
@@ -14,8 +14,9 @@ type Props = {
  * Sits subtly next to a generate button so users can see what's left
  * without cluttering the primary call-to-action.
  *
- * - Free: "🪙 190 / 200" in small grey text
- * - Pro:  "∞ Unlimited" in small purple text
+ * - Free:   "🪙 190 / 200" in small grey text
+ * - Pro:    "🪙 750 / 1000" in small grey text
+ * - Annual: "∞ Unlimited" in small purple text
  */
 export function TokenCounter({
   plan,
@@ -23,7 +24,7 @@ export function TokenCounter({
   tokensLimit,
   className = "",
 }: Props) {
-  const unlimited = isProPlan(plan) || tokensLimit === null;
+  const unlimited = isAnnualPlan(plan) || tokensLimit === null;
 
   if (unlimited) {
     return (

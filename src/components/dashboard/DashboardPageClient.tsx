@@ -25,7 +25,11 @@ import { TokenUpgradeModal } from "@/components/dashboard/TokenUpgradeModal";
 import type { CaptionRatingKey } from "@/lib/caption-rating-styles";
 import type { CaptionScore } from "@/lib/caption-score";
 import { isAnnualPlan, isProPlan } from "@/lib/plan";
-import { TOKEN_COSTS, type TokenInfo } from "@/lib/tokens-shared";
+import {
+  lowTokenWarningThreshold,
+  TOKEN_COSTS,
+  type TokenInfo,
+} from "@/lib/tokens-shared";
 import {
   hasSeenOnboarding,
   WelcomeOnboardingModal,
@@ -227,11 +231,9 @@ export function DashboardPageClient() {
         data.plan === "annual" ? "annual" : data.plan === "pro" ? "pro" : "free";
       setPlan(planValue);
       if (typeof data.tokensUsed === "number") setTokensUsed(data.tokensUsed);
-      setTokensLimit(
-        isProPlan(planValue) || data.tokensLimit === null
-          ? null
-          : data.tokensLimit ?? null
-      );
+      // The API now returns the correct per-plan limit (200 free, 1000 pro,
+      // null for annual/admin) — trust it directly.
+      setTokensLimit(data.tokensLimit ?? null);
       if (
         typeof data.tokensRemaining === "number" ||
         data.tokensRemaining === null
@@ -245,13 +247,14 @@ export function DashboardPageClient() {
   }, []);
 
   /**
-   * Pre-flight check for any token-spending action. Pro users always pass.
-   * Free users with insufficient tokens trigger the upgrade modal and the
-   * caller short-circuits without firing the API call.
+   * Pre-flight check for any token-spending action. Annual (and admin)
+   * accounts have a null limit and always pass. Free (200/day) and Pro
+   * (1000/day) users with insufficient tokens trigger the upgrade modal and
+   * the caller short-circuits without firing the API call.
    */
   const ensureTokensOrShowModal = useCallback(
     (cost: number, message?: string): boolean => {
-      if (isProPlan(plan) || tokensRemaining === null || tokensLimit === null) {
+      if (tokensRemaining === null || tokensLimit === null) {
         return true;
       }
       if (tokensRemaining < cost) {
@@ -261,7 +264,7 @@ export function DashboardPageClient() {
       }
       return true;
     },
-    [plan, tokensLimit, tokensRemaining]
+    [tokensLimit, tokensRemaining]
   );
 
   const handleTokenPaywall = useCallback(
@@ -842,11 +845,14 @@ export function DashboardPageClient() {
     }
   }
 
+  // Low-balance banner for metered plans. Free (<50 left) upsells Pro;
+  // Pro (<200 left) upsells Annual. Annual/admin (null limit) never warn.
   const lowTokens =
-    plan === "free" &&
+    (plan === "free" || plan === "pro") &&
     tokensRemaining !== null &&
+    tokensLimit !== null &&
     tokensRemaining > 0 &&
-    tokensRemaining < 50;
+    tokensRemaining <= lowTokenWarningThreshold(plan);
 
   return (
     <main className={`${shell} px-4 py-6 sm:px-6 sm:py-8`}>
@@ -942,11 +948,11 @@ export function DashboardPageClient() {
             </span>
             <button
               type="button"
-              onClick={() => startCheckout("month")}
+              onClick={() => startCheckout(plan === "pro" ? "year" : "month")}
               disabled={checkoutLoading}
               className="inline-flex min-h-[40px] shrink-0 items-center justify-center rounded-full bg-amber-900 px-4 py-1.5 text-xs font-semibold text-amber-50 transition hover:bg-amber-950 disabled:opacity-50"
             >
-              Upgrade to Pro
+              {plan === "pro" ? "Upgrade to Annual" : "Upgrade to Pro"}
             </button>
           </div>
         ) : null}
@@ -1803,6 +1809,7 @@ export function DashboardPageClient() {
         upgrading={checkoutLoading}
         resetAt={resetAt}
         message={upgradeMessage ?? undefined}
+        plan={plan}
       />
 
       <WelcomeOnboardingModal open={showOnboarding} onClose={() => setShowOnboarding(false)} />

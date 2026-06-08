@@ -23,7 +23,7 @@ export function LandingJsonLd() {
           "@type": "Offer",
           price: "0",
           priceCurrency: "USD",
-          description: "Free tier with daily caption generations; Pro plans available.",
+          description: "Free tier with 200 daily tokens; Pro (1,000/day) and Annual (unlimited) plans available.",
         },
         description:
           "AI caption generator for social media — create Instagram captions, TikTok captions, and LinkedIn captions with one click.",

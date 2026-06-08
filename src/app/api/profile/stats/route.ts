@@ -7,6 +7,7 @@ import {
 } from "@/lib/security/api-guard";
 import { supabaseServer } from "@/lib/supabase/server";
 import {
+  dailyTokenLimitForPlan,
   FREE_DAILY_TOKENS,
   nextResetIso,
   TOKEN_COSTS,
@@ -86,8 +87,7 @@ export async function GET(req: Request) {
 
   const tokensUsed = Math.max(0, usageRow?.count ?? 0);
   const unlimited = hasUnlimitedTokens(userId);
-  const tokensLimit =
-    unlimited || plan === "pro" || plan === "annual" ? null : FREE_DAILY_TOKENS;
+  const tokensLimit = unlimited ? null : dailyTokenLimitForPlan(plan);
   const tokensRemaining =
     tokensLimit === null ? null : Math.max(0, tokensLimit - tokensUsed);
 
