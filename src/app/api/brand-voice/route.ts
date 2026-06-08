@@ -35,6 +35,17 @@ function parsePersonality(raw: unknown): string[] {
     .filter((v) => PERSONALITY_OPTIONS.includes(v as (typeof PERSONALITY_OPTIONS)[number]));
 }
 
+// Only treat the table as truly missing when Postgres/PostgREST says the
+// relation does not exist. Matching on the error message text is unreliable
+// because almost every error (RLS denials, missing columns, permission issues)
+// mentions the table name "brand_voice".
+function isMissingTableError(error: { code?: string; message?: string }): boolean {
+  // 42P01 = undefined_table (Postgres); PGRST205 = table not found in schema cache.
+  if (error.code === "42P01" || error.code === "PGRST205") return true;
+  const msg = (error.message ?? "").toLowerCase();
+  return msg.includes("does not exist") || msg.includes("schema cache");
+}
+
 function parseWordList(raw: unknown): string[] {
   if (Array.isArray(raw)) {
     return raw.map((v) => String(v).trim()).filter(Boolean).slice(0, 30);
@@ -68,7 +79,7 @@ export async function GET(req: Request) {
 
     if (error) {
       // Missing table — return empty profile with a helpful hint for admins.
-      if (error.message.toLowerCase().includes("brand_voice")) {
+      if (isMissingTableError(error)) {
         return NextResponse.json({
           plan,
           annualRequired: !isAnnualPlan(plan),
@@ -159,8 +170,7 @@ export async function POST(req: Request) {
       .upsert(row, { onConflict: "user_id" });
 
     if (error) {
-      const msg = error.message.toLowerCase();
-      if (msg.includes("brand_voice") || msg.includes("relation")) {
+      if (isMissingTableError(error)) {
         return NextResponse.json(
           {
             error:
