@@ -4,7 +4,7 @@ import { AffiliatePageClient } from "@/components/affiliate/AffiliatePageClient"
 import { FooterSection } from "@/components/landing/FooterSection";
 import { LandingHeader } from "@/components/landing/LandingHeader";
 import { useUser } from "@clerk/nextjs";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -396,6 +396,114 @@ function FaqSection() {
   );
 }
 
+const HOW_IT_WORKS_STEPS = [
+  {
+    n: "01",
+    title: "Sign up",
+    body: "Sign up and get your unique tracking link instantly.",
+  },
+  {
+    n: "02",
+    title: "Share your link",
+    body: "Share your link on social media, YouTube, or anywhere.",
+  },
+  {
+    n: "03",
+    title: "Earn 20%",
+    body: "Earn 20% commission when someone upgrades to Pro.",
+  },
+];
+
+function HowItWorksModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose]);
+
+  return (
+    <AnimatePresence>
+      {open ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="how-it-works-modal-title"
+        >
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={onClose}
+            className="absolute inset-0 h-full w-full cursor-default bg-zinc-950/60 backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{ opacity: 0, y: 16, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.97 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl border border-zinc-200 bg-white p-6 shadow-2xl sm:p-8 dark:border-white/10 dark:bg-zinc-900"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-purple-600 dark:text-purple-400">
+                  Affiliate program
+                </p>
+                <h2
+                  id="how-it-works-modal-title"
+                  className="mt-2 text-2xl font-bold tracking-tight text-zinc-900 dark:text-white"
+                >
+                  How it works
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 transition hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <ol className="mt-6 flex flex-col gap-4">
+              {HOW_IT_WORKS_STEPS.map((s) => (
+                <li key={s.n} className="flex gap-4">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-600 to-fuchsia-600 text-sm font-bold text-white">
+                    {s.n}
+                  </span>
+                  <div>
+                    <h3 className="text-base font-semibold text-zinc-900 dark:text-white">{s.title}</h3>
+                    <p className="mt-1 text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+                      {s.body}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-7 inline-flex min-h-[48px] w-full items-center justify-center rounded-full bg-purple-600 px-6 py-3 text-base font-bold text-white transition hover:bg-purple-500"
+            >
+              Got it
+            </button>
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  );
+}
+
 function FinalCta({ onEnroll, signedIn }: { onEnroll: () => void; signedIn: boolean }) {
   return (
     <section className="px-4 pb-20 pt-6 sm:px-6 sm:pb-28">
@@ -430,6 +538,7 @@ function FinalCta({ onEnroll, signedIn }: { onEnroll: () => void; signedIn: bool
 export function AffiliateLandingPage() {
   const { isSignedIn, isLoaded } = useUser();
   const { enrolled, hydrated, enroll } = useEnrolled();
+  const [howItWorksOpen, setHowItWorksOpen] = useState(false);
 
   const showDashboard = isLoaded && isSignedIn && hydrated && enrolled;
 
@@ -453,12 +562,13 @@ export function AffiliateLandingPage() {
                     Share your link, watch the stats roll in, request payouts when you cross $10.
                   </p>
                 </div>
-                <Link
-                  href="#how-it-works"
+                <button
+                  type="button"
+                  onClick={() => setHowItWorksOpen(true)}
                   className="text-sm font-medium text-purple-700 underline-offset-4 hover:underline dark:text-purple-300"
                 >
                   How it works →
-                </Link>
+                </button>
               </div>
               <AffiliatePageClient />
             </div>
@@ -476,6 +586,8 @@ export function AffiliateLandingPage() {
       </main>
 
       <FooterSection />
+
+      <HowItWorksModal open={howItWorksOpen} onClose={() => setHowItWorksOpen(false)} />
     </div>
   );
 }

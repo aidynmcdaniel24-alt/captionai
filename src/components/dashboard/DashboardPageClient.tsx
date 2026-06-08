@@ -957,12 +957,14 @@ export function DashboardPageClient() {
           </div>
         ) : null}
 
-        <div
-          className="-mx-1 overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-2 hide-scrollbar dark:border-zinc-800 dark:bg-zinc-900/60"
-          role="tablist"
-          aria-label="Studio sections"
-        >
-          <div className="flex min-w-max gap-1.5 sm:gap-2">
+        <div className="relative -mx-1">
+          <div
+            className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-2 hide-scrollbar dark:border-zinc-800 dark:bg-zinc-900/60"
+            role="tablist"
+            aria-label="Studio sections"
+            style={{ scrollBehavior: "smooth", WebkitOverflowScrolling: "touch" }}
+          >
+            <div className="flex min-w-max gap-1.5 sm:gap-2">
             {(
               [
                 ["captions", "Captions", "free" as const],
@@ -1006,10 +1008,15 @@ export function DashboardPageClient() {
                       🔒
                     </span>
                   ) : null}
-                </button>
-              );
-            })}
+                  </button>
+                );
+              })}
+            </div>
           </div>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-y-px right-px w-12 rounded-r-2xl bg-gradient-to-l from-white to-transparent dark:from-zinc-900"
+          />
         </div>
 
         {error ? (
