@@ -11,6 +11,7 @@ const nav = [
   { label: "Features", href: "#features" },
   { label: "Try it", href: "#demo" },
   { label: "Pricing", href: "/pricing" },
+  { label: "How it works", href: "/how-it-works" },
   { label: "About", href: "/about" },
 ];
 

@@ -17,6 +17,7 @@ const companyLinks: FooterLink[] = [
   { label: "About", href: "/about" },
   { label: "Changelog", href: "/changelog" },
   { label: "Affiliate program", href: "/affiliate" },
+  { label: "How it works", href: "/how-it-works" },
 ];
 
 const supportLinks: FooterLink[] = [

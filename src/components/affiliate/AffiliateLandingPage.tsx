@@ -163,6 +163,13 @@ function HowItWorks() {
           <p className="mt-3 text-base text-zinc-600 dark:text-zinc-400">
             Three steps to your first commission. The whole thing takes under five minutes.
           </p>
+          <Link
+            href="/how-it-works"
+            className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-purple-700 underline-offset-4 transition hover:underline dark:text-purple-300"
+          >
+            Learn more about the program
+            <span aria-hidden>→</span>
+          </Link>
         </div>
 
         <ol className="mt-12 grid gap-4 sm:gap-6 lg:grid-cols-3">
