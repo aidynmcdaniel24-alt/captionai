@@ -399,22 +399,81 @@ function FaqSection() {
 const HOW_IT_WORKS_STEPS = [
   {
     n: "01",
-    title: "Sign up",
-    body: "Sign up and get your unique tracking link instantly.",
+    icon: "🔗",
+    title: "Get your unique link",
+    body: "Sign up and instantly get a personal tracking link like captionai.com/r/yourcode. Share it anywhere.",
   },
   {
     n: "02",
-    title: "Share your link",
-    body: "Share your link on social media, YouTube, or anywhere.",
+    icon: "📣",
+    title: "Share with your audience",
+    body: "Post on TikTok, Instagram, YouTube, Twitter, your blog — anywhere your audience hangs out.",
   },
   {
     n: "03",
-    title: "Earn 20%",
-    body: "Earn 20% commission when someone upgrades to Pro.",
+    icon: "💰",
+    title: "Earn 20% commission",
+    body: "When someone clicks your link and upgrades to Pro you earn $1.80 per month or $15.80 per year. Forever.",
   },
 ];
 
-function HowItWorksModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+const COMMISSION_TIERS = [
+  { referrals: 10, monthly: 18, annual: 216 },
+  { referrals: 50, monthly: 90, annual: 1080 },
+  { referrals: 100, monthly: 180, annual: 2160 },
+];
+
+const PAYMENT_FACTS = [
+  {
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M2.25 8.25h19.5M2.25 9V6.75A2.25 2.25 0 014.5 4.5h15a2.25 2.25 0 012.25 2.25v10.5A2.25 2.25 0 0119.5 19.5h-15a2.25 2.25 0 01-2.25-2.25V9z"
+        />
+      </svg>
+    ),
+    title: "PayPal or Venmo",
+    body: "Get paid the way you prefer.",
+  },
+  {
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33"
+        />
+      </svg>
+    ),
+    title: "$10 minimum",
+    body: "Cash out as soon as you cross $10.",
+  },
+  {
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 6v6l4 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+    ),
+    title: "3–5 business days",
+    body: "Payouts processed quickly.",
+  },
+];
+
+function HowItWorksModal({
+  open,
+  onClose,
+  onStart,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onStart: () => void;
+}) {
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -432,7 +491,7 @@ function HowItWorksModal({ open, onClose }: { open: boolean; onClose: () => void
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6"
           role="dialog"
           aria-modal="true"
           aria-labelledby="how-it-works-modal-title"
@@ -441,62 +500,151 @@ function HowItWorksModal({ open, onClose }: { open: boolean; onClose: () => void
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="absolute inset-0 h-full w-full cursor-default bg-zinc-950/60 backdrop-blur-sm"
+            className="absolute inset-0 h-full w-full cursor-default bg-zinc-950/70 backdrop-blur-sm"
           />
           <motion.div
             initial={{ opacity: 0, y: 16, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.97 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
-            className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl border border-zinc-200 bg-white p-6 shadow-2xl sm:p-8 dark:border-white/10 dark:bg-zinc-900"
+            className="relative z-10 flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-2xl dark:border-white/10 dark:bg-zinc-900"
           >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-purple-600 dark:text-purple-400">
-                  Affiliate program
-                </p>
-                <h2
-                  id="how-it-works-modal-title"
-                  className="mt-2 text-2xl font-bold tracking-tight text-zinc-900 dark:text-white"
-                >
-                  How it works
-                </h2>
-              </div>
+            {/* Gradient header */}
+            <div className="relative overflow-hidden bg-gradient-to-br from-purple-600 via-purple-600 to-fuchsia-600 px-6 py-7 text-white sm:px-8 sm:py-8">
+              <div className="pointer-events-none absolute -right-10 -top-16 h-40 w-40 rounded-full bg-white/15 blur-2xl" />
+              <div className="pointer-events-none absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-fuchsia-300/20 blur-2xl" />
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="Close"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 transition hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
+              <p className="relative text-xs font-semibold uppercase tracking-[0.22em] text-white/80">
+                Affiliate program
+              </p>
+              <h2
+                id="how-it-works-modal-title"
+                className="relative mt-2 max-w-md text-2xl font-bold leading-tight tracking-tight sm:text-3xl"
+              >
+                How the Affiliate Program Works
+              </h2>
+              <p className="relative mt-2 text-sm font-medium text-white/85 sm:text-base">
+                Share your link. Earn real money. No limits.
+              </p>
             </div>
 
-            <ol className="mt-6 flex flex-col gap-4">
-              {HOW_IT_WORKS_STEPS.map((s) => (
-                <li key={s.n} className="flex gap-4">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-600 to-fuchsia-600 text-sm font-bold text-white">
-                    {s.n}
-                  </span>
-                  <div>
-                    <h3 className="text-base font-semibold text-zinc-900 dark:text-white">{s.title}</h3>
-                    <p className="mt-1 text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-400">
-                      {s.body}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ol>
+            {/* Scrollable body */}
+            <div className="flex-1 overflow-y-auto px-6 py-7 sm:px-8">
+              {/* Steps */}
+              <ol className="flex flex-col gap-4">
+                {HOW_IT_WORKS_STEPS.map((s) => (
+                  <li
+                    key={s.n}
+                    className="flex items-start gap-4 rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4 transition hover:border-purple-300 dark:border-white/10 dark:bg-white/5 dark:hover:border-purple-500/40"
+                  >
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-600 to-fuchsia-600 text-xl shadow-md shadow-purple-500/30">
+                      {s.icon}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold tracking-wider text-purple-600 dark:text-purple-400">
+                          STEP {s.n}
+                        </span>
+                      </div>
+                      <h3 className="mt-0.5 text-base font-semibold text-zinc-900 dark:text-white">
+                        {s.title}
+                      </h3>
+                      <p className="mt-1 text-[14px] leading-relaxed text-zinc-600 dark:text-zinc-400">
+                        {s.body}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="mt-7 inline-flex min-h-[48px] w-full items-center justify-center rounded-full bg-purple-600 px-6 py-3 text-base font-bold text-white transition hover:bg-purple-500"
-            >
-              Got it
-            </button>
+              {/* Commission calculator */}
+              <div className="mt-7">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-900 dark:text-white">
+                    What you could earn
+                  </h3>
+                </div>
+                <p className="mt-1 text-[13px] text-zinc-500 dark:text-zinc-400">
+                  If you refer this many people on the Pro plan:
+                </p>
+                <div className="mt-4 overflow-hidden rounded-2xl border border-zinc-200 dark:border-white/10">
+                  <div className="grid grid-cols-3 bg-gradient-to-r from-purple-600 to-fuchsia-600 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-white">
+                    <span>Referrals</span>
+                    <span className="text-right">Per month</span>
+                    <span className="text-right">Per year</span>
+                  </div>
+                  {COMMISSION_TIERS.map((tier, i) => (
+                    <div
+                      key={tier.referrals}
+                      className={`grid grid-cols-3 items-center px-4 py-3 text-sm ${
+                        i % 2 === 0
+                          ? "bg-white dark:bg-zinc-900"
+                          : "bg-zinc-50 dark:bg-white/5"
+                      }`}
+                    >
+                      <span className="font-semibold text-zinc-900 dark:text-white">
+                        {tier.referrals} people
+                      </span>
+                      <span className="text-right font-bold text-purple-600 dark:text-purple-400">
+                        ${tier.monthly}/mo
+                      </span>
+                      <span className="text-right font-bold text-zinc-900 dark:text-white">
+                        ${tier.annual.toLocaleString()}/yr
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-2 text-[12px] text-zinc-400 dark:text-zinc-500">
+                  Estimates based on $1.80/mo commission per Pro referral.
+                </p>
+              </div>
+
+              {/* Payment info */}
+              <div className="mt-7">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-900 dark:text-white">
+                  Getting paid
+                </h3>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  {PAYMENT_FACTS.map((fact) => (
+                    <div
+                      key={fact.title}
+                      className="rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4 dark:border-white/10 dark:bg-white/5"
+                    >
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-100 text-purple-600 dark:bg-purple-500/15 dark:text-purple-300">
+                        {fact.icon}
+                      </span>
+                      <h4 className="mt-3 text-sm font-semibold text-zinc-900 dark:text-white">
+                        {fact.title}
+                      </h4>
+                      <p className="mt-1 text-[12.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                        {fact.body}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Sticky CTA footer */}
+            <div className="border-t border-zinc-200 bg-white/90 px-6 py-4 backdrop-blur sm:px-8 dark:border-white/10 dark:bg-zinc-900/90">
+              <button
+                type="button"
+                onClick={onStart}
+                className="group inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-600 px-6 py-3 text-base font-bold text-white shadow-lg shadow-purple-500/30 transition hover:from-purple-500 hover:to-fuchsia-500"
+              >
+                Start earning today
+                <span className="transition-transform group-hover:translate-x-1">→</span>
+              </button>
+            </div>
           </motion.div>
         </motion.div>
       ) : null}
@@ -587,7 +735,11 @@ export function AffiliateLandingPage() {
 
       <FooterSection />
 
-      <HowItWorksModal open={howItWorksOpen} onClose={() => setHowItWorksOpen(false)} />
+      <HowItWorksModal
+        open={howItWorksOpen}
+        onClose={() => setHowItWorksOpen(false)}
+        onStart={() => setHowItWorksOpen(false)}
+      />
     </div>
   );
 }

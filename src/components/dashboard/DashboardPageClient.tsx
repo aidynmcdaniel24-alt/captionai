@@ -959,7 +959,7 @@ export function DashboardPageClient() {
 
         <div className="relative -mx-1">
           <div
-            className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-2 hide-scrollbar dark:border-zinc-800 dark:bg-zinc-900/60"
+            className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-2 scrollbar-thin-x dark:border-zinc-800 dark:bg-zinc-900/60"
             role="tablist"
             aria-label="Studio sections"
             style={{ scrollBehavior: "smooth", WebkitOverflowScrolling: "touch" }}
@@ -1013,10 +1013,6 @@ export function DashboardPageClient() {
               })}
             </div>
           </div>
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-y-px right-px w-12 rounded-r-2xl bg-gradient-to-l from-white to-transparent dark:from-zinc-900"
-          />
         </div>
 
         {error ? (
