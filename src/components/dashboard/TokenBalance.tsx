@@ -29,11 +29,13 @@ export function TokenBalance({
   if (unlimited) {
     return (
       <div
-        className="inline-flex items-center gap-2 rounded-full border border-purple-300/70 bg-gradient-to-r from-purple-100 to-fuchsia-100 px-3 py-1.5 text-xs font-semibold text-purple-900 shadow-sm dark:border-purple-500/40 dark:from-purple-950/60 dark:to-fuchsia-950/60 dark:text-purple-100"
+        className="inline-flex items-center gap-1.5 rounded-full border border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-700 dark:border-purple-500/30 dark:bg-purple-950/40 dark:text-purple-200"
         aria-label="Unlimited tokens"
       >
-        <span aria-hidden>{isAnnualPlan(plan) ? "✨" : "♾️"}</span>
-        <span>{isAnnualPlan(plan) ? "Annual — Unlimited" : "Unlimited tokens"}</span>
+        <span aria-hidden className="text-sm leading-none">
+          {isAnnualPlan(plan) ? "👑" : "∞"}
+        </span>
+        <span>{isAnnualPlan(plan) ? "Annual · Unlimited" : "Unlimited"}</span>
       </div>
     );
   }

@@ -69,6 +69,35 @@ type Tab =
   | "analytics"
   | "collections";
 
+const NAV_LINKS: { href: string; label: string }[] = [
+  { href: "/history", label: "History" },
+  { href: "/profile", label: "Profile" },
+  { href: "/affiliate", label: "Affiliate" },
+];
+
+// Tab navigation is split into two labeled groups so the bar reads as an
+// organized toolbar instead of one long crowded strip. Order within each
+// group preserves the original tab ordering/behavior.
+const PRIMARY_TABS: { id: Tab; label: string }[] = [
+  { id: "captions", label: "Captions" },
+  { id: "hashtags", label: "Hashtags" },
+  { id: "bio", label: "Bio" },
+  { id: "trending", label: "Trending" },
+  { id: "ab", label: "A/B test" },
+  { id: "favorites", label: "Favorites" },
+  { id: "hookLibrary", label: "Hook Library" },
+];
+
+const PRO_TABS: { id: Tab; label: string; tier: "pro" | "annual" }[] = [
+  { id: "rewriter", label: "Rewriter", tier: "pro" },
+  { id: "emojis", label: "Emojis", tier: "pro" },
+  { id: "hashtagAnalyzer", label: "Hashtags+", tier: "annual" },
+  { id: "grader", label: "Grader", tier: "annual" },
+  { id: "calendar", label: "Calendar", tier: "annual" },
+  { id: "collections", label: "Collections", tier: "pro" },
+  { id: "analytics", label: "Analytics", tier: "pro" },
+];
+
 type FavoriteHistoryItem = {
   id: string;
   topic: string;
@@ -854,15 +883,45 @@ export function DashboardPageClient() {
     tokensRemaining > 0 &&
     tokensRemaining <= lowTokenWarningThreshold(plan);
 
+  const renderTab = (id: Tab, label: string, tier: "free" | "pro" | "annual") => {
+    const locked =
+      tier === "pro"
+        ? !isProPlan(plan)
+        : tier === "annual"
+          ? !isAnnualPlan(plan)
+          : false;
+    return (
+      <button
+        key={id}
+        type="button"
+        role="tab"
+        aria-selected={tab === id}
+        onClick={() => setTab(id)}
+        className={`inline-flex min-h-[36px] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-sm font-medium transition ${
+          tab === id
+            ? "bg-purple-600 text-white shadow-sm"
+            : "text-zinc-600 hover:bg-white hover:text-zinc-900 hover:shadow-sm dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
+        }`}
+      >
+        {label}
+        {locked ? (
+          <span aria-hidden className="text-[11px] opacity-70">
+            🔒
+          </span>
+        ) : null}
+      </button>
+    );
+  };
+
   return (
     <main className={`${shell} px-4 py-6 sm:px-6 sm:py-8`}>
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 sm:gap-6">
-        <div className="flex flex-col gap-3 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm backdrop-blur sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4 sm:p-4 dark:border-zinc-800 dark:bg-zinc-900/70">
+        <header className="flex flex-col gap-4 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm backdrop-blur sm:p-4 dark:border-zinc-800 dark:bg-zinc-900/70">
           <div className="flex min-w-0 items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
               <Link
                 href="/"
-                className="shrink-0 rounded-lg outline-none ring-offset-2 ring-offset-white focus-visible:ring-2 focus-visible:ring-purple-500 dark:ring-offset-zinc-900"
+                className="shrink-0 rounded-xl outline-none ring-offset-2 ring-offset-white focus-visible:ring-2 focus-visible:ring-purple-500 dark:ring-offset-zinc-900"
                 aria-label="CaptionAI home"
               >
                 <BrandLogo className="h-9 w-9" />
@@ -871,70 +930,55 @@ export function DashboardPageClient() {
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-purple-600 sm:text-xs dark:text-purple-300">
                   CaptionAI
                 </p>
-                <h1 className="truncate text-xl font-semibold sm:text-3xl">AI Caption Studio</h1>
+                <h1 className="truncate text-lg font-semibold sm:text-2xl">AI Caption Studio</h1>
               </div>
             </div>
-            <div className="flex shrink-0 items-center gap-2 sm:hidden">
+            <div className="flex shrink-0 items-center gap-2">
               <ThemeToggle />
               <UserButton userProfileUrl="/settings" userProfileMode="navigation" />
             </div>
           </div>
 
-          {plan === "free" ? (
-            <button
-              type="button"
-              className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-purple-500 disabled:opacity-50 sm:hidden"
-              disabled={checkoutLoading}
-              onClick={() => startCheckout("month")}
-            >
-              {checkoutLoading ? "Opening checkout…" : "Upgrade — $9/mo"}
-            </button>
-          ) : null}
-
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <TokenBalance
-              plan={plan}
-              tokensUsed={tokensUsed}
-              tokensLimit={tokensLimit}
-              tokensRemaining={tokensRemaining}
-            />
-            <InstallAppButton />
-            <div className="hidden sm:block">
-              <ThemeToggle />
+          <div className="flex flex-col gap-3 border-t border-zinc-100 pt-3 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800/80">
+            <div className="flex flex-wrap items-center gap-2">
+              <TokenBalance
+                plan={plan}
+                tokensUsed={tokensUsed}
+                tokensLimit={tokensLimit}
+                tokensRemaining={tokensRemaining}
+              />
+              <InstallAppButton />
             </div>
-            {plan === "free" ? (
-              <button
-                type="button"
-                className="hidden min-h-[44px] items-center justify-center rounded-full bg-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-purple-500 disabled:opacity-50 sm:inline-flex"
-                disabled={checkoutLoading}
-                onClick={() => startCheckout("month")}
+
+            <div className="flex flex-wrap items-center gap-2">
+              <nav
+                aria-label="Account"
+                className="flex flex-1 items-center gap-0.5 rounded-full border border-zinc-200 bg-zinc-50 p-1 sm:flex-none dark:border-zinc-700 dark:bg-zinc-950/60"
               >
-                {checkoutLoading ? "Opening checkout…" : "Upgrade — $9/mo"}
-              </button>
-            ) : null}
-            <Link
-              href="/history"
-              className="inline-flex min-h-[40px] flex-1 items-center justify-center rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100 sm:flex-none dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
-            >
-              History
-            </Link>
-            <Link
-              href="/profile"
-              className="inline-flex min-h-[40px] flex-1 items-center justify-center rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100 sm:flex-none dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
-            >
-              Profile
-            </Link>
-            <Link
-              href="/affiliate"
-              className="inline-flex min-h-[40px] flex-1 items-center justify-center rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100 sm:flex-none dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
-            >
-              Affiliate
-            </Link>
-            <div className="hidden sm:block">
-              <UserButton userProfileUrl="/settings" userProfileMode="navigation" />
+                {NAV_LINKS.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="inline-flex min-h-[36px] flex-1 items-center justify-center rounded-full px-3 py-1.5 text-sm font-medium text-zinc-600 transition hover:bg-white hover:text-zinc-900 hover:shadow-sm sm:flex-none dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </nav>
+              {plan === "free" ? (
+                <button
+                  type="button"
+                  className="group inline-flex min-h-[40px] w-full items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-600 px-5 py-2 text-sm font-bold text-white shadow-lg shadow-purple-600/25 transition hover:from-purple-500 hover:to-fuchsia-500 hover:shadow-purple-600/40 disabled:opacity-60 sm:w-auto"
+                  disabled={checkoutLoading}
+                  onClick={() => startCheckout("month")}
+                >
+                  <span aria-hidden className="transition-transform group-hover:scale-110">✨</span>
+                  {checkoutLoading ? "Opening checkout…" : "Upgrade — $9/mo"}
+                </button>
+              ) : null}
             </div>
           </div>
-        </div>
+        </header>
 
         {lowTokens ? (
           <div
@@ -957,60 +1001,36 @@ export function DashboardPageClient() {
           </div>
         ) : null}
 
-        <div
-          className="-mx-1 overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-2 hide-scrollbar dark:border-zinc-800 dark:bg-zinc-900/60"
-          role="tablist"
+        <nav
+          className="flex flex-col gap-2.5 rounded-2xl border border-zinc-200 bg-white p-2.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60"
           aria-label="Studio sections"
         >
-          <div className="flex min-w-max gap-1.5 sm:gap-2">
-            {(
-              [
-                ["captions", "Captions", "free" as const],
-                ["rewriter", "Rewriter", "pro" as const],
-                ["emojis", "Emojis", "pro" as const],
-                ["hashtagAnalyzer", "Hashtags+", "annual" as const],
-                ["grader", "Grader", "annual" as const],
-                ["calendar", "Calendar", "annual" as const],
-                ["hashtags", "Hashtags", "free" as const],
-                ["bio", "Bio", "free" as const],
-                ["trending", "Trending", "free" as const],
-                ["ab", "A/B test", "free" as const],
-                ["favorites", "Favorites", "free" as const],
-                ["collections", "Collections", "pro" as const],
-                ["hookLibrary", "Hook Library", "free" as const],
-                ["analytics", "Analytics", "pro" as const],
-              ] as const
-            ).map(([id, label, tier]) => {
-              const locked =
-                tier === "pro"
-                  ? !isProPlan(plan)
-                  : tier === "annual"
-                    ? !isAnnualPlan(plan)
-                    : false;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  role="tab"
-                  aria-selected={tab === id}
-                  onClick={() => setTab(id)}
-                  className={`inline-flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition ${
-                    tab === id
-                      ? "bg-purple-600 text-white shadow-sm"
-                      : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                  }`}
-                >
-                  {label}
-                  {locked ? (
-                    <span aria-hidden className="text-[11px] opacity-70">
-                      🔒
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })}
+          <div>
+            <p className="mb-1.5 px-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+              Create
+            </p>
+            <div
+              className="-mx-1 flex gap-1 overflow-x-auto px-1 hide-scrollbar"
+              role="tablist"
+              aria-label="Core tools"
+            >
+              {PRIMARY_TABS.map((t) => renderTab(t.id, t.label, "free"))}
+            </div>
           </div>
-        </div>
+
+          <div className="border-t border-zinc-100 pt-2.5 dark:border-zinc-800/80">
+            <p className="mb-1.5 px-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+              Pro tools
+            </p>
+            <div
+              className="-mx-1 flex gap-1 overflow-x-auto px-1 hide-scrollbar"
+              role="tablist"
+              aria-label="Pro and Annual tools"
+            >
+              {PRO_TABS.map((t) => renderTab(t.id, t.label, t.tier))}
+            </div>
+          </div>
+        </nav>
 
         {error ? (
           <p
@@ -1026,8 +1046,8 @@ export function DashboardPageClient() {
             <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/80">
               <IndustryTemplates topic={topic} onPick={setTopic} />
 
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <label className="block text-sm text-zinc-600 dark:text-zinc-300">
+              <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-200">
                   Photo/topic description
                 </label>
                 <ImageUploader
@@ -1040,18 +1060,18 @@ export function DashboardPageClient() {
                 />
               </div>
               <textarea
-                className="min-h-32 w-full rounded-xl border border-zinc-300 bg-white p-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                className="min-h-32 w-full rounded-xl border border-zinc-300 bg-white p-3 text-base text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                 placeholder="Example: my coffee shop in New Orleans"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
               />
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Platform</label>
+                  <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Platform</label>
                   <input
                     type="text"
-                    className="block min-h-[48px] w-full rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                    className="block min-h-[48px] w-full rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                     placeholder={PLATFORM_PLACEHOLDER}
                     value={platform}
                     onChange={(e) => setPlatform(e.target.value)}
@@ -1059,10 +1079,10 @@ export function DashboardPageClient() {
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Tone</label>
+                  <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Tone</label>
                   <input
                     type="text"
-                    className="block min-h-[48px] w-full rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                    className="block min-h-[48px] w-full rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                     placeholder={TONE_PLACEHOLDER}
                     value={tone}
                     onChange={(e) => setTone(e.target.value)}
@@ -1070,9 +1090,9 @@ export function DashboardPageClient() {
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Language</label>
+                  <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Language</label>
                   <select
-                    className="block min-h-[48px] w-full max-w-md rounded-xl border border-zinc-300 bg-white px-3 text-base dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                    className="block min-h-[48px] w-full max-w-md rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                     value={language}
                     onChange={(e) => setLanguage(e.target.value)}
                   >
@@ -1215,19 +1235,19 @@ export function DashboardPageClient() {
               Generate a mix of reach and niche hashtags tailored to your topic and platform.
             </p>
 
-            <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Topic</label>
+            <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Topic</label>
             <textarea
-              className="min-h-24 w-full rounded-xl border border-zinc-300 bg-white p-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+              className="min-h-24 w-full rounded-xl border border-zinc-300 bg-white p-3 text-base text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
               placeholder="Example: my coffee shop in New Orleans"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
             />
 
             <div className="mt-4">
-              <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Platform</label>
+              <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Platform</label>
               <input
                 type="text"
-                className="block min-h-[48px] w-full max-w-md rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                className="block min-h-[48px] w-full max-w-md rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                 placeholder={PLATFORM_PLACEHOLDER}
                 value={platform}
                 onChange={(e) => setPlatform(e.target.value)}
@@ -1301,20 +1321,20 @@ export function DashboardPageClient() {
               Describe yourself or your brand, pick a platform and tone, and we will write a profile bio.
             </p>
 
-            <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">About you / your brand</label>
+            <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">About you / your brand</label>
             <textarea
-              className="min-h-24 w-full rounded-xl border border-zinc-300 bg-white p-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+              className="min-h-24 w-full rounded-xl border border-zinc-300 bg-white p-3 text-base text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
               placeholder="Example: indie game developer, makes cozy pixel-art puzzle games"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
             />
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Platform</label>
+                <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Platform</label>
                 <input
                   type="text"
-                  className="block min-h-[48px] w-full rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  className="block min-h-[48px] w-full rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                   placeholder={PLATFORM_PLACEHOLDER}
                   value={platform}
                   onChange={(e) => setPlatform(e.target.value)}
@@ -1322,10 +1342,10 @@ export function DashboardPageClient() {
                 />
               </div>
               <div>
-                <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Tone</label>
+                <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Tone</label>
                 <input
                   type="text"
-                  className="block min-h-[48px] w-full rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  className="block min-h-[48px] w-full rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                   placeholder={TONE_PLACEHOLDER}
                   value={tone}
                   onChange={(e) => setTone(e.target.value)}
@@ -1491,20 +1511,20 @@ export function DashboardPageClient() {
               Generate two caption variants for the same post and track which one performs better.
             </p>
 
-            <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Topic</label>
+            <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Topic</label>
             <textarea
-              className="min-h-24 w-full rounded-xl border border-zinc-300 bg-white p-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+              className="min-h-24 w-full rounded-xl border border-zinc-300 bg-white p-3 text-base text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
               placeholder="Example: launching a new fitness app for beginners"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
             />
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Platform</label>
+                <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Platform</label>
                 <input
                   type="text"
-                  className="block min-h-[48px] w-full rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  className="block min-h-[48px] w-full rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                   placeholder={PLATFORM_PLACEHOLDER}
                   value={platform}
                   onChange={(e) => setPlatform(e.target.value)}
@@ -1512,10 +1532,10 @@ export function DashboardPageClient() {
                 />
               </div>
               <div>
-                <label className="mb-2 block text-sm text-zinc-600 dark:text-zinc-300">Tone</label>
+                <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Tone</label>
                 <input
                   type="text"
-                  className="block min-h-[48px] w-full rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
+                  className="block min-h-[48px] w-full rounded-xl border border-zinc-300 bg-white px-3 text-base text-zinc-900 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white"
                   placeholder={TONE_PLACEHOLDER}
                   value={tone}
                   onChange={(e) => setTone(e.target.value)}

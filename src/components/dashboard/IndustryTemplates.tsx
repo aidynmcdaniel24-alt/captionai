@@ -59,8 +59,8 @@ export function IndustryTemplates({
 
   return (
     <div className="mb-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <label className="text-sm text-zinc-600 dark:text-zinc-300">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <label className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
           Industry templates
         </label>
         <div className="relative">
@@ -68,7 +68,7 @@ export function IndustryTemplates({
             aria-label="Industry"
             value={industry.key}
             onChange={(e) => changeIndustry(e.target.value)}
-            className="min-h-[40px] appearance-none rounded-lg border border-zinc-300 bg-white py-1.5 pl-3 pr-9 text-sm font-medium text-zinc-800 outline-none focus:border-purple-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+            className="min-h-[32px] appearance-none rounded-lg border border-zinc-300 bg-white py-1 pl-2.5 pr-8 text-xs font-medium text-zinc-800 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
           >
             {INDUSTRIES.map((i) => (
               <option key={i.key} value={i.key}>
@@ -78,7 +78,7 @@ export function IndustryTemplates({
           </select>
           <span
             aria-hidden
-            className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-zinc-500 dark:text-zinc-400"
+            className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-[10px] text-zinc-500 dark:text-zinc-400"
           >
             ▼
           </span>
@@ -86,7 +86,7 @@ export function IndustryTemplates({
       </div>
 
       <div
-        className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 scrollbar-thin-x sm:-mx-1 sm:px-1"
+        className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1.5 scrollbar-thin-x sm:-mx-1 sm:px-1"
         role="group"
         aria-label={`${industry.label} caption templates`}
       >
@@ -99,14 +99,13 @@ export function IndustryTemplates({
               type="button"
               onClick={() => onPick(tpl.prompt)}
               aria-pressed={active}
-              className={`flex min-h-[40px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
+              className={`flex min-h-[30px] shrink-0 items-center whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
                 active
                   ? "border-purple-500 bg-purple-600 text-white shadow-sm hover:bg-purple-500"
-                  : "border-zinc-200 bg-zinc-50 text-zinc-800 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:border-purple-500/60 dark:hover:bg-purple-950/40 dark:hover:text-purple-100"
+                  : "border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:border-purple-500/60 dark:hover:bg-purple-950/40 dark:hover:text-purple-100"
               }`}
             >
-              <span aria-hidden>{industry.icon}</span>
-              <span>{tpl.label}</span>
+              {tpl.label}
             </button>
           );
         })}
