@@ -1,7 +1,5 @@
 "use client";
 
-import { isAnnualPlan } from "@/lib/plan";
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 const PERSONALITIES = [
@@ -15,11 +13,30 @@ const PERSONALITIES = [
   "Authoritative",
 ] as const;
 
-type Props = {
-  plan: "free" | "pro" | "annual" | null;
+type BrandProfile = {
+  brandName?: string;
+  personality?: string[];
+  wordsToUse?: string[];
+  wordsToAvoid?: string[];
+  exampleCaption?: string;
 };
 
-export function BrandToneSection({ plan }: Props) {
+export function isBrandToneProfileSaved(profile: BrandProfile | null | undefined): boolean {
+  if (!profile) return false;
+  return Boolean(
+    profile.brandName?.trim() ||
+      (profile.personality?.length ?? 0) > 0 ||
+      (profile.wordsToUse?.length ?? 0) > 0 ||
+      (profile.wordsToAvoid?.length ?? 0) > 0 ||
+      profile.exampleCaption?.trim()
+  );
+}
+
+type Props = {
+  onProfileChange?: (saved: boolean) => void;
+};
+
+export function BrandToneSection({ onProfileChange }: Props) {
   const [brandName, setBrandName] = useState("");
   const [personality, setPersonality] = useState<string[]>([]);
   const [wordsToUse, setWordsToUse] = useState("");
@@ -30,45 +47,50 @@ export function BrandToneSection({ plan }: Props) {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
+  const applyProfile = useCallback(
+    (profile: BrandProfile | null | undefined) => {
+      setBrandName(profile?.brandName ?? "");
+      setPersonality(profile?.personality ?? []);
+      setWordsToUse((profile?.wordsToUse ?? []).join(", "));
+      setWordsToAvoid((profile?.wordsToAvoid ?? []).join(", "));
+      setExampleCaption(profile?.exampleCaption ?? "");
+      onProfileChange?.(isBrandToneProfileSaved(profile));
+    },
+    [onProfileChange]
+  );
+
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       const res = await fetch("/api/brand-voice");
-      if (!res.ok) return;
       const data = (await res.json()) as {
-        profile?: {
-          brandName?: string;
-          personality?: string[];
-          wordsToUse?: string[];
-          wordsToAvoid?: string[];
-          exampleCaption?: string;
-        } | null;
+        profile?: BrandProfile | null;
         tableMissing?: boolean;
+        error?: string;
       };
       if (data.tableMissing) {
-        setError("Run the brand_voice SQL in Supabase to enable this feature.");
+        setError(
+          "Brand voice table is not set up yet. Run the brand_voice SQL migration in Supabase first."
+        );
+        onProfileChange?.(false);
         return;
       }
-      const p = data.profile;
-      if (p) {
-        setBrandName(p.brandName ?? "");
-        setPersonality(p.personality ?? []);
-        setWordsToUse((p.wordsToUse ?? []).join(", "));
-        setWordsToAvoid((p.wordsToAvoid ?? []).join(", "));
-        setExampleCaption(p.exampleCaption ?? "");
+      if (!res.ok) {
+        applyProfile(null);
+        return;
       }
+      applyProfile(data.profile);
     } catch {
-      setError("Could not load brand tone.");
+      applyProfile(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applyProfile, onProfileChange]);
 
   useEffect(() => {
-    if (isAnnualPlan(plan)) void load();
-    else setLoading(false);
-  }, [plan, load]);
+    void load();
+  }, [load]);
 
   function togglePersonality(p: string) {
     setPersonality((prev) =>
@@ -98,6 +120,15 @@ export function BrandToneSection({ plan }: Props) {
         return;
       }
       setMessage("Brand tone saved — it will apply automatically when you generate captions.");
+      onProfileChange?.(
+        isBrandToneProfileSaved({
+          brandName,
+          personality,
+          wordsToUse: wordsToUse.split(/[,\n]/).map((s) => s.trim()).filter(Boolean),
+          wordsToAvoid: wordsToAvoid.split(/[,\n]/).map((s) => s.trim()).filter(Boolean),
+          exampleCaption,
+        })
+      );
     } catch {
       setError("Could not save brand tone.");
     } finally {
@@ -106,23 +137,13 @@ export function BrandToneSection({ plan }: Props) {
   }
 
   return (
-    <section className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-950/50">
-      <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Brand tone</h2>
-      <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-        Annual only — save your brand voice once; captions match it automatically.
+    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/80">
+      <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Brand tone</h2>
+      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+        Save your brand voice once — captions match it automatically on every generation.
       </p>
 
-      {!isAnnualPlan(plan) ? (
-        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-100">
-          <p>Upgrade to Annual to unlock Brand Tone Profiles.</p>
-          <Link
-            href="/upgrade"
-            className="mt-2 inline-block text-xs font-semibold underline"
-          >
-            View Annual plan
-          </Link>
-        </div>
-      ) : loading ? (
+      {loading ? (
         <p className="mt-4 text-sm text-zinc-500">Loading…</p>
       ) : (
         <div className="mt-4 space-y-4">
@@ -203,12 +224,12 @@ export function BrandToneSection({ plan }: Props) {
             type="button"
             disabled={saving}
             onClick={() => void save()}
-            className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-500 disabled:opacity-50"
+            className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-500 disabled:opacity-50 sm:w-auto"
           >
             {saving ? "Saving…" : "Save brand tone"}
           </button>
         </div>
       )}
-    </section>
+    </div>
   );
 }

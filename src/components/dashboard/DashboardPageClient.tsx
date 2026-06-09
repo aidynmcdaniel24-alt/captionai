@@ -6,6 +6,8 @@ import {
   type AbWinnerMetric,
 } from "@/components/dashboard/AbPastWinners";
 import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
+import { BrandToneTab } from "@/components/dashboard/BrandToneTab";
+import { isBrandToneProfileSaved } from "@/components/dashboard/BrandToneSection";
 import { CalendarTab } from "@/components/dashboard/CalendarTab";
 import { EmojisTab } from "@/components/dashboard/EmojisTab";
 import { GraderTab } from "@/components/dashboard/GraderTab";
@@ -67,6 +69,7 @@ type Tab =
   | "favorites"
   | "hookLibrary"
   | "analytics"
+  | "brandTone"
   | "collections";
 
 type FavoriteHistoryItem = {
@@ -160,6 +163,7 @@ export function DashboardPageClient() {
   const [proBoost, setProBoost] = useState(false);
   const [qualityTier, setQualityTier] = useState<"standard" | "pro" | "elite">("standard");
   const [brandToneActive, setBrandToneActive] = useState(false);
+  const [brandToneSaved, setBrandToneSaved] = useState(false);
   const [fav, setFav] = useState<Record<number, boolean>>({});
 
   // Image-to-caption (Feature 3)
@@ -282,10 +286,35 @@ export function DashboardPageClient() {
     []
   );
 
+  const refreshBrandToneSaved = useCallback(async () => {
+    try {
+      const res = await fetch("/api/brand-voice");
+      if (!res.ok) return;
+      const data = (await res.json()) as {
+        profile?: {
+          brandName?: string;
+          personality?: string[];
+          wordsToUse?: string[];
+          wordsToAvoid?: string[];
+          exampleCaption?: string;
+        } | null;
+        tableMissing?: boolean;
+      };
+      if (data.tableMissing) {
+        setBrandToneSaved(false);
+        return;
+      }
+      setBrandToneSaved(isBrandToneProfileSaved(data.profile));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate plan/usage on mount
     void refreshPlan();
-  }, [refreshPlan]);
+    void refreshBrandToneSaved();
+  }, [refreshPlan, refreshBrandToneSaved]);
 
   useEffect(() => {
     if (!hasSeenOnboarding()) {
@@ -981,6 +1010,7 @@ export function DashboardPageClient() {
                 ["collections", "Collections", "pro" as const],
                 ["hookLibrary", "Hook Library", "free" as const],
                 ["analytics", "Analytics", "pro" as const],
+                ["brandTone", "Brand Tone", "annual" as const],
               ] as const
             ).map(([id, label, tier]) => {
               const locked =
@@ -1003,6 +1033,18 @@ export function DashboardPageClient() {
                   }`}
                 >
                   {label}
+                  {id === "captions" && brandToneSaved ? (
+                    <span
+                      title="Your saved brand tone will apply to caption generation."
+                      className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                        tab === id
+                          ? "bg-emerald-500/30 text-emerald-50"
+                          : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
+                      }`}
+                    >
+                      Brand Tone active
+                    </span>
+                  ) : null}
                   {locked ? (
                     <span aria-hidden className="text-[11px] opacity-70">
                       🔒
@@ -1798,6 +1840,15 @@ export function DashboardPageClient() {
             plan={plan}
             checkoutLoading={checkoutLoading}
             onStartCheckout={startCheckout}
+          />
+        ) : null}
+
+        {tab === "brandTone" ? (
+          <BrandToneTab
+            plan={plan}
+            checkoutLoading={checkoutLoading}
+            onStartCheckout={startCheckout}
+            onProfileChange={setBrandToneSaved}
           />
         ) : null}
       </div>

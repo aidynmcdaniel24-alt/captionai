@@ -1,7 +1,6 @@
 "use client";
 
 import { BestTimeCard } from "@/components/dashboard/BestTimeCard";
-import { BrandToneSection } from "@/components/profile/BrandToneSection";
 import { WelcomeOnboardingModal } from "@/components/dashboard/WelcomeOnboardingModal";
 import { ChangePhotoButton } from "@/components/ChangePhotoButton";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -305,8 +304,6 @@ export default function ProfilePage() {
               ) : null}
             </div>
           </section>
-
-          <BrandToneSection plan={subscriptionPlan} />
 
           <div className="mt-6">
             <BestTimeCard platform="Instagram" />

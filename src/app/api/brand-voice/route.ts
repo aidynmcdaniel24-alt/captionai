@@ -35,15 +35,20 @@ function parsePersonality(raw: unknown): string[] {
     .filter((v) => PERSONALITY_OPTIONS.includes(v as (typeof PERSONALITY_OPTIONS)[number]));
 }
 
-// Only treat the table as truly missing when Postgres/PostgREST says the
-// relation does not exist. Matching on the error message text is unreliable
-// because almost every error (RLS denials, missing columns, permission issues)
-// mentions the table name "brand_voice".
-function isMissingTableError(error: { code?: string; message?: string }): boolean {
-  // 42P01 = undefined_table (Postgres); PGRST205 = table not found in schema cache.
-  if (error.code === "42P01" || error.code === "PGRST205") return true;
-  const msg = (error.message ?? "").toLowerCase();
-  return msg.includes("does not exist") || msg.includes("schema cache");
+// 42P01 = undefined_table in Postgres — the only case where we tell users to run the migration.
+function isMissingTableError(error: { code?: string }): boolean {
+  return error.code === "42P01";
+}
+
+function emptyBrandVoiceProfile() {
+  return {
+    brandName: "",
+    personality: [] as string[],
+    wordsToUse: [] as string[],
+    wordsToAvoid: [] as string[],
+    exampleCaption: "",
+    updatedAt: null as string | null,
+  };
 }
 
 function parseWordList(raw: unknown): string[] {
@@ -78,19 +83,25 @@ export async function GET(req: Request) {
       .maybeSingle();
 
     if (error) {
-      // Missing table — return empty profile with a helpful hint for admins.
+      const errorCode = (error as { code?: string }).code ?? "unknown";
+      const errorMessage = error.message ?? "unknown";
+      console.log("[brand-voice:get] Supabase error code:", errorCode);
+      console.log("[brand-voice:get] Supabase error message:", errorMessage);
+
       if (isMissingTableError(error)) {
         return NextResponse.json({
           plan,
           annualRequired: !isAnnualPlan(plan),
-          profile: null,
+          profile: emptyBrandVoiceProfile(),
           tableMissing: true,
         });
       }
-      return NextResponse.json(
-        { error: safeErrorMessage(error, "Could not load brand voice.") },
-        { status: 500 }
-      );
+
+      return NextResponse.json({
+        plan,
+        annualRequired: !isAnnualPlan(plan),
+        profile: emptyBrandVoiceProfile(),
+      });
     }
 
     return NextResponse.json({
@@ -105,13 +116,18 @@ export async function GET(req: Request) {
             exampleCaption: data.example_caption ?? "",
             updatedAt: data.updated_at,
           }
-        : null,
+        : emptyBrandVoiceProfile(),
     });
   } catch (e) {
-    return NextResponse.json(
-      { error: safeErrorMessage(e, "Could not load brand voice.") },
-      { status: 500 }
+    console.log(
+      "[brand-voice:get] unexpected exception:",
+      e instanceof Error ? e.message : String(e)
     );
+    return NextResponse.json({
+      plan,
+      annualRequired: !isAnnualPlan(plan),
+      profile: emptyBrandVoiceProfile(),
+    });
   }
 }
 
