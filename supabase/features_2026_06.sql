@@ -41,8 +41,8 @@ create table if not exists public.brand_voice (
   user_id text not null unique,
   brand_name text,
   personality jsonb not null default '[]'::jsonb,
-  words_to_use jsonb not null default '[]'::jsonb,
-  words_to_avoid jsonb not null default '[]'::jsonb,
+  words_to_use text,
+  words_to_avoid text,
   example_caption text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

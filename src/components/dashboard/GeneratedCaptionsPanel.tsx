@@ -65,7 +65,7 @@ export function GeneratedCaptionsPanel({
   const ratingsForTimes = captions.map((_, i) => captionRatings[i] ?? ("medium" as const));
   const research = bestTimeForPlatform(displayPlatform);
 
-  const { times, loading: timesLoading } = useCaptionBestTimes({
+  const { recommendations, loading: timesLoading } = useCaptionBestTimes({
     captions,
     ratings: ratingsForTimes,
     platform: displayPlatform,
@@ -297,7 +297,7 @@ export function GeneratedCaptionsPanel({
                         <CaptionScoreBar score={captionScores[index]!} />
                       ) : null}
                       <CaptionBestTimeBadge
-                        time={times[index]}
+                        recommendation={recommendations[index]}
                         rating={rating}
                         loading={timesLoading}
                         reason={research?.reason}

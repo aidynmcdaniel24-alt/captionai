@@ -1,5 +1,7 @@
 "use client";
 
+import type { BestTimeRecommendation } from "@/lib/best-time-recommendations";
+import { getBestTimeRecommendation } from "@/lib/best-time-recommendations";
 import type { CaptionRatingKey } from "@/lib/caption-rating-styles";
 import { useEffect, useMemo, useState } from "react";
 
@@ -20,7 +22,7 @@ export function useCaptionBestTimes({
   topic = "",
   enabled = true,
 }: UseCaptionBestTimesArgs) {
-  const [times, setTimes] = useState<(string | null)[]>([]);
+  const [recommendations, setRecommendations] = useState<(BestTimeRecommendation | null)[]>([]);
   const [loading, setLoading] = useState(false);
 
   const payloadKey = useMemo(() => {
@@ -39,7 +41,7 @@ export function useCaptionBestTimes({
   useEffect(() => {
     if (!payloadKey) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- clear state when the payload becomes empty (deps change)
-      setTimes([]);
+      setRecommendations([]);
       setLoading(false);
       return;
     }
@@ -70,22 +72,64 @@ export function useCaptionBestTimes({
             }),
             signal: ac.signal,
           });
-          const data = (await res.json()) as { times?: string[]; error?: string };
+          const data = (await res.json()) as {
+            recommendations?: BestTimeRecommendation[];
+            times?: string[];
+            error?: string;
+          };
           if (ac.signal.aborted) {
             return;
           }
-          if (res.ok && Array.isArray(data.times)) {
-            setTimes(data.times);
+          if (res.ok && Array.isArray(data.recommendations)) {
+            setRecommendations(data.recommendations);
+          } else if (res.ok && Array.isArray(data.times)) {
+            setRecommendations(
+              data.times.map((time, i) =>
+                getBestTimeRecommendation({
+                  platform: parsed.platform,
+                  topic: parsed.topic,
+                  tone: parsed.tone,
+                  caption: parsed.captions[i],
+                  rating: parsed.ratings[i] ?? "medium",
+                })
+              )
+            );
           } else {
-            setTimes(parsed.captions.map(() => null));
+            setRecommendations(
+              parsed.captions.map((caption, i) =>
+                getBestTimeRecommendation({
+                  platform: parsed.platform,
+                  topic: parsed.topic,
+                  tone: parsed.tone,
+                  caption,
+                  rating: parsed.ratings[i] ?? "medium",
+                })
+              )
+            );
           }
         } catch (e) {
           if (e instanceof DOMException && e.name === "AbortError") {
             return;
           }
           if (!ac.signal.aborted) {
-            const parsed = JSON.parse(payloadKey) as { captions: string[] };
-            setTimes(parsed.captions.map(() => null));
+            const parsed = JSON.parse(payloadKey) as {
+              captions: string[];
+              ratings: CaptionRatingKey[];
+              platform: string;
+              tone: string;
+              topic: string;
+            };
+            setRecommendations(
+              parsed.captions.map((caption, i) =>
+                getBestTimeRecommendation({
+                  platform: parsed.platform,
+                  topic: parsed.topic,
+                  tone: parsed.tone,
+                  caption,
+                  rating: parsed.ratings[i] ?? "medium",
+                })
+              )
+            );
           }
         } finally {
           if (!ac.signal.aborted) {
@@ -101,5 +145,7 @@ export function useCaptionBestTimes({
     };
   }, [payloadKey]);
 
-  return { times, loading };
+  const times = recommendations.map((r) => r?.time ?? null);
+
+  return { times, recommendations, loading };
 }

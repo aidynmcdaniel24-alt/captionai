@@ -65,6 +65,29 @@ function parseWordList(raw: unknown): string[] {
   return [];
 }
 
+function wordsToText(words: string[]): string | null {
+  const text = words.join(", ").trim();
+  return text || null;
+}
+
+function rowToProfile(data: {
+  brand_name: string | null;
+  personality: unknown;
+  words_to_use: unknown;
+  words_to_avoid: unknown;
+  example_caption: string | null;
+  updated_at?: string | null;
+}) {
+  return {
+    brandName: data.brand_name ?? "",
+    personality: parsePersonality(data.personality),
+    wordsToUse: parseWordList(data.words_to_use),
+    wordsToAvoid: parseWordList(data.words_to_avoid),
+    exampleCaption: data.example_caption ?? "",
+    updatedAt: data.updated_at ?? null,
+  };
+}
+
 export async function GET(req: Request) {
   const authResult = await requireUser(req, "brand-voice:get");
   if (!authResult.ok) return authResult.response;
@@ -107,16 +130,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       plan,
       annualRequired: !isAnnualPlan(plan),
-      profile: data
-        ? {
-            brandName: data.brand_name ?? "",
-            personality: parsePersonality(data.personality),
-            wordsToUse: parseWordList(data.words_to_use),
-            wordsToAvoid: parseWordList(data.words_to_avoid),
-            exampleCaption: data.example_caption ?? "",
-            updatedAt: data.updated_at,
-          }
-        : emptyBrandVoiceProfile(),
+      profile: data ? rowToProfile(data) : emptyBrandVoiceProfile(),
     });
   } catch (e) {
     console.log(
@@ -131,7 +145,7 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+async function saveBrandVoice(req: Request) {
   const authResult = await requireUser(req, "brand-voice:save");
   if (!authResult.ok) return authResult.response;
   const { userId } = authResult;
@@ -170,22 +184,30 @@ export async function POST(req: Request) {
     );
   }
 
+  const now = new Date().toISOString();
   const row = {
     user_id: userId,
     brand_name: brandName || null,
     personality,
-    words_to_use: wordsToUse,
-    words_to_avoid: wordsToAvoid,
+    words_to_use: wordsToText(wordsToUse),
+    words_to_avoid: wordsToText(wordsToAvoid),
     example_caption: exampleCaption || null,
-    updated_at: new Date().toISOString(),
+    updated_at: now,
   };
 
   try {
-    const { error } = await supabaseServer
+    const { data, error } = await supabaseServer
       .from("brand_voice")
-      .upsert(row, { onConflict: "user_id" });
+      .upsert(row, { onConflict: "user_id" })
+      .select("brand_name, personality, words_to_use, words_to_avoid, example_caption, updated_at")
+      .single();
 
     if (error) {
+      const errorCode = (error as { code?: string }).code ?? "unknown";
+      const errorMessage = error.message ?? "unknown";
+      console.log("[brand-voice:save] Supabase error code:", errorCode);
+      console.log("[brand-voice:save] Supabase error message:", errorMessage);
+
       if (isMissingTableError(error)) {
         return NextResponse.json(
           {
@@ -202,11 +224,24 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json({ ok: true, profile: row });
+    const profile = data ? rowToProfile(data) : rowToProfile({ ...row, updated_at: now });
+    return NextResponse.json({ ok: true, success: true, profile });
   } catch (e) {
+    console.log(
+      "[brand-voice:save] unexpected exception:",
+      e instanceof Error ? e.message : String(e)
+    );
     return NextResponse.json(
       { error: safeErrorMessage(e, "Could not save brand voice.") },
       { status: 500 }
     );
   }
+}
+
+export async function POST(req: Request) {
+  return saveBrandVoice(req);
+}
+
+export async function PUT(req: Request) {
+  return saveBrandVoice(req);
 }

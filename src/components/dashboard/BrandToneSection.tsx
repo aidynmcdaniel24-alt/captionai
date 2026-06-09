@@ -109,8 +109,8 @@ export function BrandToneSection({ onProfileChange }: Props) {
         body: JSON.stringify({
           brandName,
           personality,
-          wordsToUse: wordsToUse.split(/[,\n]/).map((s) => s.trim()).filter(Boolean),
-          wordsToAvoid: wordsToAvoid.split(/[,\n]/).map((s) => s.trim()).filter(Boolean),
+          wordsToUse,
+          wordsToAvoid,
           exampleCaption,
         }),
       });

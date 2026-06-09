@@ -11,6 +11,20 @@ type CopiedItem = {
   favoriteCount: number;
 };
 
+type BestCaption = {
+  caption: string;
+  score: number | null;
+  platform: string;
+  tone: string;
+};
+
+type WeekComparison = {
+  thisWeek: number;
+  lastWeek: number;
+  deltaPercent: number;
+  direction: "up" | "down" | "flat";
+};
+
 type AnalyticsResponse = {
   plan: "free" | "pro" | "annual";
   proRequired?: boolean;
@@ -27,6 +41,10 @@ type AnalyticsResponse = {
   mostUsedPlatform?: string | null;
   favoriteTone?: string | null;
   topTopics?: string[];
+  insights?: string[];
+  streak?: number;
+  bestCaption?: BestCaption | null;
+  weekComparison?: WeekComparison;
 };
 
 type Props = {
@@ -34,6 +52,17 @@ type Props = {
   checkoutLoading: boolean;
   onStartCheckout: (interval?: "month" | "year") => void;
 };
+
+const BAR_COLORS = [
+  "from-purple-500 to-fuchsia-500",
+  "from-violet-500 to-purple-500",
+  "from-indigo-500 to-violet-500",
+  "from-blue-500 to-indigo-500",
+  "from-cyan-500 to-blue-500",
+  "from-teal-500 to-cyan-500",
+  "from-emerald-500 to-teal-500",
+  "from-amber-500 to-orange-500",
+];
 
 const PLACEHOLDER: AnalyticsResponse = {
   plan: "free",
@@ -82,36 +111,57 @@ const PLACEHOLDER: AnalyticsResponse = {
   ],
   bestHourLabel: "19:00 UTC",
   favoritesCount: 42,
+  insights: [
+    "You generate most captions on Tuesday — consider scheduling your posts for then.",
+    "Instagram is your most used platform — you might want to try LinkedIn too.",
+    "Your captions score highest with a hype tone — keep using it!",
+  ],
+  streak: 5,
+  bestCaption: {
+    caption: "Three months in and this still doesn't feel real…",
+    score: 87,
+    platform: "Instagram",
+    tone: "Inspirational",
+  },
+  weekComparison: {
+    thisWeek: 18,
+    lastWeek: 12,
+    deltaPercent: 50,
+    direction: "up",
+  },
 };
 
-function deltaLabel(thisWeek: number, lastWeek: number): {
-  label: string;
-  positive: boolean;
-} {
-  if (lastWeek === 0 && thisWeek === 0) return { label: "no change", positive: true };
-  if (lastWeek === 0) return { label: "+100%", positive: true };
-  const pct = ((thisWeek - lastWeek) / Math.max(1, lastWeek)) * 100;
-  const rounded = Math.round(pct);
-  return {
-    label: `${rounded >= 0 ? "+" : ""}${rounded}%`,
-    positive: rounded >= 0,
-  };
-}
-
-function BarRow({ item, max }: { item: CountedItem; max: number }) {
-  const pct = max === 0 ? 0 : Math.max(2, Math.round((item.value / max) * 100));
+function BarRow({
+  item,
+  max,
+  colorIndex,
+}: {
+  item: CountedItem;
+  max: number;
+  colorIndex: number;
+}) {
+  const pct = max === 0 ? 0 : Math.max(4, Math.round((item.value / max) * 100));
+  const gradient = BAR_COLORS[colorIndex % BAR_COLORS.length];
   return (
-    <div className="grid grid-cols-[8rem_1fr_3rem] items-center gap-2 text-sm">
-      <span className="truncate font-medium text-zinc-700 dark:text-zinc-200">
+    <div className="grid grid-cols-[7rem_1fr_2.5rem] items-center gap-2 text-sm">
+      <span
+        className="truncate font-medium text-zinc-700 dark:text-zinc-200"
+        title={item.name}
+      >
         {item.name}
       </span>
-      <div className="h-2 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+      <div className="h-3 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-500"
+          className={`h-full rounded-full bg-gradient-to-r ${gradient} transition-all duration-500`}
           style={{ width: `${pct}%` }}
+          role="progressbar"
+          aria-valuenow={item.value}
+          aria-valuemin={0}
+          aria-valuemax={max}
+          aria-label={`${item.name}: ${item.value}`}
         />
       </div>
-      <span className="text-right font-mono text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
+      <span className="text-right font-mono text-xs tabular-nums font-semibold text-zinc-600 dark:text-zinc-300">
         {item.value}
       </span>
     </div>
@@ -122,13 +172,24 @@ function StatCard({
   label,
   value,
   hint,
+  accent,
 }: {
   label: string;
   value: string | number;
   hint?: string;
+  accent?: "purple" | "emerald" | "amber" | "blue";
 }) {
+  const accentBorder = {
+    purple: "border-purple-200 dark:border-purple-800/50",
+    emerald: "border-emerald-200 dark:border-emerald-800/50",
+    amber: "border-amber-200 dark:border-amber-800/50",
+    blue: "border-blue-200 dark:border-blue-800/50",
+  }[accent ?? "purple"];
+
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80">
+    <div
+      className={`rounded-2xl border bg-white p-4 shadow-sm dark:bg-zinc-900/80 ${accentBorder}`}
+    >
       <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
         {label}
       </p>
@@ -142,56 +203,137 @@ function StatCard({
   );
 }
 
+function WeekComparisonCard({ comparison }: { comparison: WeekComparison }) {
+  const { thisWeek, lastWeek, deltaPercent, direction } = comparison;
+  const arrow = direction === "up" ? "↑" : direction === "down" ? "↓" : "→";
+  const color =
+    direction === "up"
+      ? "text-emerald-600 dark:text-emerald-400"
+      : direction === "down"
+        ? "text-red-600 dark:text-red-400"
+        : "text-zinc-500";
+
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-gradient-to-br from-white to-zinc-50 p-4 shadow-sm dark:border-zinc-800 dark:from-zinc-900/80 dark:to-zinc-950/60">
+      <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
+        This week vs last week
+      </p>
+      <div className="mt-3 flex items-end gap-4">
+        <div>
+          <p className="text-3xl font-bold tabular-nums text-zinc-900 dark:text-white">
+            {thisWeek}
+          </p>
+          <p className="text-xs text-zinc-500">This week</p>
+        </div>
+        <div className={`text-2xl font-bold ${color}`} aria-hidden>
+          {arrow}
+        </div>
+        <div>
+          <p className="text-xl font-semibold tabular-nums text-zinc-600 dark:text-zinc-300">
+            {lastWeek}
+          </p>
+          <p className="text-xs text-zinc-500">Last week</p>
+        </div>
+        <div className={`ml-auto text-right text-sm font-semibold ${color}`}>
+          {direction === "flat" ? "No change" : `${deltaPercent >= 0 ? "+" : ""}${deltaPercent}%`}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AnalyticsView({ data, blurred }: { data: AnalyticsResponse; blurred: boolean }) {
   const platformMax = data.platforms[0]?.value ?? 0;
   const toneMax = data.tones[0]?.value ?? 0;
   const languageMax = data.languages[0]?.value ?? 0;
-  const delta = deltaLabel(data.thisWeek, data.lastWeek);
+  const insights = data.insights ?? [];
+  const streak = data.streak ?? 0;
+  const weekComparison = data.weekComparison ?? {
+    thisWeek: data.thisWeek,
+    lastWeek: data.lastWeek,
+    deltaPercent: 0,
+    direction: "flat" as const,
+  };
 
   return (
     <div className={blurred ? "select-none blur-sm pointer-events-none" : ""} aria-hidden={blurred}>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Total captions" value={data.total} hint="All time" />
+      {insights.length > 0 ? (
+        <div className="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-fuchsia-50 p-5 dark:border-purple-800/40 dark:from-purple-950/30 dark:to-fuchsia-950/20">
+          <div className="flex items-center gap-2">
+            <span className="text-xl" aria-hidden>
+              💡
+            </span>
+            <h3 className="text-sm font-bold text-purple-900 dark:text-purple-100">
+              Your insights
+            </h3>
+          </div>
+          <ul className="mt-3 space-y-2">
+            {insights.map((insight, i) => (
+              <li
+                key={i}
+                className="flex gap-2 text-sm leading-relaxed text-purple-900/90 dark:text-purple-100/90"
+              >
+                <span className="mt-0.5 shrink-0 text-purple-500" aria-hidden>
+                  •
+                </span>
+                {insight}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="Total captions" value={data.total} hint="All time" accent="purple" />
         <StatCard
-          label="This week"
-          value={data.thisWeek}
-          hint={`${delta.label} vs last week`}
+          label="Day streak"
+          value={streak > 0 ? `🔥 ${streak}` : "—"}
+          hint={streak > 0 ? "Days in a row" : "Generate daily to build a streak"}
+          accent="amber"
         />
         <StatCard
           label="Captions copied"
           value={data.copiesCount ?? data.favoritesCount}
-          hint="Caption memory"
+          hint="Your best picks"
+          accent="emerald"
         />
         <StatCard
-          label="Best hour"
+          label="Peak hour"
           value={data.bestHourLabel ?? "—"}
           hint="When you create most"
+          accent="blue"
         />
       </div>
 
-      {data.mostUsedPlatform || data.favoriteTone || (data.topTopics?.length ?? 0) > 0 ? (
-        <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-800/40 dark:bg-emerald-950/20">
-          <h3 className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
-            Caption memory insights
-          </h3>
-          <ul className="mt-2 space-y-1 text-sm text-emerald-800 dark:text-emerald-200">
-            {data.mostUsedPlatform ? (
-              <li>
-                <span className="font-medium">Your most used platform:</span> {data.mostUsedPlatform}
-              </li>
-            ) : null}
-            {data.favoriteTone ? (
-              <li>
-                <span className="font-medium">Your favorite tone:</span> {data.favoriteTone}
-              </li>
-            ) : null}
-            {data.topTopics && data.topTopics.length > 0 ? (
-              <li>
-                <span className="font-medium">Best performing topics:</span>{" "}
-                {data.topTopics.join(", ")}
-              </li>
-            ) : null}
-          </ul>
+      <div className="mt-4">
+        <WeekComparisonCard comparison={weekComparison} />
+      </div>
+
+      {data.bestCaption ? (
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50 p-5 dark:border-amber-800/40 dark:from-amber-950/25 dark:to-yellow-950/20">
+          <div className="flex items-center gap-2">
+            <span className="text-xl" aria-hidden>
+              🏆
+            </span>
+            <h3 className="text-sm font-bold text-amber-900 dark:text-amber-100">
+              Your best caption
+            </h3>
+            {data.bestCaption.score != null ? (
+              <span className="ml-auto rounded-full bg-amber-200 px-2.5 py-0.5 text-xs font-bold text-amber-900 dark:bg-amber-900/50 dark:text-amber-200">
+                Score {data.bestCaption.score}
+              </span>
+            ) : (
+              <span className="ml-auto rounded-full bg-amber-200 px-2.5 py-0.5 text-xs font-bold text-amber-900 dark:bg-amber-900/50 dark:text-amber-200">
+                AI Best pick
+              </span>
+            )}
+          </div>
+          <p className="mt-3 text-sm leading-relaxed text-amber-950 dark:text-amber-50">
+            &ldquo;{data.bestCaption.caption}&rdquo;
+          </p>
+          <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+            {data.bestCaption.platform} · {data.bestCaption.tone}
+          </p>
         </div>
       ) : null}
 
@@ -200,12 +342,14 @@ function AnalyticsView({ data, blurred }: { data: AnalyticsResponse; blurred: bo
           <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">
             Most used platforms
           </h3>
-          <div className="mt-3 flex flex-col gap-2.5">
+          <div className="mt-3 flex flex-col gap-3">
             {data.platforms.length === 0 ? (
-              <p className="text-sm text-zinc-500">No data yet</p>
+              <p className="text-sm text-zinc-500">
+                Generate your first caption to see which platforms you prefer.
+              </p>
             ) : (
-              data.platforms.map((p) => (
-                <BarRow key={p.name} item={p} max={platformMax} />
+              data.platforms.map((p, i) => (
+                <BarRow key={p.name} item={p} max={platformMax} colorIndex={i} />
               ))
             )}
           </div>
@@ -215,11 +359,15 @@ function AnalyticsView({ data, blurred }: { data: AnalyticsResponse; blurred: bo
           <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">
             Most used tones
           </h3>
-          <div className="mt-3 flex flex-col gap-2.5">
+          <div className="mt-3 flex flex-col gap-3">
             {data.tones.length === 0 ? (
-              <p className="text-sm text-zinc-500">No data yet</p>
+              <p className="text-sm text-zinc-500">
+                Try different tones — we&apos;ll show which ones you love most.
+              </p>
             ) : (
-              data.tones.map((p) => <BarRow key={p.name} item={p} max={toneMax} />)
+              data.tones.map((p, i) => (
+                <BarRow key={p.name} item={p} max={toneMax} colorIndex={i + 2} />
+              ))
             )}
           </div>
         </div>
@@ -230,12 +378,14 @@ function AnalyticsView({ data, blurred }: { data: AnalyticsResponse; blurred: bo
           <h3 className="text-sm font-semibold text-zinc-900 dark:text-white">
             Language breakdown
           </h3>
-          <div className="mt-3 flex flex-col gap-2.5">
+          <div className="mt-3 flex flex-col gap-3">
             {data.languages.length === 0 ? (
-              <p className="text-sm text-zinc-500">No data yet</p>
+              <p className="text-sm text-zinc-500">
+                Generate captions in different languages to see your mix here.
+              </p>
             ) : (
-              data.languages.map((p) => (
-                <BarRow key={p.name} item={p} max={languageMax} />
+              data.languages.map((p, i) => (
+                <BarRow key={p.name} item={p} max={languageMax} colorIndex={i + 4} />
               ))
             )}
           </div>
@@ -247,7 +397,9 @@ function AnalyticsView({ data, blurred }: { data: AnalyticsResponse; blurred: bo
           </h3>
           <ol className="mt-3 flex flex-col gap-3">
             {data.topCopied.length === 0 ? (
-              <p className="text-sm text-zinc-500">No data yet</p>
+              <p className="text-sm text-zinc-500">
+                Copy captions you love — we&apos;ll track which ones perform best for you.
+              </p>
             ) : (
               data.topCopied.map((c, idx) => (
                 <li
@@ -258,7 +410,7 @@ function AnalyticsView({ data, blurred }: { data: AnalyticsResponse; blurred: bo
                     {c.caption}
                   </p>
                   <p className="mt-1 text-xs text-zinc-500">
-                    {c.platform} · {c.tone} · ⭐ {c.favoriteCount}
+                    {c.platform} · {c.tone} · copied {c.favoriteCount}×
                   </p>
                 </li>
               ))
@@ -299,13 +451,12 @@ export function AnalyticsTab({ plan, checkoutLoading, onStartCheckout }: Props) 
   }, [load]);
 
   const isFree = !isProPlan(plan);
-  const empty =
-    data && !data.proRequired && data.total === 0;
+  const empty = data && !data.proRequired && data.total === 0;
 
   if (loading && !data) {
     return (
       <div className="rounded-2xl border border-zinc-200 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/80">
-        Loading analytics…
+        Loading your personal analytics…
       </div>
     );
   }
@@ -325,11 +476,11 @@ export function AnalyticsTab({ plan, checkoutLoading, onStartCheckout }: Props) 
     <div className="relative">
       <div className="mb-3">
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
-          Caption Analytics
+          Your Caption Coach
         </h2>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Where your captions are landing — platforms, tones, language, and the
-          ones you actually save.
+          Personalized insights on your habits, streaks, and what&apos;s working — not just
+          numbers.
         </p>
       </div>
 
@@ -341,11 +492,11 @@ export function AnalyticsTab({ plan, checkoutLoading, onStartCheckout }: Props) 
               Pro feature
             </span>
             <h3 className="max-w-md text-xl font-bold text-zinc-900 sm:text-2xl dark:text-white">
-              Upgrade to Pro to see your analytics
+              Upgrade to Pro to unlock your caption coach
             </h3>
             <p className="max-w-md text-sm text-zinc-600 dark:text-zinc-300">
-              Track which platforms, tones, and times of day are working best
-              for you. See the captions you save the most.
+              Get personalized insights, streak tracking, week-over-week trends, and your
+              highest-scoring captions.
             </p>
             <button
               type="button"
@@ -358,14 +509,14 @@ export function AnalyticsTab({ plan, checkoutLoading, onStartCheckout }: Props) 
           </div>
         </div>
       ) : empty ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-900/80">
-          <p className="text-3xl">📊</p>
-          <h3 className="mt-3 text-lg font-semibold text-zinc-900 dark:text-white">
-            No data yet
+        <div className="rounded-2xl border border-dashed border-purple-300 bg-gradient-to-br from-purple-50/50 to-fuchsia-50/50 p-10 text-center dark:border-purple-700/50 dark:from-purple-950/20 dark:to-fuchsia-950/20">
+          <p className="text-4xl">📊</p>
+          <h3 className="mt-4 text-xl font-bold text-zinc-900 dark:text-white">
+            Your coach is ready — let&apos;s get started
           </h3>
-          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            Generate a few captions and your analytics will start showing up
-            here.
+          <p className="mx-auto mt-2 max-w-md text-sm text-zinc-600 dark:text-zinc-400">
+            Generate your first caption to see personalized insights, streak tracking, and
+            week-over-week trends. The more you create, the smarter your coach gets.
           </p>
         </div>
       ) : data ? (

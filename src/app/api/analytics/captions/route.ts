@@ -18,10 +18,107 @@ type HistoryRow = {
   tone: string | null;
   language: string | null;
   captions: unknown;
+  ai_ratings?: string[] | null;
   created_at: string;
 };
 
 type CountedItem = { name: string; value: number };
+
+const DAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+function computeStreak(timestamps: number[]): number {
+  if (timestamps.length === 0) return 0;
+  const days = new Set(
+    timestamps.map((t) => {
+      const d = new Date(t);
+      d.setUTCHours(0, 0, 0, 0);
+      return d.getTime();
+    })
+  );
+  const oneDay = 24 * 60 * 60 * 1000;
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  let cursor = today.getTime();
+  if (!days.has(cursor)) {
+    cursor -= oneDay;
+  }
+  let streak = 0;
+  while (days.has(cursor)) {
+    streak++;
+    cursor -= oneDay;
+  }
+  return streak;
+}
+
+function buildInsights(args: {
+  dayOfWeekCounts: number[];
+  platforms: CountedItem[];
+  tones: CountedItem[];
+  thisWeek: number;
+  lastWeek: number;
+  streak: number;
+}): string[] {
+  const insights: string[] = [];
+  const { dayOfWeekCounts, platforms, tones, thisWeek, lastWeek, streak } = args;
+
+  let busiestIdx = 0;
+  let busiestVal = 0;
+  dayOfWeekCounts.forEach((v, i) => {
+    if (v > busiestVal) {
+      busiestVal = v;
+      busiestIdx = i;
+    }
+  });
+  if (busiestVal > 0) {
+    insights.push(
+      `You generate most captions on ${DAY_NAMES[busiestIdx]} — consider scheduling your posts for then.`
+    );
+  }
+
+  const topPlatform = platforms[0]?.name;
+  if (topPlatform) {
+    const hasLinkedIn = platforms.some((p) =>
+      p.name.toLowerCase().includes("linkedin")
+    );
+    if (!hasLinkedIn && topPlatform.toLowerCase() !== "linkedin") {
+      insights.push(
+        `${topPlatform} is your most used platform — you might want to try LinkedIn too.`
+      );
+    } else {
+      insights.push(
+        `${topPlatform} is your go-to platform — double down on what works there.`
+      );
+    }
+  }
+
+  const topTone = tones[0]?.name;
+  if (topTone) {
+    insights.push(
+      `Your captions score highest with a ${topTone.toLowerCase()} tone — keep using it!`
+    );
+  }
+
+  if (thisWeek > lastWeek && lastWeek > 0) {
+    const pct = Math.round(((thisWeek - lastWeek) / lastWeek) * 100);
+    insights.push(
+      `Usage is up ${pct}% this week — you're building great momentum.`
+    );
+  } else if (streak >= 3) {
+    insights.push(
+      `You're on a ${streak}-day streak — consistency is how creators win.`
+    );
+  }
+
+  return insights.slice(0, 3);
+}
 
 function countBy(rows: HistoryRow[], key: keyof HistoryRow): CountedItem[] {
   const map = new Map<string, number>();
@@ -84,12 +181,16 @@ export async function GET(req: Request) {
       mostUsedPlatform: null,
       favoriteTone: null,
       topTopics: [],
+      insights: [],
+      streak: 0,
+      bestCaption: null,
+      weekComparison: { thisWeek: 0, lastWeek: 0, deltaPercent: 0, direction: "flat" as const },
     });
   }
 
   const { data: rowsData, error } = await supabaseServer
     .from("caption_history")
-    .select("id, topic, platform, tone, language, captions, created_at")
+    .select("id, topic, platform, tone, language, captions, ai_ratings, created_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(2000);
@@ -111,14 +212,30 @@ export async function GET(req: Request) {
   let thisWeek = 0;
   let lastWeek = 0;
   const hourBuckets = new Array<number>(24).fill(0);
+  const dayOfWeekCounts = new Array<number>(7).fill(0);
+  const activityTimestamps: number[] = [];
 
   for (const row of rows) {
     const t = Date.parse(row.created_at);
     if (Number.isNaN(t)) continue;
+    activityTimestamps.push(t);
     if (t >= weekStart) thisWeek++;
     else if (t >= lastWeekStart) lastWeek++;
-    const hour = new Date(t).getUTCHours();
-    hourBuckets[hour] = (hourBuckets[hour] ?? 0) + 1;
+    const dt = new Date(t);
+    hourBuckets[dt.getUTCHours()] = (hourBuckets[dt.getUTCHours()] ?? 0) + 1;
+    dayOfWeekCounts[dt.getUTCDay()] = (dayOfWeekCounts[dt.getUTCDay()] ?? 0) + 1;
+  }
+
+  const streak = computeStreak(activityTimestamps);
+
+  let deltaPercent = 0;
+  let direction: "up" | "down" | "flat" = "flat";
+  if (lastWeek === 0 && thisWeek > 0) {
+    deltaPercent = 100;
+    direction = "up";
+  } else if (lastWeek > 0) {
+    deltaPercent = Math.round(((thisWeek - lastWeek) / lastWeek) * 100);
+    direction = deltaPercent > 0 ? "up" : deltaPercent < 0 ? "down" : "flat";
   }
 
   const bestHour = hourBuckets.reduce(
@@ -225,6 +342,57 @@ export async function GET(req: Request) {
     }
   }
 
+  const insights = buildInsights({
+    dayOfWeekCounts,
+    platforms,
+    tones,
+    thisWeek,
+    lastWeek,
+    streak,
+  });
+
+  let bestCaption: {
+    caption: string;
+    score: number | null;
+    platform: string;
+    tone: string;
+  } | null = null;
+
+  if (copyRows && copyRows.length > 0) {
+    const scored = copyRows
+      .filter((r) => typeof r.score === "number" && (r.caption_text as string)?.trim())
+      .sort((a, b) => (b.score as number) - (a.score as number));
+    const top = scored[0];
+    if (top) {
+      bestCaption = {
+        caption: (top.caption_text as string).trim(),
+        score: top.score as number,
+        platform: (top.platform as string) ?? "—",
+        tone: (top.tone as string) ?? "—",
+      };
+    }
+  }
+
+  if (!bestCaption) {
+    for (const row of rows) {
+      if (!Array.isArray(row.captions) || !Array.isArray(row.ai_ratings)) continue;
+      const ratings = row.ai_ratings as string[];
+      const bestIdx = ratings.findIndex((r) => r === "best");
+      if (bestIdx >= 0) {
+        const text = (row.captions as unknown[])[bestIdx];
+        if (typeof text === "string" && text.trim()) {
+          bestCaption = {
+            caption: text.trim(),
+            score: null,
+            platform: row.platform ?? "—",
+            tone: row.tone ?? "—",
+          };
+          break;
+        }
+      }
+    }
+  }
+
   return NextResponse.json({
     plan,
     proRequired: false,
@@ -242,5 +410,14 @@ export async function GET(req: Request) {
     mostUsedPlatform: memoryPlatform,
     favoriteTone: memoryTone,
     topTopics,
+    insights,
+    streak,
+    bestCaption,
+    weekComparison: {
+      thisWeek,
+      lastWeek,
+      deltaPercent,
+      direction,
+    },
   });
 }

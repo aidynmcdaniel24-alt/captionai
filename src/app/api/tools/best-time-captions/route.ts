@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import {
+  getBestTimeRecommendation,
+  type BestTimeRecommendation,
+} from "@/lib/best-time-recommendations";
 import { bestTimeResearchBlock } from "@/lib/best-time-data";
 import type { CaptionRatingKey } from "@/lib/caption-rating-styles";
 import { guardTopic } from "@/lib/content-moderation";
@@ -29,24 +33,59 @@ type CaptionItem = {
   rating: CaptionRatingKey;
 };
 
-function parseTimes(raw: string, expected: number): string[] | null {
+function fallbackRecommendations(
+  items: CaptionItem[],
+  platform: string,
+  topic: string,
+  tone: string
+): BestTimeRecommendation[] {
+  return items.map((item) =>
+    getBestTimeRecommendation({
+      platform,
+      topic,
+      tone,
+      caption: item.caption,
+      rating: item.rating,
+    })
+  );
+}
+
+function parseRecommendations(
+  raw: string,
+  expected: number,
+  fallback: BestTimeRecommendation[]
+): BestTimeRecommendation[] | null {
   const payload = extractJsonPayload(raw);
   try {
-    const j = JSON.parse(payload) as { times?: unknown };
-    if (!Array.isArray(j.times) || j.times.length !== expected) {
+    const j = JSON.parse(payload) as { recommendations?: unknown };
+    if (!Array.isArray(j.recommendations) || j.recommendations.length !== expected) {
       return null;
     }
-    const times = j.times.map((t) => {
-      const s = String(t ?? "").trim();
-      if (!s || s.length > 80) {
-        return null;
-      }
-      return s;
+    const recs = j.recommendations.map((entry, i) => {
+      const row = entry as {
+        time?: unknown;
+        reason?: unknown;
+        stat?: unknown;
+        confidence?: unknown;
+      };
+      const time = String(row.time ?? "").trim();
+      const reason = String(row.reason ?? "").trim();
+      const stat = String(row.stat ?? "").trim();
+      const conf = String(row.confidence ?? "").trim();
+      if (!time || time.length > 80 || !reason) return null;
+      const confidence =
+        conf === "High" || conf === "Medium" || conf === "Low"
+          ? conf
+          : fallback[i]?.confidence ?? "Medium";
+      return {
+        time,
+        reason,
+        stat: stat || fallback[i]?.stat || "Posts perform better in peak windows.",
+        confidence,
+      } satisfies BestTimeRecommendation;
     });
-    if (times.some((t) => t === null)) {
-      return null;
-    }
-    return times as string[];
+    if (recs.some((r) => r === null)) return null;
+    return recs as BestTimeRecommendation[];
   } catch {
     return null;
   }
@@ -98,6 +137,8 @@ export async function POST(req: Request) {
     items.push({ caption, rating });
   }
 
+  const fallbacks = fallbackRecommendations(items, platform, topic, tone);
+
   if (topic) {
     const moderation = await guardTopic(topic, {
       userId,
@@ -108,13 +149,13 @@ export async function POST(req: Request) {
 
   const groq = getGroqClient();
   if (!groq) {
-    return NextResponse.json({ error: "AI unavailable." }, { status: 503 });
+    return NextResponse.json({ recommendations: fallbacks, times: fallbacks.map((r) => r.time) });
   }
 
   const lines = items
     .map(
       (item, i) =>
-        `${i + 1}. [rating: ${item.rating}] "${item.caption.slice(0, 400)}${item.caption.length > 400 ? "…" : ""}"`,
+        `${i + 1}. [rating: ${item.rating}] "${item.caption.slice(0, 400)}${item.caption.length > 400 ? "…" : ""}"`
     )
     .join("\n");
 
@@ -123,41 +164,51 @@ export async function POST(req: Request) {
       groq.chat.completions.create({
         model: "llama-3.3-70b-versatile",
         temperature: 0.4,
-        max_tokens: 450,
+        max_tokens: 900,
         messages: [
           {
             role: "system",
-            content: `You recommend optimal posting windows for individual social media captions, grounded in real engagement research. Reply with strict JSON only: {"times":["...","..."]}.
+            content: `You recommend optimal posting windows for individual social media captions, grounded in real engagement research. Reply with strict JSON only: {"recommendations":[{"time":"...","reason":"...","stat":"...","confidence":"High|Medium|Low"},...]}.
 
 INDUSTRY ENGAGEMENT RESEARCH (Later, Sprout Social, Hootsuite) — use these as the foundation:
 ${bestTimeResearchBlock()}
 
+TOPIC-SPECIFIC WINDOWS:
+- Gym/fitness: early morning 5-7am and evening 6-8pm
+- Food: 11am-1pm (lunch) and 5-7pm (dinner prep)
+- Business/LinkedIn: Tuesday-Thursday 8-11am
+- Entertainment/TikTok: evenings 7-10pm and weekends
+- Travel: Friday evening and Saturday morning
+- Fashion: weekday evenings 6-9pm
+
 Rules:
-- Return exactly ${items.length} strings in "times", same order as the captions.
-- Each string is SHORT for a UI badge: a day or day-range plus a time window, e.g. "Tuesday 7pm – 9pm" or "Weekday 9am – 11am". No sentences, no timezone lectures.
-- Start from the research windows for ${platform}, then fine-tune using the caption content/topic to infer when that audience cares.
-- Tone: ${tone} — funny/hype/inspirational skew evenings and weekends; professional skew weekday business hours.
-- Rating: "best" captions get the prime peak-engagement slot from the research; "medium" get solid but secondary windows; "worst" get off-peak or experimental slots.
-- Use en-dash (–) between times. English only.`,
+- Return exactly ${items.length} objects in "recommendations", same order as captions.
+- "time": SHORT badge text, e.g. "Tuesday 8pm – 9pm" (use en-dash –).
+- "reason": ONE plain-English sentence explaining WHY this window works for this caption's topic and platform.
+- "stat": ONE short data point, e.g. "Posts get 38% more reach." — realistic percentages 25-45%.
+- "confidence": "High" for best-rated captions at peak windows, "Medium" for solid slots, "Low" for off-peak/experimental.
+- Platform: ${platform}. Tone: ${tone}. Fine-tune using caption content.`,
           },
           {
             role: "user",
-            content: `Topic context: ${topic || "(none)"}\nPlatform: ${platform}\nTone: ${tone}\n\nCaptions:\n${lines}\n\nReturn JSON with key "times" only.`,
+            content: `Topic context: ${topic || "(none)"}\nPlatform: ${platform}\nTone: ${tone}\n\nCaptions:\n${lines}\n\nReturn JSON with key "recommendations" only.`,
           },
         ],
-      }),
+      })
     );
 
     const content = completion.choices[0]?.message?.content ?? "";
-    const times = parseTimes(content, items.length);
-    if (!times) {
-      return NextResponse.json({ error: "Could not parse AI response." }, { status: 502 });
-    }
-    return NextResponse.json({ times });
-  } catch (e) {
-    return NextResponse.json(
-      { error: safeErrorMessage(e, "Could not generate posting times.") },
-      { status: 500 }
-    );
+    const recommendations =
+      parseRecommendations(content, items.length, fallbacks) ?? fallbacks;
+
+    return NextResponse.json({
+      recommendations,
+      times: recommendations.map((r) => r.time),
+    });
+  } catch {
+    return NextResponse.json({
+      recommendations: fallbacks,
+      times: fallbacks.map((r) => r.time),
+    });
   }
 }

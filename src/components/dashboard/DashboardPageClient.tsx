@@ -55,6 +55,34 @@ const LANGUAGES = [
   "Korean",
 ];
 
+const DASHBOARD_TAB_ROWS = [
+  {
+    label: "Create",
+    tabs: [
+      ["captions", "Captions", "free"],
+      ["hashtags", "Hashtags", "free"],
+      ["bio", "Bio", "free"],
+      ["rewriter", "Rewriter", "pro"],
+      ["emojis", "Emojis", "pro"],
+      ["trending", "Trending", "free"],
+    ],
+  },
+  {
+    label: "Analyze & Plan",
+    tabs: [
+      ["ab", "A/B test", "free"],
+      ["grader", "Grader", "annual"],
+      ["hashtagAnalyzer", "Hashtags+", "annual"],
+      ["calendar", "Calendar", "annual"],
+      ["hookLibrary", "Hook Library", "free"],
+      ["analytics", "Analytics", "pro"],
+      ["brandTone", "Brand Tone", "annual"],
+      ["favorites", "Favorites", "free"],
+      ["collections", "Collections", "pro"],
+    ],
+  },
+] as const;
+
 type Tab =
   | "captions"
   | "rewriter"
@@ -412,7 +440,6 @@ export function DashboardPageClient() {
         setPlan(data.plan);
       }
       applyTokenInfo(data.tokens);
-      await refreshPlan();
     } catch {
       setError("Could not generate captions. Please try again.");
     } finally {
@@ -986,75 +1013,73 @@ export function DashboardPageClient() {
           </div>
         ) : null}
 
-        <div className="relative -mx-1">
-          <div
-            className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-2 scrollbar-thin-x dark:border-zinc-800 dark:bg-zinc-900/60"
-            role="tablist"
-            aria-label="Studio sections"
-            style={{ scrollBehavior: "smooth", WebkitOverflowScrolling: "touch" }}
-          >
-            <div className="flex min-w-max gap-1.5 sm:gap-2">
-            {(
-              [
-                ["captions", "Captions", "free" as const],
-                ["rewriter", "Rewriter", "pro" as const],
-                ["emojis", "Emojis", "pro" as const],
-                ["hashtagAnalyzer", "Hashtags+", "annual" as const],
-                ["grader", "Grader", "annual" as const],
-                ["calendar", "Calendar", "annual" as const],
-                ["hashtags", "Hashtags", "free" as const],
-                ["bio", "Bio", "free" as const],
-                ["trending", "Trending", "free" as const],
-                ["ab", "A/B test", "free" as const],
-                ["favorites", "Favorites", "free" as const],
-                ["collections", "Collections", "pro" as const],
-                ["hookLibrary", "Hook Library", "free" as const],
-                ["analytics", "Analytics", "pro" as const],
-                ["brandTone", "Brand Tone", "annual" as const],
-              ] as const
-            ).map(([id, label, tier]) => {
-              const locked =
-                tier === "pro"
-                  ? !isProPlan(plan)
-                  : tier === "annual"
-                    ? !isAnnualPlan(plan)
-                    : false;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  role="tab"
-                  aria-selected={tab === id}
-                  onClick={() => setTab(id)}
-                  className={`inline-flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition ${
-                    tab === id
-                      ? "bg-purple-600 text-white shadow-sm"
-                      : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                  }`}
-                >
-                  {label}
-                  {id === "captions" && brandToneSaved ? (
-                    <span
-                      title="Your saved brand tone will apply to caption generation."
-                      className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+        <div className="relative -mx-1 space-y-2">
+          {DASHBOARD_TAB_ROWS.map((row) => (
+            <div
+              key={row.label}
+              className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-2 scrollbar-thin-x dark:border-zinc-800 dark:bg-zinc-900/60"
+              role="tablist"
+              aria-label={`${row.label} sections`}
+              style={{ scrollBehavior: "smooth", WebkitOverflowScrolling: "touch" }}
+            >
+              <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                {row.label}
+              </p>
+              <div className="flex min-w-max gap-1.5 sm:gap-2">
+                {row.tabs.map(([id, label, tier]) => {
+                  const locked =
+                    tier === "pro"
+                      ? !isProPlan(plan)
+                      : tier === "annual"
+                        ? !isAnnualPlan(plan)
+                        : false;
+                  const upgradeHint =
+                    tier === "annual"
+                      ? "Annual feature — upgrade to unlock"
+                      : tier === "pro"
+                        ? "Pro feature — upgrade to unlock"
+                        : undefined;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      role="tab"
+                      aria-selected={tab === id}
+                      aria-label={locked ? `${label} (${upgradeHint})` : label}
+                      title={locked ? upgradeHint : undefined}
+                      onClick={() => setTab(id as Tab)}
+                      className={`inline-flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition ${
                         tab === id
-                          ? "bg-emerald-500/30 text-emerald-50"
-                          : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
+                          ? "bg-purple-600 text-white shadow-sm"
+                          : locked
+                            ? "text-zinc-500 hover:bg-purple-50 dark:text-zinc-400 dark:hover:bg-purple-950/30"
+                            : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
                       }`}
                     >
-                      Brand Tone active
-                    </span>
-                  ) : null}
-                  {locked ? (
-                    <span aria-hidden className="text-[11px] opacity-70">
-                      🔒
-                    </span>
-                  ) : null}
-                  </button>
-                );
-              })}
+                      {label}
+                      {id === "captions" && brandToneSaved ? (
+                        <span
+                          title="Your saved brand tone will apply to caption generation."
+                          className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                            tab === id
+                              ? "bg-emerald-500/30 text-emerald-50"
+                              : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
+                          }`}
+                        >
+                          Brand Tone active
+                        </span>
+                      ) : null}
+                      {locked ? (
+                        <span className="text-[10px] font-semibold opacity-80" aria-hidden>
+                          🔒
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ))}
         </div>
 
         {error ? (
