@@ -84,12 +84,12 @@ const PLATFORM_PROFILES: Record<string, PlatformProfile> = {
     length:
       "EXACTLY 3-5 sentences of body copy. The body copy must NEVER contain any hashtags. After the final sentence of body copy ends (with its punctuation and any closing emoji), insert a literal blank line (a \\n\\n line break), then place all hashtags together on the FINAL line as a single space-separated block.",
     hashtags:
-      "8-12 hashtags total. ABSOLUTE RULE: hashtags MUST appear on a completely separate new line at the very end of the caption, with one fully blank line between the body copy and the hashtag line. NEVER inline a hashtag inside a sentence. NEVER put a hashtag on the same line as body copy. NEVER mix hashtags into the paragraph. Format: <body copy>\\n\\n#tag1 #tag2 #tag3 ... Mix 2-3 broader reach tags with 6-9 niche tags that genuinely match the content. All lowercase, no spaces inside a tag, no banned or generic spam tags.",
+      "8-12 hashtags total. ABSOLUTE RULE: hashtags MUST appear on a completely separate new line at the very end of the caption, with one fully blank line (\\n\\n) between the body copy and the hashtag line. NEVER inline a hashtag inside a sentence. NEVER put a hashtag on the same line as body copy. NEVER mix hashtags into the paragraph. Format: <body copy>\\n\\n#tag1 #tag2 #tag3 ... Mix 2-3 broader reach tags with 6-9 niche tags that genuinely match the content. All lowercase, no spaces inside a tag. VERIFY SPELLING of every hashtag before returning — typos like #coldplunch instead of #coldplunge are unacceptable.",
     notes:
-      "Open with a sensory or emotional hook that creates a feeling or paints a scene in the first 5 words. Build a small lifestyle/storytelling moment across 3-5 sentences using specific sensory details. ALWAYS end with a soft, genuine question that invites people to share their own version in the comments. No corporate buzzwords, no influencer cliches. STRICTLY FORBIDDEN openers on Instagram (these are TikTok hooks, not Instagram hooks): \"POV:\", \"Tell me why\", \"Not me\", \"This is your sign\", \"Stop scrolling\", \"no one talks about\", \"wait for it\", \"the way I…\", \"I was today years old\". If any of those phrases appear in the first 5 words, REWRITE. The body copy itself must contain ZERO hashtags — hashtags only live in the dedicated final hashtag line described above.",
+      "First line must stop the scroll on its own — never start with \"I\", a time marker (\"Today\", \"Day 1\"), or a restatement of the topic. Build 3-5 sentences with at least one concrete physical or numeric detail (a sound, a time, a temperature, a specific object — not abstract feelings alone). Some captions end on a strong statement; do not force every caption to end with a question. If you use a question, make it specific to this post, not generic. No corporate buzzwords, no influencer cliches, no journey-documenting language. STRICTLY FORBIDDEN openers on Instagram (TikTok hooks): \"POV:\", \"Tell me why\", \"Not me\", \"This is your sign\", \"Stop scrolling\", \"no one talks about\", \"wait for it\", \"the way I…\", \"I was today years old\". Body copy must contain ZERO hashtags — hashtags only on the dedicated final line after a blank line. Double-check every hashtag spelling before returning (e.g. #coldplunge not #coldplunch).",
     examples: [
-      "Some days you just need to slow down and remember why you started. This moment reminded me that the little things are actually the big things. The light hit the window just right and I forgot what I was rushing toward. What's been your reminder lately? \u2728\n\n#lifestyle #mindset #inspiration #grateful #contentcreator #slowliving #intentionalliving #selfcare #morningroutine #goodvibes",
-      "The cortado was good. The playlist was better. We didn't plan a vibe \u2014 we just played the records we love and somehow strangers ended up staying for hours. The best moments aren't the ones you schedule. They're the ones you let happen. What's a place that surprised you like that?\n\n#coffeeshopvibes #cortado #independentcoffee #vinylcommunity #localfinds #slowmornings #cafeculture #thirdwavecoffee #morningritual #neworleans",
+      "The gasp comes before the decision every single time. Forty-eight degrees, metal tub on the porch, neighbor's dog staring through the fence like I've lost my mind. Fingers go numb somewhere around ninety seconds — that's when the panic stops being the whole story.\n\n#coldplunge #coldexposure #morningroutine #recovery #wellness #biohacking #icebath #mindovermatter #healthjourney #wimhof #coldtherapy #dailyhabit",
+      "Not everyone who posts ice baths actually likes cold water. Some of us are just stubborn enough to keep showing up at 5:42am when the tub steams in the wrong direction. The shock still wins on day twelve. The difference is you stop negotiating with it mid-splash.\n\n#coldplunge #5amclub #discipline #coldwater #recoveryday #wellnessjourney #habitstacking #mentaltoughness #selfimprovement #icebath",
     ],
   },
   tiktok: {
@@ -98,7 +98,7 @@ const PLATFORM_PROFILES: Record<string, PlatformProfile> = {
     length:
       "STRICT 1-3 short lines maximum. The first 5 words must stop the scroll. Total caption body under ~150 characters before hashtags. NEVER write a paragraph.",
     hashtags:
-      "3-5 hashtags maximum. Mix 1 broad reach tag (#fyp / #foryou / #foryoupage) with 2-4 niche tags that match the actual content. Lowercase, no spaces.",
+      "3-5 hashtags maximum. Mix 1 broad reach tag (#fyp / #foryou / #foryoupage) with 2-4 niche tags that match the actual content. Lowercase, no spaces. Every hashtag must be spelled correctly — verify letter-by-letter before returning.",
     notes:
       "MUST open with a punchy TikTok-native hook. STRONGLY PREFER one of these openers: 'POV:', 'Tell me why', 'Not me', 'This is your sign', 'no one talks about', 'wait for it', 'the way I\u2026'. Then one quick payoff line, optional emoji. Reads like a one-liner, not a paragraph.",
     examples: [
@@ -115,7 +115,7 @@ const PLATFORM_PROFILES: Record<string, PlatformProfile> = {
     hashtags:
       "MAXIMUM 2 hashtags. Industry-relevant, CamelCase or lowercase. Often best to skip hashtags entirely. NEVER more than 2. Hashtags go on the final line, plain text, no markdown around them.",
     notes:
-      "Open with a contrarian truth, a specific number, or a vulnerable moment \u2014 NEVER a TikTok / short-form opener. STRICTLY FORBIDDEN openers on LinkedIn: \"POV:\", \"Tell me why\", \"Not me\", \"This is your sign\", \"no one talks about\", \"wait for it\", \"the way I\u2026\", \"stop scrolling\", \"I was today years old\". Build a tiny narrative across professional paragraphs. Land on a clear, useful lesson or insight other operators can take away. ALWAYS end with a thought-provoking question for the reader. Output must be plain prose paragraphs only \u2014 no markdown characters anywhere.",
+      "Open with a contrarian truth, a specific number, or a vulnerable moment \u2014 NEVER a TikTok / short-form opener. First line must not start with \"I\", a time marker, or a topic restatement. STRICTLY FORBIDDEN openers on LinkedIn: \"POV:\", \"Tell me why\", \"Not me\", \"This is your sign\", \"no one talks about\", \"wait for it\", \"the way I\u2026\", \"stop scrolling\", \"I was today years old\". Build a tiny narrative across professional paragraphs with at least one concrete detail per post. Land on a clear, useful lesson — not a generic motivational quote. Some posts end on a strong statement; questions are optional and must be specific when used. Output must be plain prose paragraphs only \u2014 no markdown characters anywhere.",
     examples: [
       "I used to spend 30 minutes writing one caption.\n\nNow it takes 10 seconds.\n\nThe lesson? Work smarter, not harder. The tools changed, but more importantly, the way I think about my time changed.\n\nWe romanticize the grind. We rarely audit what the grind is actually for.\n\nWhat tools have changed how you work?",
       "Three years ago I quit a six-figure engineering job to open a coffee shop.\n\nLast Tuesday a customer cried at the bar because the espresso reminded her of her father.\n\nThe spreadsheet measures revenue. The relationships measure why we're really here.\n\nMost businesses get this backwards.\n\nWhat's the most unexpected metric your work actually changes?",
@@ -132,7 +132,7 @@ const PLATFORM_PROFILES: Record<string, PlatformProfile> = {
     hashtags:
       "0-3 hashtags maximum. Local or community-relevant when used. Many great Facebook posts use no hashtags at all.",
     notes:
-      "Open with a small, relatable scene or moment. Keep it tight at 2-3 sentences. ALWAYS end with a question or a clear call-to-action that invites friends/community to chime in.",
+      "Open with a small, relatable scene or moment — not with \"I\" or \"Today\". Keep it tight at 2-3 sentences with at least one concrete detail. A question or CTA is optional; when used, keep it specific to the post, not generic.",
     examples: [
       "Funny how a quiet Saturday turned into the best afternoon I've had all month. Sometimes the unplanned hours really are the best ones. What did you get up to this weekend?",
       "Just poured our 100,000th cup of coffee this morning \u2014 still kind of in shock. Thanks for being part of it, neighbors. Who's a small business that's been part of your week lately?",
@@ -220,7 +220,7 @@ function profileForPlatform(platform: string): PlatformProfile {
     hashtags:
       "Use the hashtag conventions of this platform. If unsure, use 2-4 niche, lowercase, topical hashtags.",
     notes:
-      "Open with a strong hook in the first 5 words. End with a question or invitation to engage.",
+      "Open with a strong hook in the first 5 words — not with \"I\" or a time marker. Include at least one concrete detail. End with a question or statement as fits the platform; do not force a generic question on every caption.",
     examples: [],
   };
 }
@@ -241,19 +241,50 @@ function formatPlatformBriefing(profile: PlatformProfile): string {
   return parts.join("\n");
 }
 
-const CAPTION_ARCHETYPES = `Caption 1 — PUNCHY HOOK: open with a scroll-stopping, PLATFORM-NATIVE hook in the first 5 words. The opener MUST match the platform's voice:
-  • TikTok / Threads / Bluesky / Twitter/X / Facebook: short-form openers are welcome — "POV:", "Tell me why", "Not me", "This is your sign", a bold claim, or a curiosity gap.
-  • Instagram: NEVER use TikTok-style openers. The Instagram "punchy hook" is a sensory or emotional opener that paints a scene or feeling in the first line — e.g. "Some days you just need to slow down.", "Caught the light hitting the window just right today.", "Three months in and this still doesn't feel real.". STRICTLY FORBIDDEN openers on Instagram: "POV:", "Tell me why", "Not me", "This is your sign", "Stop scrolling", "no one talks about", "wait for it", "the way I…", "I was today years old". NEVER write "POV:" or any other TikTok-style short-form opener on Instagram.
-  • LinkedIn: NEVER use TikTok-style openers. The "punchy hook" on LinkedIn is a contrarian truth, a specific number, or a one-line confession — e.g. "I used to spend 30 minutes on a caption.", "Three years ago I quit a six-figure job.", "Most operators get this backwards.". STRICTLY FORBIDDEN openers on LinkedIn: "POV:", "Tell me why", "Not me", "This is your sign", "Stop scrolling", "no one talks about", "wait for it", "the way I…", "I was today years old". NEVER write "POV:" or any short-form opener on LinkedIn.
-  • YouTube / Pinterest: lead with a searchable, keyword-rich claim instead of a slang opener.
-Energy is direct and punchy. Short and snappy where the platform allows it.
+const BANNED_PHRASES = `BANNED PHRASES — never use these or anything close to them. Scan every caption before returning; if any appear, rewrite that line:
+"Today marks the beginning", "a mix of emotions", "excitement and trepidation", "nervous but excited", "stay tuned", "stay tuned for updates", "documenting my journey", "sharing my journey", "I'll be documenting", "the science behind", "I'm eager to", "daunting but worth it", "push my body to its limits", "test my physical and mental endurance", "see the benefits", "embark on", "dive in", "game-changer", "revolutionize", "leverage", "in today's world", "In a world where", "Imagine a place where", "Whether you're a... or a...", "It's not just X, it's Y", "Let's dive in", "Buckle up", "level up", "unlock potential", "comment below!!", "double tap if you agree", "smash that like button", "follow for more!!!"`;
 
-Caption 2 — STORY / LIFESTYLE MOMENT: open with a specific small moment or sensory detail. Build a tiny human story with concrete imagery, then end with a genuine question that invites the reader to share their own version. Warmer, more grounded, more emotional than Caption 1.
+const FIRST_LINE_RULES = `FIRST LINE — every caption's opening line must work as a standalone scroll-stopper:
+- FORBIDDEN: starting with "I", "I'm", "I've", "My", or "We".
+- FORBIDDEN: starting with a time marker ("Today", "Thirty days", "Day 1", "This morning", "Day one").
+- FORBIDDEN: restating the topic as the opener ("Cold plunging is...", "Starting my cold plunge challenge").
+- GOOD: sensory punch, contrarian line, specific number, unexpected image, mid-action scene, sharp observation.
+- Platform-specific opener bans (TikTok hooks on Instagram/LinkedIn): "POV:", "Tell me why", "Not me", "This is your sign", "Stop scrolling", "no one talks about", "wait for it", "the way I…", "I was today years old".`;
 
-Caption 3 — CONTRARIAN INSIGHT / LESSON: open with a confident, slightly contrarian observation, a specific number, or a sharp lesson learned. Reads like something a real operator would screenshot. Ends on a clear takeaway or thought-provoking line.
+const CONCRETE_DETAIL_RULES = `CONCRETE DETAIL — mandatory in EVERY caption:
+Each caption must contain at least one specific, physical, or numeric detail that could NOT apply to a generic post about the same broad topic. Abstract feelings alone are not enough.
+Examples (cold plunge): the involuntary gasp, fingers numb at the 90-second mark, the 5:42am alarm, the dog watching confused, water so cold your teeth chatter before you decide to get in.
+If you cannot point to a concrete detail in a caption, add one or rewrite.`;
 
-CRITICAL RULE — ALL THREE MUST BE MEANINGFULLY DIFFERENT:
-The three captions must feel like they were written by three different people. Different opener style, different rhythm, different sentence length, different vocabulary, different emotional register. Do NOT write three variations of the same line, the same vibe, or the same opening word. If two of them feel similar, rewrite one.`;
+const CTA_RULES = `QUESTIONS & CTAs:
+- Do NOT end every caption with a question — overusing generic questions ("What's your favorite way to challenge yourself?", "Who else can relate?", "Would you try this?") is an AI tell.
+- Across the batch, at least one caption MUST end on a strong statement, observation, or punchline — no question at all.
+- When you do use a question, it must be specific to THIS content and this moment, not interchangeable with any other post.
+- Twitter/X often needs no question. Instagram, LinkedIn, and Facebook may use questions on some captions but not all.`;
+
+const CAPTION_ARCHETYPES = `MANDATORY STRUCTURAL VARIETY — this is the #1 priority. Each caption in the batch MUST use a structurally DIFFERENT archetype. Never reuse the same opener, skeleton, or emotional arc twice. If any two captions share an opener or structure, rewrite one before returning.
+
+FORBIDDEN SKELETON (never use for ANY caption — this produced identical reworded captions in live testing):
+"I'm starting X → I feel nervous/excited → I'll see benefits → generic question."
+If you catch yourself writing this pattern in any form, scrap it and start over with a different archetype.
+
+Assign these distinct structures across the captions (use the first four; for count > 4, invent additional structurally unique angles that do not echo any of these):
+
+Archetype A — IN THE MIDDLE OF THE MOMENT: Drop the reader into the scene right now. Present tense. Sensory and physical. No "I'm starting X" setup, no preamble. Example energy: "The water hits your chest and your lungs forget what air is."
+
+Archetype B — CONFESSION / CONTRARIAN ADMISSION: Open with something unexpectedly honest or against-type. Example energy: "Cold water people? Not really one of them." Then earn the rest with specifics.
+
+Archetype C — NUMBER, LIST, OR SHARP SINGLE OBSERVATION: One specific stat, a tight list, or one razor observation that could not be swapped to another topic. Example energy: "Ninety seconds. That's when the fingers go numb." or "Three things the tutorial skipped: ..."
+
+Archetype D — REFLECTIVE LESSON: A genuine insight from experience — NOT a generic motivational quote, NOT "the journey teaches you" fluff. Land on something specific learned, phrased like you'd tell a friend over coffee.
+
+Platform-native opener rules still apply on top of these archetypes:
+  • TikTok: open with POV:, Tell me why, Not me, or another pattern interrupt — max 3 lines total.
+  • Instagram / LinkedIn: NEVER use TikTok-style openers. Use sensory punch, contrarian line, number, or mid-action scene instead.
+  • Twitter/X: witty or contrarian, under 280 characters total.
+  • YouTube / Pinterest: lead with a searchable, keyword-rich claim instead of slang.
+
+CRITICAL: ALL captions must feel like they were written by different people — different opener style, rhythm, sentence length, vocabulary, emotional register, and ending type (some questions, some statements).`;
 
 const SCORE_RUBRIC = `CAPTION QUALITY SCORE — score each caption on a 0-100 scale, broken into 5 fixed buckets:
   • hook (0-25)         — how strongly the FIRST LINE stops the scroll. 25 = irresistible, 0 = generic / forgettable.
@@ -271,24 +302,29 @@ const FORMATTING_RULES = `FORMATTING RULES — these are non-negotiable. The cap
 - LINE BREAKS: use \\n\\n (blank line) only as a paragraph separator. Never put a single \\n in the middle of a sentence. Within a paragraph, write one continuous flowing line.
 - EMOJI: place them naturally — end of a sentence, end of a paragraph, or right next to the noun they describe. NEVER scatter random emoji between every word. Maximum 1-3 emoji per caption body (hashtags don't count). Same emoji should never repeat back-to-back (no "💪💪💪").
 - CHARACTERS: use straight quotes (") and apostrophes ('), not smart quotes. Use real "..." (three dots) not "…". Use "—" with a space on each side only as a deliberate em-dash.
-- HASHTAGS: lowercase, no spaces inside the tag, no broken tags like "# tag". They follow the platform's placement rule (see PLATFORM BRIEFING).
+- HASHTAGS: lowercase, no spaces inside the tag, no broken tags like "# tag". Spell every hashtag correctly — verify letter-by-letter against the topic before returning. They follow the platform's placement rule (see PLATFORM BRIEFING). Instagram: body copy ends, then \\n\\n, then ALL hashtags on ONE final line only.
 - The final caption must feel polished, intentional, and ready to post. If a sentence reads awkwardly, REWRITE it before returning.`;
 
-const QUALITY_RULES = `WHAT MAKES A GREAT CAPTION (apply to all three):
+const QUALITY_RULES = `WHAT MAKES A GREAT CAPTION (apply to all):
 
-- HUMAN, NOT AI: write like a real person posting from their phone. Use contractions, casual phrasing, occasional sentence fragments, real-sounding rhythm. AVOID sentence patterns that scream ChatGPT: "In a world where...", "Imagine a place where...", "Whether you're a... or a...", "It's not just X, it's Y", "Let's dive in", "Buckle up". If a line sounds like a LinkedIn marketing template, rewrite it.
-- The FIRST LINE must stop the scroll. No warm-ups, no "in today's post", no generic openers, no "Hey guys".
-- SPECIFICS OVER GENERICS: use concrete details, real numbers, names of things, sensory imagery, real emotions. AVOID vague claims like "amazing", "best ever", "next level", "game-changer", "unlock potential", "synergy", "leverage", "level up", "elevate", "transform your life". Replace them with something specific.
-- EMOTIONAL TRUTH: each caption should make the reader feel something real or recognize themselves in it. No fake hype, no manufactured urgency.
-- Use power phrases sparingly but deliberately: "honestly", "actually", "the truth is", "POV:", "tell me why", "not me", "no one talks about", "this is your sign".
+${BANNED_PHRASES}
+
+${FIRST_LINE_RULES}
+
+${CONCRETE_DETAIL_RULES}
+
+${CTA_RULES}
+
+- HUMAN, NOT AI: write like a real person posting from their phone. Use contractions, casual phrasing, occasional sentence fragments, real-sounding rhythm. If a line sounds like a LinkedIn marketing template or a ChatGPT journey post, rewrite it.
+- SPECIFICS OVER GENERICS: use concrete details, real numbers, names of things, sensory imagery. AVOID vague claims like "amazing", "best ever", "next level", "synergy", "elevate", "transform your life". Replace them with something only this post could say.
+- EMOTIONAL TRUTH: each caption should make the reader feel something real or recognize themselves in it. No fake hype, no manufactured urgency, no "mix of emotions" language.
 - Match the requested TONE exactly without breaking the platform voice.
-- End with a CTA, question, or invitation phrased like a real human would say it. NEVER use "comment below!!", "double tap if you agree!", "smash that like button", "follow for more!!!".
-- HASHTAGS must follow the platform's hashtag rules EXACTLY:
-    \u2022 Instagram: 8-12 hashtags on a NEW LINE at the end (after a blank line).
-    \u2022 TikTok: 3-5 hashtags, inline at the end is fine.
-    \u2022 LinkedIn: maximum 2 hashtags. Often zero.
-    \u2022 Twitter/X: 0 hashtags is best, maximum 1, and the WHOLE post must be \u2264 280 characters.
-    \u2022 Facebook: 0-3 hashtags maximum.
+- HASHTAGS must follow the platform's hashtag rules EXACTLY — correct spelling is mandatory (verify each tag letter-by-letter against the topic):
+    • Instagram: 8-12 hashtags on a NEW LINE after a blank line. ZERO hashtags inside body copy.
+    • TikTok: 3-5 correctly-spelled hashtags.
+    • LinkedIn: maximum 2 hashtags. Often zero.
+    • Twitter/X: 0 hashtags is best, maximum 1, and the WHOLE post must be ≤ 280 characters.
+    • Facebook: 0-3 hashtags maximum.
   Never exceed the platform's hashtag count. Never use banned or generic spam tags (#love, #instagood without context, #followforfollow, etc.).`;
 
 const RATING_RUBRIC = `RATING RUBRIC — read carefully, this is where most AIs get it wrong.
@@ -319,30 +355,29 @@ Then assign labels: the highest-scoring caption gets "best", the lowest gets "wo
 
 Before you finalize the ratings, ask yourself one more time: "If I were a real person scrolling this platform, which of these three would actually stop me?" That one is "best".`;
 
-const PRO_AMPLIFIERS = `PRO BOOST — ELITE COPYWRITING MODE:
-You are now operating at the level of a top-tier social copywriter who has shipped viral content for major creators.
+const PRO_AMPLIFIERS = `PRO BOOST — stronger hooks, sharper voice, more distinct archetypes:
+You are operating above standard quality. Each caption must use a clearly different structural archetype — not three rewordings of the same idea.
 
-Pull from these advanced techniques across the three captions (do NOT use them all in one caption — pick what fits each archetype):
-  • PATTERN INTERRUPT openers: "Stop scrolling.", "POV:", "Everyone gets this wrong.", "I was today years old when…"
-  • OPEN LOOPS: introduce a thread or specific number that the reader has to keep reading to resolve ("3 things I learned…", "Here's the part nobody tells you about…").
-  • SOCIAL PROOF baked in: small, believable specifics ("our 100,000th cup", "after 11 months testing this", "a regular told me…"). Never use round, made-up numbers.
-  • CONTRAST and PARADOX: "I spent X on Y. The thing that actually worked cost nothing."
-  • SENSORY ANCHORS: smells, sounds, weather, time-of-day. Pull the reader into a scene.
-  • NICHE FLUENCY: use vocabulary a real insider in the topic's niche would use, not outsider-sounding words.
-  • HASHTAG LADDER: for platforms that use hashtags, mix sizes — 1-2 broad reach tags, 2-3 mid-size, 3-5 niche specialist tags. All must be plausibly real and relevant.
-  • CTA VARIETY: avoid "comment below". Use specific invitations ("tell me the version on your block", "save this for the next time you…", "tag the friend who…").
+Techniques to deploy (one or two per caption, not all stacked in one):
+  • OPEN LOOPS: a specific number or detail the reader has to keep reading to resolve ("90 seconds in, something shifts", "the part the tutorial skipped").
+  • SOCIAL PROOF baked in: small, believable specifics ("our 100,000th cup", "after 11 months testing this", "a regular told me…"). Never round, made-up numbers.
+  • CONTRAST and PARADOX: "The expensive gear didn't matter. The 5:42am alarm did."
+  • SENSORY ANCHORS: smells, sounds, weather, time-of-day, physical sensations. Pull the reader into a scene.
+  • NICHE FLUENCY: vocabulary a real insider in this niche would use, not outsider-sounding words.
+  • HASHTAG LADDER: mix 1-2 broad reach tags with mid-size and niche specialist tags. Every tag must be spelled correctly.
+  • ENDING VARIETY: mix statement endings with specific questions — never default every caption to a generic question.
 
-Tone of voice should feel like a confident, slightly mischievous insider who knows the niche cold. Each caption should be the kind of post a creator would screenshot and study.`;
+Tone: confident insider who knows the niche cold. Distinct archetypes matter more than loud openers.`;
 
-const ELITE_AMPLIFIERS = `ELITE MODE — VIRAL-WORTHY COPYWRITING (Annual / top tier):
-You are now the best social copywriter alive, writing for a creator who pays a premium for captions that go viral. Everything in PRO BOOST applies, plus:
-  • EVERY caption must be screenshot-worthy on its own. No filler captions, no "safe" options — each one should be postable as the hero caption.
-  • MASTER-LEVEL HOOKS: layer a curiosity gap or open loop with a specific, concrete detail in the FIRST 5 words. The reader should feel they MUST keep reading.
-  • ADVANCED COPYWRITING FRAMEWORKS: rotate through proven structures across the set — AIDA, PAS (problem-agitate-solve), before/after/bridge, the "but here's the thing" pivot, the listicle tease, the contrarian reframe. Never repeat a framework twice in the same set.
-  • NICHE-SPECIFIC LANGUAGE: write with the exact vocabulary, references, and in-jokes a true insider of this niche would use. An outsider should feel they're reading from someone who lives in this world.
-  • EMOTIONAL PRECISION: target a specific, nameable emotion per caption (nostalgia, righteous anger, hope, FOMO, belonging, relief) rather than generic "inspiration".
-  • RHYTHM & SOUND: vary sentence length deliberately for cadence. Use a short punchy line to land the point. Read it aloud in your head — it must sound effortless.
-  • Each caption should be good enough that a competitor would screenshot it to study. If a caption is merely "good", rewrite it until it's exceptional.`;
+const ELITE_AMPLIFIERS = `ELITE MODE — genuinely specific, screenshot-worthy writing (Annual / top tier):
+Everything in PRO BOOST applies, plus:
+  • EVERY caption must stand alone as post-worthy — specific enough to screenshot, natural enough to post from a phone without editing.
+  • MASTER-LEVEL HOOKS: the first line stops the scroll on its own — sensory, contrarian, or numeric — with a concrete detail in the first two sentences, never abstract setup.
+  • STRUCTURAL ROTATION: use a different copywriting shape per caption — mid-action scene, confession, numbered observation, reflective lesson. Never repeat a framework twice in the same batch.
+  • NICHE-SPECIFIC LANGUAGE: exact vocabulary, references, and in-jokes a true insider would use. An outsider should feel they're reading someone who lives in this world.
+  • EMOTIONAL PRECISION: target a specific, nameable emotion per caption (stubborn pride, disbelief, relief, dry humor) rather than generic "inspiration".
+  • RHYTHM & SOUND: vary sentence length for cadence. Read it aloud in your head — effortless, never overwritten or hypey.
+  • Never sacrifice natural voice for cleverness. If a caption sounds AI-polished, strip it back and add one more concrete detail instead.`;
 
 function buildPrompt({
   topic,
@@ -369,16 +404,18 @@ function buildPrompt({
     ? ELITE_AMPLIFIERS
     : isPro
       ? PRO_AMPLIFIERS
-      : "STANDARD MODE: write good, clean captions. Keep them grounded and natural. Use one strong technique per caption rather than stacking many.";
+      : "STANDARD MODE (Free): write clean, correct, good captions. Keep them grounded and natural. Still enforce structural variety across archetypes, concrete details, banned phrase scan, and platform formatting — quality bar is human and post-ready, not generic AI filler.";
 
-  const countInstruction = `OUTPUT COUNT — you MUST return EXACTLY ${count} distinct captions (not 3, not fewer — exactly ${count}). Each must be meaningfully different from every other one in opener style, rhythm, sentence length, vocabulary, and emotional register. Think of them as written by ${count} different talented writers. If any two feel similar, rewrite one.`;
+  const countInstruction = `OUTPUT COUNT — you MUST return EXACTLY ${count} distinct captions (not 3, not fewer — exactly ${count}).
+
+STRUCTURAL VARIETY IS MANDATORY: each caption must use a different archetype (see DISTINCT CAPTION ANGLES below). Never reuse the same opener, skeleton, or "starting X → nervous/excited → benefits → question" pattern. If any two captions share structure or opening rhythm, rewrite before returning. Think of them as written by ${count} different people with ${count} different ideas — not ${count} rewordings of one idea.`;
 
   const ratingInstruction =
     count === 3
       ? `Assign labels: the highest-scoring caption gets "best", the lowest gets "worst", and the remaining one gets "medium". Use each of "best", "medium", and "worst" EXACTLY once across the three.`
       : `Assign labels across the ${count} captions: give the single strongest caption "best", the single weakest "worst", and label every other caption "medium". There must be exactly one "best" and exactly one "worst"; all others are "medium".`;
 
-  return `You are a top 1% social media copywriter who writes captions that real creators screenshot, save, and study. Your captions sound HUMAN, never AI-generated.
+  return `You are a top 1% social media copywriter who writes captions that real creators screenshot, save, and study. Your captions sound HUMAN, never AI-generated. Your #1 job is structural variety — each caption in a batch must be a different archetype, not the same idea reworded.
 
 REQUEST
   Topic:    "${topic}"
@@ -395,7 +432,7 @@ ${QUALITY_RULES}
 
 ${countInstruction}
 
-DISTINCT CAPTION ANGLES (use these as the first three archetypes, then extend with additional fresh, distinct angles for any remaining captions):
+DISTINCT CAPTION ANGLES — assign a different archetype to each caption; never repeat structure:
 ${CAPTION_ARCHETYPES}
 
 ${RATING_RUBRIC}
@@ -405,16 +442,16 @@ RATING LABELS FOR THIS REQUEST: ${ratingInstruction}
 ${SCORE_RUBRIC}
 ${brandVoiceBlock ? `\n${brandVoiceBlock}\n` : ""}
 ${`\n${amplifier}\n`}
-BEFORE YOU RETURN, SELF-CHECK each caption against this checklist:
-  1. Does it strictly match the ${platform} LENGTH rule above? (TikTok: 1-3 lines. Instagram: 3-5 sentences + hashtags on a new line. LinkedIn: 3-5 short paragraphs. Twitter/X: \u2264 280 characters total. Facebook: 2-3 sentences.)
-  2. Does it strictly match the ${platform} HASHTAG count and placement rule? (TikTok 3-5, Instagram 8-12 on a NEW LINE with a blank line before them and ZERO hashtags inside the body copy, LinkedIn \u2264 2, Twitter/X 0-1, Facebook 0-3.)
-  3. INSTAGRAM SPECIFIC: every hashtag MUST sit on the final line after a blank line. NO hashtag may appear inside any body sentence. The body and the hashtag block MUST be separated by \\n\\n. If even one hashtag is mixed into the prose, REWRITE. ALSO: the caption MUST NOT open with a TikTok-style opener. STRICTLY FORBIDDEN openers on Instagram: "POV:", "Tell me why", "Not me", "This is your sign", "Stop scrolling", "no one talks about", "wait for it", "the way I…", "I was today years old". If ANY of those phrases appear in the first 5 words, REWRITE the opener as a sensory or emotional scene-setter instead.
-  4. LINKEDIN SPECIFIC: (a) contains ZERO markdown characters (no **, no *, no _, no \`, no ###); (b) contains ZERO TikTok-style openers ("POV:", "Tell me why", "Not me", "This is your sign", "Stop scrolling", "no one talks about", "wait for it", "the way I…", "I was today years old"); AND (c) is laid out as EXACTLY 3-5 SHORT paragraphs of 1-2 sentences MAXIMUM each, with a LITERAL BLANK LINE (a \\n\\n line break) between every paragraph. The caption MUST NOT be one long paragraph or a wall of text. If the draft is a single block, BREAK IT into 3-5 short paragraphs separated by blank lines. If markdown, a TikTok opener, OR a single-block / wall-of-text layout is present, REWRITE.
-  5. Does it end with a platform-appropriate question or CTA (where the platform calls for one)?
-  6. Does it sound like a real human wrote it from their phone \u2014 not an AI? No "in a world where...", no "let's dive in", no "buckle up", no generic hype.
-  7. Are ALL ${count} captions MEANINGFULLY DIFFERENT from each other in style, rhythm, opener, and vocabulary? Did you return EXACTLY ${count} captions?
-  8. Did you apply the RATING RUBRIC honestly \u2014 NOT defaulting to "Caption 1 = best", NOT defaulting to "loudest opener = best", and genuinely picking the most engaging caption as "best"?
-  9. FORMATTING — every sentence ends with proper punctuation; no double spaces; no random ALL CAPS words; emoji are placed naturally (not scattered); straight quotes only; consistent spacing; no leftover dashes that look like the sentence was cut off.
+MANDATORY SELF-CHECK — run this on EVERY caption before returning JSON. If any check fails, fix it first:
+  1. STRUCTURAL VARIETY: Are all ${count} captions structurally different? Do any two share an opener, skeleton, or the forbidden "starting X → nervous/excited → benefits → question" pattern? If yes, rewrite.
+  2. BANNED PHRASES: Scan every line against the BANNED PHRASES list. If any appear (or close paraphrases), rewrite that line.
+  3. INSTAGRAM (when platform is Instagram): Are ALL hashtags on their own line after a blank line (\\n\\n), with ZERO hashtags inside body copy? Is every hashtag spelled correctly letter-by-letter?
+  4. CONCRETE DETAIL: Does each caption contain at least one specific physical or numeric detail that could not apply to a generic post?
+  5. FIRST LINE: Does each opening line work as a standalone scroll-stopper — NOT starting with "I"/"I'm", NOT a time marker ("Today", "Day 1"), NOT a restatement of the topic?
+  6. HUMAN VOICE: Would a real person actually post this from their phone? Not overwritten, not hypey, not every caption ending in the same generic question?
+  7. PLATFORM FORMAT: Does each caption match ${platform} length, hashtag count, and formatting rules exactly? (TikTok: max 3 lines + 3-5 hashtags. Instagram: 3-5 body sentences + blank line + 8-12 hashtags on own line. LinkedIn: 3-5 short paragraphs with blank lines between, max 2 hashtags, no TikTok openers, no markdown. Twitter/X: ≤280 chars total, witty/contrarian, max 1 hashtag. Facebook: 2-3 sentences, 0-3 hashtags.)
+  8. RATINGS: Did you apply the RATING RUBRIC honestly — not defaulting to "Caption 1 = best" or "loudest opener = best"?
+  9. FORMATTING: Every sentence ends with proper punctuation; no double spaces; no random ALL CAPS; emoji placed naturally; straight quotes only.
 If any answer is no, rewrite that caption (or re-rate) before returning.
 
 FINAL OUTPUT \u2014 return STRICT JSON ONLY, no markdown fences, no commentary, with this exact shape (every array MUST have exactly ${count} entries, one per caption, in the same order):
@@ -577,7 +614,7 @@ const STRICT_JSON_SYSTEM =
   "You write elite-level social media captions. Output must be a single JSON object only — no markdown fences, no commentary, no text before or after the JSON.";
 
 const CREATIVE_JSON_SYSTEM =
-  "You write elite-level social media captions that real creators screenshot and save. Match platform voice exactly. Always return strict JSON when asked.";
+  "You write elite-level social media captions that real creators screenshot and save. Each caption in a batch must use a structurally different archetype — never the same skeleton reworded. Match platform voice and formatting exactly. Always return strict JSON when asked.";
 
 async function fetchCaptionsFromGroq(
   groq: NonNullable<ReturnType<typeof getGroqClient>>,
