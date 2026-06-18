@@ -9,7 +9,7 @@ export type PrivacySection = {
   blocks: PrivacyBlock[];
 };
 
-export const PRIVACY_LAST_UPDATED = "May 1, 2026";
+export const PRIVACY_LAST_UPDATED = "June 2026";
 
 export const PRIVACY_SECTIONS: PrivacySection[] = [
   {

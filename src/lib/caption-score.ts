@@ -5,6 +5,8 @@
 // Buckets (max points):
 //   hook 25, emotion 25, cta 20, platformFit 20, originality 10  → total 100
 
+import type { CaptionRatingKey } from "@/lib/caption-rating-styles";
+
 export type CaptionScoreBreakdown = {
   hook: number;
   emotion: number;
@@ -371,4 +373,28 @@ export function computeCaptionScores(
   modelScores?: (RawScoreInput | null | undefined)[] | null
 ): CaptionScore[] {
   return captions.map((cap, i) => computeCaptionScore(cap, platform, modelScores?.[i] ?? null));
+}
+
+/**
+ * Derive Best/Medium/Worst labels directly from the numeric scores so the label
+ * can never disagree with the score the user sees. The single highest-scoring
+ * caption is "best", the single lowest is "worst", and everything in between is
+ * "medium". Ties are broken by original order (earlier caption wins the higher
+ * rank), keeping the assignment deterministic.
+ */
+export function deriveCaptionRatingsFromScores(
+  scores: CaptionScore[]
+): CaptionRatingKey[] {
+  const n = scores.length;
+  if (n === 0) return [];
+  if (n === 1) return ["best"];
+
+  const order = scores
+    .map((s, i) => ({ i, total: s.total }))
+    .sort((a, b) => b.total - a.total || a.i - b.i);
+
+  const ratings: CaptionRatingKey[] = new Array(n).fill("medium");
+  ratings[order[0]!.i] = "best";
+  ratings[order[n - 1]!.i] = "worst";
+  return ratings;
 }

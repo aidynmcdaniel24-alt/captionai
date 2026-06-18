@@ -26,6 +26,7 @@ import { TokenCounter } from "@/components/dashboard/TokenCounter";
 import { TokenUpgradeModal } from "@/components/dashboard/TokenUpgradeModal";
 import type { CaptionRatingKey } from "@/lib/caption-rating-styles";
 import type { CaptionScore } from "@/lib/caption-score";
+import { friendlyError } from "@/lib/friendly-error";
 import { isAnnualPlan, isProPlan } from "@/lib/plan";
 import {
   lowTokenWarningThreshold,
@@ -37,6 +38,7 @@ import {
   WelcomeOnboardingModal,
 } from "@/components/dashboard/WelcomeOnboardingModal";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -55,32 +57,22 @@ const LANGUAGES = [
   "Korean",
 ];
 
-const DASHBOARD_TAB_ROWS = [
-  {
-    label: "Create",
-    tabs: [
-      ["captions", "Captions", "free"],
-      ["hashtags", "Hashtags", "free"],
-      ["bio", "Bio", "free"],
-      ["rewriter", "Rewriter", "pro"],
-      ["emojis", "Emojis", "pro"],
-      ["trending", "Trending", "free"],
-    ],
-  },
-  {
-    label: "Analyze & Plan",
-    tabs: [
-      ["ab", "A/B test", "free"],
-      ["grader", "Grader", "annual"],
-      ["hashtagAnalyzer", "Hashtags+", "annual"],
-      ["calendar", "Calendar", "annual"],
-      ["hookLibrary", "Hook Library", "free"],
-      ["analytics", "Analytics", "pro"],
-      ["brandTone", "Brand Tone", "annual"],
-      ["favorites", "Favorites", "free"],
-      ["collections", "Collections", "pro"],
-    ],
-  },
+const DASHBOARD_TABS = [
+  ["captions", "Captions", "free"],
+  ["hashtags", "Hashtags", "free"],
+  ["bio", "Bio", "free"],
+  ["rewriter", "Rewriter", "pro"],
+  ["emojis", "Emojis", "pro"],
+  ["trending", "Trending", "free"],
+  ["ab", "A/B Test", "free"],
+  ["hashtagAnalyzer", "Hashtags+", "annual"],
+  ["grader", "Grader", "annual"],
+  ["calendar", "Calendar", "annual"],
+  ["hookLibrary", "Hook Library", "free"],
+  ["analytics", "Analytics", "pro"],
+  ["brandTone", "Brand Tone", "annual"],
+  ["favorites", "Favorites", "free"],
+  ["collections", "Collections", "pro"],
 ] as const;
 
 type Tab =
@@ -363,7 +355,7 @@ export function DashboardPageClient() {
       const data = (await res.json()) as { url?: string; error?: string };
 
       if (!res.ok) {
-        setError(data.error || "Could not start checkout.");
+        setError(friendlyError({ message: data.error, status: res.status }, "Could not start checkout."));
         return;
       }
       if (data.url) {
@@ -421,10 +413,7 @@ export function DashboardPageClient() {
           return;
         }
 
-        const fullError = [data.error, data.stage ? `(stage: ${data.stage})` : null, data.details]
-          .filter(Boolean)
-          .join(" ");
-        setError(fullError || "Something went wrong.");
+        setError(friendlyError({ message: data.error, status: res.status }));
         return;
       }
 
@@ -441,7 +430,7 @@ export function DashboardPageClient() {
       }
       applyTokenInfo(data.tokens);
     } catch {
-      setError("Could not generate captions. Please try again.");
+      setError(friendlyError(undefined));
     } finally {
       setIsLoading(false);
     }
@@ -515,7 +504,7 @@ export function DashboardPageClient() {
       if (!res.ok) {
         setFav((f) => ({ ...f, [index]: !on }));
         const data = (await res.json()) as { error?: string };
-        setError(data.error || "Could not update favorite.");
+        setError(friendlyError({ message: data.error, status: res.status }, "Could not update favorite."));
       }
     } catch {
       setFav((f) => ({ ...f, [index]: !on }));
@@ -548,13 +537,13 @@ export function DashboardPageClient() {
           handleTokenPaywall(data);
           return;
         }
-        setError(data.error || "Hashtag generation failed.");
+        setError(friendlyError({ message: data.error, status: res.status }, "Hashtag generation failed."));
         return;
       }
       setHtags(data.hashtags ?? []);
       applyTokenInfo(data.tokens);
     } catch {
-      setError("Network error.");
+      setError(friendlyError(undefined));
     } finally {
       setHtLoading(false);
     }
@@ -585,7 +574,7 @@ export function DashboardPageClient() {
           handleTokenPaywall(data);
           return;
         }
-        setError(data.error || "Bio generation failed.");
+        setError(friendlyError({ message: data.error, status: res.status }, "Bio generation failed."));
         return;
       }
       if (data.bio) {
@@ -593,7 +582,7 @@ export function DashboardPageClient() {
       }
       applyTokenInfo(data.tokens);
     } catch {
-      setError("Network error.");
+      setError(friendlyError(undefined));
     } finally {
       setBioLoading(false);
     }
@@ -627,7 +616,7 @@ export function DashboardPageClient() {
             return;
           }
           setTrendingCategories([]);
-          setError(data.error || "Could not load trending topics.");
+          setError(friendlyError({ message: data.error, status: res.status }, "Could not load trending topics."));
           return;
         }
         setTrendingCategories(data.categories ?? []);
@@ -691,7 +680,7 @@ export function DashboardPageClient() {
           handleTokenPaywall(data);
           return;
         }
-        setError(data.error || "Could not generate pair.");
+        setError(friendlyError({ message: data.error, status: res.status }, "Could not generate pair."));
         return;
       }
       setAbA(data.a ?? "");
@@ -700,7 +689,7 @@ export function DashboardPageClient() {
       setAbStyleB(data.styleB ?? null);
       applyTokenInfo(data.tokens);
     } catch {
-      setError("Network error.");
+      setError(friendlyError(undefined));
     } finally {
       setAbLoading(false);
     }
@@ -725,7 +714,7 @@ export function DashboardPageClient() {
       });
       if (!res.ok) {
         const data = (await res.json()) as { error?: string };
-        setError(data.error || "Could not save winner.");
+        setError(friendlyError({ message: data.error, status: res.status }, "Could not save winner."));
         return;
       }
       setAbWinnerSaved(true);
@@ -791,7 +780,7 @@ export function DashboardPageClient() {
           setImagePreview(null);
           return;
         }
-        setError(data.error || "Could not analyze your image.");
+        setError(friendlyError({ message: data.error, status: res.status }, "Could not analyze your image."));
         setImagePreview(null);
         return;
       }
@@ -835,7 +824,7 @@ export function DashboardPageClient() {
         setAbExpId(data.id);
         return;
       }
-      setError(data.error || "Could not save A/B experiment.");
+      setError(friendlyError({ message: data.error, status: res.status }, "Could not save A/B experiment."));
     } catch {
       setError("Could not save A/B experiment.");
     }
@@ -849,7 +838,7 @@ export function DashboardPageClient() {
       const data = (await res.json()) as { items?: FavoriteHistoryItem[]; error?: string };
       if (!res.ok) {
         setFavorites([]);
-        setError(data.error || "Could not load favorites.");
+        setError(friendlyError({ message: data.error, status: res.status }, "Could not load favorites."));
         return;
       }
       const onlyFavorites = (data.items ?? []).filter(
@@ -893,7 +882,7 @@ export function DashboardPageClient() {
       if (!res.ok) {
         setFavorites(previous);
         const data = (await res.json()) as { error?: string };
-        setError(data.error || "Could not remove favorite.");
+        setError(friendlyError({ message: data.error, status: res.status }, "Could not remove favorite."));
       }
     } catch {
       setFavorites(previous);
@@ -909,6 +898,44 @@ export function DashboardPageClient() {
     tokensLimit !== null &&
     tokensRemaining > 0 &&
     tokensRemaining <= lowTokenWarningThreshold(plan);
+
+  if (plan === null) {
+    return (
+      <main className={`${shell} px-4 py-6 sm:px-6 sm:py-8`}>
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 sm:gap-6">
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm sm:p-4 dark:border-zinc-800 dark:bg-zinc-900/70">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-9 w-9 rounded-lg" />
+              <div className="space-y-1.5">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-6 w-40" />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-9 w-24 rounded-full" />
+              <Skeleton className="h-9 w-9 rounded-full" />
+            </div>
+          </div>
+          <div className="rounded-2xl border border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-900/60">
+            <div className="flex gap-2 overflow-hidden">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-24 shrink-0 rounded-xl" />
+              ))}
+            </div>
+          </div>
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/80">
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="mt-3 h-28 w-full rounded-xl" />
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <Skeleton className="h-11 w-full rounded-xl" />
+              <Skeleton className="h-11 w-full rounded-xl" />
+            </div>
+            <Skeleton className="mt-4 h-12 w-full rounded-xl" />
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className={`${shell} px-4 py-6 sm:px-6 sm:py-8`}>
@@ -939,7 +966,7 @@ export function DashboardPageClient() {
           {plan === "free" ? (
             <button
               type="button"
-              className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-purple-500 disabled:opacity-50 sm:hidden"
+              className="inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-600 px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:opacity-90 disabled:opacity-50 sm:hidden"
               disabled={checkoutLoading}
               onClick={() => startCheckout("month")}
             >
@@ -961,7 +988,7 @@ export function DashboardPageClient() {
             {plan === "free" ? (
               <button
                 type="button"
-                className="hidden min-h-[44px] items-center justify-center rounded-full bg-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-purple-500 disabled:opacity-50 sm:inline-flex"
+                className="hidden min-h-[44px] items-center justify-center rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-600 px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:opacity-90 disabled:opacity-50 sm:inline-flex"
                 disabled={checkoutLoading}
                 onClick={() => startCheckout("month")}
               >
@@ -1013,73 +1040,67 @@ export function DashboardPageClient() {
           </div>
         ) : null}
 
-        <div className="relative -mx-1 space-y-2">
-          {DASHBOARD_TAB_ROWS.map((row) => (
-            <div
-              key={row.label}
-              className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-2 scrollbar-thin-x dark:border-zinc-800 dark:bg-zinc-900/60"
-              role="tablist"
-              aria-label={`${row.label} sections`}
-              style={{ scrollBehavior: "smooth", WebkitOverflowScrolling: "touch" }}
-            >
-              <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-                {row.label}
-              </p>
-              <div className="flex min-w-max gap-1.5 sm:gap-2">
-                {row.tabs.map(([id, label, tier]) => {
-                  const locked =
-                    tier === "pro"
-                      ? !isProPlan(plan)
-                      : tier === "annual"
-                        ? !isAnnualPlan(plan)
-                        : false;
-                  const upgradeHint =
-                    tier === "annual"
-                      ? "Annual feature — upgrade to unlock"
-                      : tier === "pro"
-                        ? "Pro feature — upgrade to unlock"
-                        : undefined;
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      role="tab"
-                      aria-selected={tab === id}
-                      aria-label={locked ? `${label} (${upgradeHint})` : label}
-                      title={locked ? upgradeHint : undefined}
-                      onClick={() => setTab(id as Tab)}
-                      className={`inline-flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition ${
-                        tab === id
-                          ? "bg-purple-600 text-white shadow-sm"
-                          : locked
-                            ? "text-zinc-500 hover:bg-purple-50 dark:text-zinc-400 dark:hover:bg-purple-950/30"
-                            : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                      }`}
-                    >
-                      {label}
-                      {id === "captions" && brandToneSaved ? (
-                        <span
-                          title="Your saved brand tone will apply to caption generation."
-                          className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                            tab === id
-                              ? "bg-emerald-500/30 text-emerald-50"
-                              : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
-                          }`}
-                        >
-                          Brand Tone active
-                        </span>
-                      ) : null}
-                      {locked ? (
-                        <span className="text-[10px] font-semibold opacity-80" aria-hidden>
-                          🔒
-                        </span>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
+        <div className="relative -mx-1">
+          <div
+            className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-2 scrollbar-thin-x dark:border-zinc-800 dark:bg-zinc-900/60"
+            role="tablist"
+            aria-label="Dashboard sections"
+            style={{ scrollBehavior: "smooth", WebkitOverflowScrolling: "touch" }}
+          >
+            <div className="flex min-w-max gap-1.5 sm:gap-2">
+              {DASHBOARD_TABS.map(([id, label, tier]) => {
+                const locked =
+                  tier === "pro"
+                    ? !isProPlan(plan)
+                    : tier === "annual"
+                      ? !isAnnualPlan(plan)
+                      : false;
+                const upgradeHint =
+                  tier === "annual"
+                    ? "Annual feature — upgrade to unlock"
+                    : tier === "pro"
+                      ? "Pro feature — upgrade to unlock"
+                      : undefined;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    aria-selected={tab === id}
+                    aria-label={locked ? `${label} (${upgradeHint})` : label}
+                    title={locked ? upgradeHint : undefined}
+                    onClick={() => setTab(id as Tab)}
+                    className={`inline-flex min-h-[40px] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition ${
+                      tab === id
+                        ? "bg-purple-600 text-white shadow-sm"
+                        : locked
+                          ? "text-zinc-500 hover:bg-purple-50 dark:text-zinc-400 dark:hover:bg-purple-950/30"
+                          : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                    }`}
+                  >
+                    {label}
+                    {id === "captions" && brandToneSaved ? (
+                      <span
+                        title="Your saved brand tone will apply to caption generation."
+                        className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                          tab === id
+                            ? "bg-emerald-500/30 text-emerald-50"
+                            : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
+                        }`}
+                      >
+                        Brand Tone active
+                      </span>
+                    ) : null}
+                    {locked ? (
+                      <span className="text-[10px] font-semibold opacity-80" aria-hidden>
+                        🔒
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
             </div>
-          ))}
+          </div>
         </div>
 
         {error ? (
@@ -1157,7 +1178,7 @@ export function DashboardPageClient() {
 
               <div className="mt-5 flex flex-col gap-2">
                 <button
-                  className="inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-purple-600 px-5 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-purple-500 disabled:opacity-70 sm:w-auto"
+                  className="inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 px-5 py-3 text-base font-semibold text-white shadow-sm transition hover:opacity-90 disabled:opacity-70 sm:w-auto"
                   disabled={isLoading}
                   onClick={handleGenerate}
                 >
@@ -1783,11 +1804,27 @@ export function DashboardPageClient() {
             </div>
 
             {favoritesLoading && favorites.length === 0 ? (
-              <p className="text-sm text-zinc-500">Loading favorites…</p>
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-20 w-full rounded-xl" />
+                ))}
+              </div>
             ) : favorites.length === 0 ? (
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                You haven&apos;t saved any favorites yet. Tap the ☆ on any generated caption to save it here.
-              </p>
+              <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50/60 p-8 text-center sm:p-10 dark:border-zinc-700 dark:bg-zinc-950/30">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-2xl dark:bg-amber-950/50">
+                  ⭐
+                </div>
+                <p className="mt-4 text-sm font-medium text-zinc-700 dark:text-zinc-200">
+                  No favorites yet. Star a caption to save it here.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setTab("captions")}
+                  className="mt-5 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+                >
+                  Generate captions
+                </button>
+              </div>
             ) : (
               <ul className="flex flex-col gap-4">
                 {favorites.map((item) => (

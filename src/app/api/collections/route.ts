@@ -60,8 +60,18 @@ export async function GET(req: Request) {
 
   const ids = (collections ?? []).map((c) => c.id as string);
 
+  // Optional caption param: report which collections already contain it so the
+  // UI can show a "already saved" checkmark. Sanitized the same way items are
+  // stored on insert so the equality match is reliable.
+  const url = new URL(req.url);
+  const captionText = sanitizeText(url.searchParams.get("caption"), {
+    maxLength: 4000,
+    allowLineBreaks: true,
+  });
+
   // Fetch counts in a single query keyed by collection_id.
   const counts = new Map<string, number>();
+  const containsCaption = new Set<string>();
   if (ids.length > 0) {
     const { data: countRows, error: countErr } = await supabaseServer
       .from("caption_collection_items")
@@ -74,6 +84,18 @@ export async function GET(req: Request) {
         counts.set(id, (counts.get(id) ?? 0) + 1);
       }
     }
+
+    if (captionText) {
+      const { data: memberRows } = await supabaseServer
+        .from("caption_collection_items")
+        .select("collection_id")
+        .eq("user_id", userId)
+        .eq("caption_text", captionText)
+        .in("collection_id", ids);
+      for (const row of memberRows ?? []) {
+        containsCaption.add(row.collection_id as string);
+      }
+    }
   }
 
   const items = (collections ?? []).map((c) => ({
@@ -81,6 +103,7 @@ export async function GET(req: Request) {
     name: c.name as string,
     created_at: c.created_at as string,
     count: counts.get(c.id as string) ?? 0,
+    containsCaption: containsCaption.has(c.id as string),
   }));
 
   return NextResponse.json({ items });

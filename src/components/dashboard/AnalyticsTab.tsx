@@ -1,6 +1,9 @@
 "use client";
 
 import { isProPlan } from "@/lib/plan";
+import { friendlyError } from "@/lib/friendly-error";
+import { Skeleton } from "@/components/ui/Skeleton";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 type CountedItem = { name: string; value: number };
@@ -434,12 +437,12 @@ export function AnalyticsTab({ plan, checkoutLoading, onStartCheckout }: Props) 
       const res = await fetch("/api/analytics/captions");
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
-        setError(body.error || "Could not load analytics.");
+        setError(friendlyError({ message: body.error, status: res.status }, "Could not load analytics."));
         return;
       }
       setData((await res.json()) as AnalyticsResponse);
     } catch {
-      setError("Could not load analytics.");
+      setError(friendlyError(undefined));
     } finally {
       setLoading(false);
     }
@@ -455,8 +458,36 @@ export function AnalyticsTab({ plan, checkoutLoading, onStartCheckout }: Props) 
 
   if (loading && !data) {
     return (
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/80">
-        Loading your personal analytics…
+      <div className="space-y-4">
+        <div>
+          <Skeleton className="h-6 w-44" />
+          <Skeleton className="mt-2 h-3.5 w-72 max-w-full" />
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900/80"
+            >
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="mt-3 h-7 w-12" />
+            </div>
+          ))}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900/80">
+            <Skeleton className="h-4 w-32" />
+            <div className="mt-4 space-y-2.5">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-3.5" style={{ width: `${85 - i * 14}%` }} />
+              ))}
+            </div>
+          </div>
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900/80">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="mt-4 h-32 w-full rounded-xl" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -510,14 +541,24 @@ export function AnalyticsTab({ plan, checkoutLoading, onStartCheckout }: Props) 
         </div>
       ) : empty ? (
         <div className="rounded-2xl border border-dashed border-purple-300 bg-gradient-to-br from-purple-50/50 to-fuchsia-50/50 p-10 text-center dark:border-purple-700/50 dark:from-purple-950/20 dark:to-fuchsia-950/20">
-          <p className="text-4xl">📊</p>
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-purple-100 text-2xl dark:bg-purple-950/50">
+            📊
+          </div>
           <h3 className="mt-4 text-xl font-bold text-zinc-900 dark:text-white">
-            Your coach is ready — let&apos;s get started
+            Generate at least 5 captions to see your analytics.
           </h3>
           <p className="mx-auto mt-2 max-w-md text-sm text-zinc-600 dark:text-zinc-400">
-            Generate your first caption to see personalized insights, streak tracking, and
-            week-over-week trends. The more you create, the smarter your coach gets.
+            The more you create, the smarter your caption coach gets — with streak
+            tracking, week-over-week trends, and your highest-scoring captions.
           </p>
+          <div className="mt-5">
+            <Link
+              href="/dashboard"
+              className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+            >
+              Generate captions
+            </Link>
+          </div>
         </div>
       ) : data ? (
         <AnalyticsView data={data} blurred={false} />

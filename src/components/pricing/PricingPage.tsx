@@ -3,6 +3,7 @@
 import { FooterSection } from "@/components/landing/FooterSection";
 import { LandingHeader } from "@/components/landing/LandingHeader";
 import { MoneyBackBadge } from "@/components/landing/MoneyBackBadge";
+import { TrustBadges } from "@/components/TrustBadges";
 import { useUser } from "@clerk/nextjs";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
@@ -257,8 +258,9 @@ export function PricingPage() {
               Start free. Upgrade when you&apos;re posting every day and need more daily tokens
               and the full Pro toolkit.
             </motion.p>
-            <div className="mt-6 flex justify-center">
+            <div className="mt-6 flex flex-col items-center gap-3">
               <MoneyBackBadge />
+              <TrustBadges />
             </div>
           </div>
         </section>
@@ -344,13 +346,14 @@ export function PricingPage() {
             </div>
 
             <div className="mt-8 flex flex-col items-center gap-4 text-center">
-              <MoneyBackBadge variant="purple" />
+              <MoneyBackBadge variant="purple" size="lg" />
               <Link
                 href={signedIn ? "/upgrade" : "/sign-up"}
-                className="inline-flex min-h-[52px] items-center justify-center rounded-full bg-purple-600 px-8 py-3 text-base font-semibold text-white shadow-xl shadow-purple-600/30 transition hover:bg-purple-500"
+                className="inline-flex min-h-[52px] items-center justify-center rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-600 px-8 py-3 text-base font-semibold text-white shadow-xl shadow-purple-600/30 transition hover:opacity-90"
               >
                 {signedIn ? "Upgrade to Pro" : "Start free — upgrade later"}
               </Link>
+              <TrustBadges className="mt-1" />
             </div>
           </div>
         </section>

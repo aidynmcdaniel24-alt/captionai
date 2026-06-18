@@ -4,6 +4,7 @@ import { BestTimeCard } from "@/components/dashboard/BestTimeCard";
 import { WelcomeOnboardingModal } from "@/components/dashboard/WelcomeOnboardingModal";
 import { ChangePhotoButton } from "@/components/ChangePhotoButton";
 import { UserAvatar } from "@/components/UserAvatar";
+import { Skeleton, SkeletonCard } from "@/components/ui/Skeleton";
 import { SignOutButton, useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -154,9 +155,31 @@ export default function ProfilePage() {
 
   if (!isLoaded || !isSignedIn) {
     return (
-      <main className="min-h-screen bg-zinc-50 px-4 py-12 dark:bg-gradient-to-b dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900">
-        <div className="mx-auto max-w-lg animate-pulse rounded-2xl border border-zinc-200 bg-white p-8 dark:border-zinc-800 dark:bg-zinc-900/60">
-          <div className="h-8 w-48 rounded bg-zinc-200 dark:bg-zinc-800" />
+      <main className="min-h-screen bg-zinc-50 px-4 py-6 sm:py-10 dark:bg-gradient-to-b dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900">
+        <div className="mx-auto max-w-lg">
+          <Skeleton className="mb-6 h-5 w-36" />
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900/70">
+            <Skeleton className="h-7 w-40" />
+            <Skeleton className="mt-2 h-3.5 w-64" />
+            <div className="mt-6 flex items-center gap-4 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+              <Skeleton className="h-16 w-16 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3.5 w-48" />
+              </div>
+            </div>
+            <div className="mt-6 space-y-4 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="space-y-1.5">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-5 w-40" />
+                </div>
+              ))}
+            </div>
+            <div className="mt-6">
+              <SkeletonCard lines={2} />
+            </div>
+          </div>
         </div>
       </main>
     );
@@ -297,7 +320,7 @@ export default function ProfilePage() {
               {!isPro && subscriptionPlan !== null ? (
                 <Link
                   href="/upgrade"
-                  className="rounded-xl bg-purple-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-purple-500"
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 px-4 py-3 text-center text-sm font-semibold text-white transition hover:opacity-90"
                 >
                   Upgrade to Pro
                 </Link>

@@ -361,6 +361,16 @@ function splitTrailingHashtagBlock(text: string): { body: string; tailHashtags: 
   return { body: trimmed, tailHashtags: "" };
 }
 
+// Normalize clock times so they never read as "5 Am" / "5:42 AM" / "5PM".
+// Collapses any casing/spacing of am/pm (including "a.m." style dots) down to
+// a lowercase suffix glued to the number, e.g. "5am", "5:42pm".
+function normalizeTimeFormats(input: string): string {
+  return input.replace(
+    /\b(\d{1,2}(?::\d{2})?)\s*([AaPp])\.?\s?[Mm]\.?(?=\b|$|[^A-Za-z])/g,
+    (_m, time: string, meridiem: string) => `${time}${meridiem.toLowerCase()}m`
+  );
+}
+
 function processTokens(input: string, mapper: (token: string) => string): string {
   return input
     .split(/(\s+)/)
@@ -393,6 +403,8 @@ export function polishCaption(raw: string): string {
   next = normalizeEmojiSpacing(next);
   next = ensureTerminalPunctuationOnBody(next);
   next = capitalizeSentenceStarts(next);
+  // Run after capitalization so "5 Am" / "5:42 AM" never survives.
+  next = normalizeTimeFormats(next);
 
   // Final whitespace sweep.
   next = next.replace(/[ \t]{2,}/g, " ").trim();

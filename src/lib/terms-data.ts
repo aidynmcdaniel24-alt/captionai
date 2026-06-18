@@ -9,7 +9,7 @@ export type TermsSection = {
   blocks: TermsBlock[];
 };
 
-export const TERMS_LAST_UPDATED = "May 1, 2026";
+export const TERMS_LAST_UPDATED = "June 2026";
 
 export const TERMS_SECTIONS: TermsSection[] = [
   {

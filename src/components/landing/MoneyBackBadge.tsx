@@ -1,10 +1,16 @@
 type MoneyBackBadgeProps = {
   className?: string;
   variant?: "emerald" | "purple";
+  /** "lg" makes the guarantee badge larger and bolder for upgrade pages. */
+  size?: "default" | "lg";
 };
 
 /** "30-day money back guarantee" badge with a shield icon. */
-export function MoneyBackBadge({ className = "", variant = "emerald" }: MoneyBackBadgeProps) {
+export function MoneyBackBadge({
+  className = "",
+  variant = "emerald",
+  size = "default",
+}: MoneyBackBadgeProps) {
   const palette =
     variant === "emerald"
       ? "border-emerald-300/70 bg-emerald-50 text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-200"
@@ -15,14 +21,20 @@ export function MoneyBackBadge({ className = "", variant = "emerald" }: MoneyBac
       ? "text-emerald-600 dark:text-emerald-400"
       : "text-purple-600 dark:text-purple-400";
 
+  const isLg = size === "lg";
+  const containerSize = isLg
+    ? "gap-3 rounded-2xl px-5 py-3.5 text-base shadow-md"
+    : "gap-3 rounded-2xl px-4 py-3 text-sm shadow-sm";
+  const iconSize = isLg ? "h-6 w-6" : "h-5 w-5";
+
   return (
     <div
       role="img"
       aria-label="30-day money back guarantee — no questions asked"
-      className={`inline-flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-medium shadow-sm ${palette} ${className}`}
+      className={`inline-flex items-center border font-medium ${containerSize} ${palette} ${className}`}
     >
       <svg
-        className={`h-5 w-5 shrink-0 ${iconColor}`}
+        className={`shrink-0 ${iconSize} ${iconColor}`}
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -36,7 +48,7 @@ export function MoneyBackBadge({ className = "", variant = "emerald" }: MoneyBac
         />
       </svg>
       <span>
-        <span className="font-semibold">30-day money back guarantee</span>
+        <span className="font-bold">30-day money back guarantee</span>
         <span className="opacity-80"> — no questions asked.</span>
       </span>
     </div>

@@ -1,7 +1,9 @@
 "use client";
 
 import { isProPlan } from "@/lib/plan";
-import { useCallback, useEffect, useState } from "react";
+import { friendlyError } from "@/lib/friendly-error";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type Collection = {
   id: string;
@@ -79,6 +81,7 @@ export function CollectionsTab({
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
+  const newNameRef = useRef<HTMLInputElement | null>(null);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeName, setActiveName] = useState<string>("");
@@ -102,13 +105,13 @@ export function CollectionsTab({
           setCollections([]);
           return;
         }
-        setError(body.error || "Could not load collections.");
+        setError(friendlyError({ message: body.error, status: res.status }, "Could not load collections."));
         return;
       }
       const data = (await res.json()) as { items?: Collection[] };
       setCollections(data.items ?? []);
     } catch {
-      setError("Could not load collections.");
+      setError(friendlyError(undefined));
     } finally {
       setLoading(false);
     }
@@ -158,7 +161,7 @@ export function CollectionsTab({
       });
       const data = (await res.json()) as Collection & { error?: string };
       if (!res.ok) {
-        setError(data.error || "Could not create collection.");
+        setError(friendlyError({ message: data.error, status: res.status }, "Could not create collection."));
         return;
       }
       setCollections((prev) => [
@@ -376,6 +379,7 @@ export function CollectionsTab({
               }}
             >
               <input
+                ref={newNameRef}
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
@@ -386,7 +390,7 @@ export function CollectionsTab({
               <button
                 type="submit"
                 disabled={creating || !newName.trim()}
-                className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50"
+                className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
               >
                 {creating ? "Creating…" : "+ New collection"}
               </button>
@@ -394,16 +398,28 @@ export function CollectionsTab({
           </div>
 
           {loading ? (
-            <p className="text-sm text-zinc-500">Loading collections…</p>
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <li key={i}>
+                  <Skeleton className="h-[88px] w-full rounded-2xl" />
+                </li>
+              ))}
+            </ul>
           ) : collections.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-zinc-300 px-4 py-8 text-center dark:border-zinc-700">
-              <p className="text-3xl">📁</p>
-              <p className="mt-2 text-sm font-medium text-zinc-700 dark:text-zinc-200">
-                No collections yet
+            <div className="rounded-2xl border border-dashed border-zinc-300 px-4 py-10 text-center dark:border-zinc-700">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-purple-100 text-2xl dark:bg-purple-950/50">
+                📁
+              </div>
+              <p className="mt-4 text-sm font-medium text-zinc-700 dark:text-zinc-200">
+                No collections yet. Create one to organize your captions.
               </p>
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                Create one above to start organizing your saved captions.
-              </p>
+              <button
+                type="button"
+                onClick={() => newNameRef.current?.focus()}
+                className="mt-5 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+              >
+                + New collection
+              </button>
             </div>
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2">

@@ -2,6 +2,8 @@
 
 import { BrandLogo } from "@/components/BrandLogo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { friendlyError } from "@/lib/friendly-error";
 import { UserButton, useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -112,7 +114,7 @@ export function HistoryPageClient() {
       const res = await fetch("/api/captions/history");
       const data = (await res.json()) as HistoryResponse;
       if (!res.ok) {
-        setError(data.error || "Could not load caption history.");
+        setError(friendlyError({ message: data.error, status: res.status }, "Could not load caption history."));
         setItems([]);
         return;
       }
@@ -122,7 +124,7 @@ export function HistoryPageClient() {
       if (typeof data.limit === "number") setHistoryLimit(data.limit);
       setTruncated(Boolean(data.truncated));
     } catch {
-      setError("Could not load caption history.");
+      setError(friendlyError(undefined));
       setItems([]);
     } finally {
       setLoading(false);
@@ -137,7 +139,7 @@ export function HistoryPageClient() {
       const res = await fetch("/api/captions/history/export");
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
-        setError(data.error || "Could not export history.");
+        setError(friendlyError({ message: data.error, status: res.status }, "Could not export history."));
         return;
       }
       const blob = await res.blob();
@@ -210,9 +212,22 @@ export function HistoryPageClient() {
 
   if (!isLoaded || !isSignedIn) {
     return (
-      <main className="min-h-screen bg-zinc-50 px-4 py-12 dark:bg-gradient-to-b dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900">
-        <div className="mx-auto max-w-3xl animate-pulse rounded-2xl border border-zinc-200 bg-white p-8 dark:border-zinc-800 dark:bg-zinc-900/60">
-          <div className="h-8 w-48 rounded bg-zinc-200 dark:bg-zinc-800" />
+      <main className="min-h-screen bg-zinc-50 px-4 py-6 sm:py-10 dark:bg-gradient-to-b dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-900">
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900/70">
+            <Skeleton className="h-7 w-40" />
+            <Skeleton className="mt-3 h-11 w-full" />
+          </div>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900/80"
+            >
+              <Skeleton className="h-3 w-28" />
+              <Skeleton className="mt-2 h-5 w-1/2" />
+              <Skeleton className="mt-4 h-16 w-full rounded-xl" />
+            </div>
+          ))}
         </div>
       </main>
     );
@@ -344,19 +359,37 @@ export function HistoryPageClient() {
         ) : null}
 
         {loading && items.length === 0 ? (
-          <div className="rounded-2xl border border-zinc-200 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/80">
-            Loading your history…
-          </div>
+          <ul className="flex flex-col gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <li
+                key={i}
+                className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-5 dark:border-zinc-800 dark:bg-zinc-900/80"
+              >
+                <Skeleton className="h-3 w-28" />
+                <Skeleton className="mt-2 h-5 w-1/2" />
+                <Skeleton className="mt-1 h-3 w-32" />
+                <div className="mt-4 space-y-3">
+                  <Skeleton className="h-16 w-full rounded-xl" />
+                  <Skeleton className="h-16 w-full rounded-xl" />
+                </div>
+              </li>
+            ))}
+          </ul>
         ) : filtered.length === 0 ? (
-          <div className="rounded-2xl border border-zinc-200 bg-white p-6 text-center text-sm text-zinc-600 sm:p-8 dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-300">
-            {items.length === 0
-              ? "You haven't generated any captions yet. Head to the dashboard to make your first one."
-              : "No saved generations match your filters."}
+          <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center sm:p-10 dark:border-zinc-800 dark:bg-zinc-900/80">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-purple-100 text-2xl dark:bg-purple-950/50">
+              {items.length === 0 ? "📝" : "🔍"}
+            </div>
+            <p className="mt-4 text-sm font-medium text-zinc-700 dark:text-zinc-200">
+              {items.length === 0
+                ? "No history yet. Generate your first caption to get started."
+                : "No saved generations match your filters."}
+            </p>
             {items.length === 0 ? (
-              <div className="mt-4">
+              <div className="mt-5">
                 <Link
                   href="/dashboard"
-                  className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-500"
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
                 >
                   Generate captions
                 </Link>

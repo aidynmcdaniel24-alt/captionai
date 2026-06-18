@@ -1,5 +1,8 @@
 "use client";
 
+import { MoneyBackBadge } from "@/components/landing/MoneyBackBadge";
+import { TrustBadges } from "@/components/TrustBadges";
+import { friendlyError } from "@/lib/friendly-error";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -33,7 +36,7 @@ function UpgradeCheckout() {
         throw new Error("Checkout URL missing.");
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Something went wrong.");
+          setError(friendlyError(e instanceof Error ? e.message : undefined));
           setPending(false);
         }
       }
@@ -53,6 +56,10 @@ function UpgradeCheckout() {
             <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-purple-500 border-t-transparent" />
             <p className="mt-6 text-lg font-medium">Opening secure Stripe checkout…</p>
             <p className="mt-2 text-sm text-zinc-400">You will be redirected to enter payment details.</p>
+            <div className="mt-8 flex flex-col items-center gap-3">
+              <MoneyBackBadge size="lg" />
+              <TrustBadges tone="dark" />
+            </div>
           </>
         ) : null}
 

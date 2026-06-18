@@ -1,5 +1,6 @@
 "use client";
 
+import { CookieConsent } from "@/components/CookieConsent";
 import { InactivityLogout } from "@/components/InactivityLogout";
 import { PwaRegister } from "@/components/pwa/PwaRegister";
 import { ReferralClaim } from "@/components/ReferralClaim";
@@ -19,6 +20,7 @@ export function ClientProviders({
       <ReferralClaim />
       <PwaRegister />
       {children}
+      <CookieConsent />
     </ThemeProvider>
   );
 }

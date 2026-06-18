@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { logAdminEvent } from "@/lib/admin-log";
 import { polishCaptions } from "@/lib/caption-formatter";
 import { guardTopic } from "@/lib/content-moderation";
-import { computeCaptionScores, type CaptionScore } from "@/lib/caption-score";
+import {
+  computeCaptionScores,
+  deriveCaptionRatingsFromScores,
+  type CaptionScore,
+} from "@/lib/caption-score";
 import { getGroqClient } from "@/lib/groq-client";
 import { withGroqRetry } from "@/lib/groq-retry";
 import type { CaptionRatingKey } from "@/lib/caption-rating-styles";
@@ -813,8 +817,10 @@ export async function POST(req: Request) {
 
     captions = postProcessCaptions(parsed.captions, platform);
     emojiPerCaption = parsed.emojiPerCaption;
-    captionRatings = parsed.captionRatings;
     captionScores = computeCaptionScores(captions, platform, parsed.captionScores);
+    // Derive the Best/Medium/Worst labels from the numeric scores so they can
+    // never disagree with what the user sees (overrides the model's labels).
+    captionRatings = deriveCaptionRatingsFromScores(captionScores);
 
     const { data: inserted, error: historyError } = await supabaseServer
       .from("caption_history")
