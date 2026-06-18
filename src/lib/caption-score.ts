@@ -377,10 +377,18 @@ export function computeCaptionScores(
 
 /**
  * Derive Best/Medium/Worst labels directly from the numeric scores so the label
- * can never disagree with the score the user sees. The single highest-scoring
- * caption is "best", the single lowest is "worst", and everything in between is
- * "medium". Ties are broken by original order (earlier caption wins the higher
- * rank), keeping the assignment deterministic.
+ * can never disagree with the score the user sees. Works for ANY number of
+ * captions (3, 5, 7, …):
+ *   - the single highest-scoring caption gets "best"
+ *   - the single lowest-scoring caption gets "worst"
+ *   - every other caption gets "medium"
+ * There is always exactly one "best" and exactly one "worst" in the batch
+ * (never two of either). Ties are broken by original order so the result is
+ * deterministic: the earliest caption among the top scores wins "best", and the
+ * earliest among the bottom scores wins "worst".
+ *
+ * Apply this to the FULL list of captions after every score has been computed,
+ * regardless of how many captions there are.
  */
 export function deriveCaptionRatingsFromScores(
   scores: CaptionScore[]
@@ -389,12 +397,25 @@ export function deriveCaptionRatingsFromScores(
   if (n === 0) return [];
   if (n === 1) return ["best"];
 
-  const order = scores
-    .map((s, i) => ({ i, total: s.total }))
-    .sort((a, b) => b.total - a.total || a.i - b.i);
+  // Single pass to find the highest and lowest scoring captions. Strict
+  // comparisons mean the FIRST occurrence of the max/min wins, so ties resolve
+  // by original order.
+  let bestIdx = 0;
+  let worstIdx = 0;
+  for (let i = 1; i < n; i++) {
+    const total = scores[i]!.total;
+    if (total > scores[bestIdx]!.total) bestIdx = i;
+    if (total < scores[worstIdx]!.total) worstIdx = i;
+  }
+
+  // Only happens when every caption has the identical score. Force them apart
+  // so we still emit exactly one "best" and one "worst".
+  if (worstIdx === bestIdx) {
+    worstIdx = bestIdx === n - 1 ? 0 : n - 1;
+  }
 
   const ratings: CaptionRatingKey[] = new Array(n).fill("medium");
-  ratings[order[0]!.i] = "best";
-  ratings[order[n - 1]!.i] = "worst";
+  ratings[bestIdx] = "best";
+  ratings[worstIdx] = "worst";
   return ratings;
 }
