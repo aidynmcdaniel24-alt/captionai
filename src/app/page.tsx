@@ -6,7 +6,7 @@ import { SEO_KEYWORDS } from "@/lib/seo";
 const title = "CaptionAI — Free AI Caption Generator for Instagram, TikTok & LinkedIn";
 
 const description =
-  "Caption generator free for social media captions. Create Instagram captions, TikTok captions, and LinkedIn captions in seconds with our AI caption generator.";
+  "Generate free AI captions for Instagram, TikTok, and LinkedIn in seconds. CaptionAI's AI caption generator writes engaging social media captions and hashtags instantly.";
 
 export const metadata: Metadata = {
   title: { absolute: title },
