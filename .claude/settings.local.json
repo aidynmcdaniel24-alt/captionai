@@ -6,7 +6,12 @@
       "Bash(git push *)",
       "PowerShell(git add *)",
       "PowerShell(git push *)",
-      "PowerShell(git *)"
+      "PowerShell(git *)",
+      "Bash(git -C \"C:\\\\Users\\\\aidyn\\\\OneDrive\\\\Desktop\\\\CaptionAI\\\\captionai\" add -A)",
+      "Bash(git -C \"C:\\\\Users\\\\aidyn\\\\OneDrive\\\\Desktop\\\\CaptionAI\\\\captionai\" status)",
+      "Bash(git -C \"C:\\\\Users\\\\aidyn\\\\OneDrive\\\\Desktop\\\\CaptionAI\\\\captionai\" restore --staged .claude/settings.local.json)",
+      "Bash(git -C \"C:\\\\Users\\\\aidyn\\\\OneDrive\\\\Desktop\\\\CaptionAI\\\\captionai\" commit -m \"Overhaul caption prompt for variety, concrete detail, and platform formatting\" -- src/app/api/captions/generate/route.ts)",
+      "Bash(git *)"
     ]
   }
 }

@@ -266,6 +266,35 @@ function scoreOriginality(caption: string): number {
   return Math.max(0, score);
 }
 
+// LinkedIn over-scores easily: the model happily hands a generic, formatless
+// post 100/100. Reserve 90+ for posts that show real substance. We count
+// quality signals and cap the final total when too few are present.
+function linkedInScoreCap(caption: string): number {
+  const body = bodyWithoutHashtags(caption);
+  const lower = body.toLowerCase();
+  const paragraphs = body.split(/\n{2,}/).filter(Boolean).length;
+
+  let signals = 0;
+  if (/\d/.test(body)) signals++; // a concrete number/stat
+  if (body.length >= 220) signals++; // enough substance to be a real post
+  if (paragraphs >= 3 && paragraphs <= 6) signals++; // formatted to breathe
+  if (!CLICHES.some((c) => lower.includes(c))) signals++; // not cliché-ridden
+
+  const opener = firstLine(caption)
+    .toLowerCase()
+    .replace(/^[^\p{L}\p{N}]+/u, "");
+  const genericOpener =
+    /^(in today|in this|as a|as an|i am|i'm|we are|we're|excited to|thrilled to|happy to|proud to|i want to share|i wanted to share)/.test(
+      opener
+    );
+  if (!genericOpener) signals++;
+
+  // 4+ signals = genuinely strong, eligible for the full 90-100 range.
+  if (signals >= 4) return 100;
+  if (signals === 3) return 88;
+  return 80;
+}
+
 export function heuristicScore(caption: string, platform: string): CaptionScoreBreakdown {
   return {
     hook: scoreHook(caption),
@@ -352,7 +381,7 @@ export function computeCaptionScore(
 ): CaptionScore {
   const heuristic = heuristicScore(caption, platform);
   const breakdown = mergeBreakdown(fromModel ?? undefined, heuristic);
-  const total = clampScore(
+  let total = clampScore(
     breakdown.hook +
       breakdown.emotion +
       breakdown.cta +
@@ -360,6 +389,10 @@ export function computeCaptionScore(
       breakdown.originality,
     100
   );
+  // LinkedIn: keep 90+ honest — only genuinely strong posts can reach it.
+  if (platform.trim().toLowerCase().includes("linkedin")) {
+    total = Math.min(total, linkedInScoreCap(caption));
+  }
   const band = bandForScore(total);
   const explanation =
     (fromModel?.explanation && String(fromModel.explanation).trim().slice(0, 140)) ||

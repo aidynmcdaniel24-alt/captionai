@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { guardTopic } from "@/lib/content-moderation";
 import { getGroqClient } from "@/lib/groq-client";
 import { withGroqRetry } from "@/lib/groq-retry";
+import { sanitizeHashtagsInText } from "@/lib/hashtag-sanitize";
 import {
   RATE_LIMITS,
   rateLimitByUser,
@@ -22,7 +23,9 @@ function parseBio(raw: string): string | null {
   try {
     const j = JSON.parse(raw) as { bio?: string };
     const b = j.bio?.trim();
-    return b || null;
+    if (!b) return null;
+    // Tidy any broken hashtags ("# tag", "#fall_events") that sneak into a bio.
+    return sanitizeHashtagsInText(b).trim() || null;
   } catch {
     return null;
   }
@@ -72,19 +75,38 @@ export async function POST(req: Request) {
       groq.chat.completions.create({
         model: "llama-3.3-70b-versatile",
         temperature: 0.8,
-        max_tokens: 500,
+        max_tokens: 1200,
         response_format: { type: "json_object" },
         messages: [
           {
             role: "system",
             content:
-              "You write social media profile bios. Output must be a single JSON object only — no markdown fences, no commentary, no text before or after the JSON.",
+              "You write social media PROFILE BIOS — the short blurb on someone's account, NOT a caption for a single post. A bio describes the ACCOUNT as a whole: who they are, what they offer, where, and what to do next. Output must be a single JSON object only — no markdown fences, no commentary, no text before or after the JSON. Always finish the bio — never cut off mid-sentence.",
           },
           {
             role: "user",
-            content: `Write ONE concise profile bio for ${platform} with tone: ${tone}.
-About: "${about}"
-Keep within the platform's typical bio length (around 150-160 characters where appropriate). Return JSON exactly in this shape: {"bio":"the bio text"}`,
+            content: `Write ONE complete ${platform} PROFILE BIO with a ${tone} tone.
+
+About the account: "${about}"
+
+This is a profile bio, NOT a post caption. Write about the account/brand/person overall — never about one specific post or event.
+
+Structure it as short, punchy lines on SEPARATE lines (use "\\n" between lines), in this order, skipping any that don't apply:
+1. What the business or person IS — one clear line.
+2. What they offer / their specialty.
+3. Location, if relevant.
+4. A clear call to action (e.g. "Link in bio", "Order online", "DM to book", "Shop now 👇").
+
+Rules:
+- Keep each line short and scannable. Lead lines with a relevant emoji where it fits the tone.
+- Use line breaks between lines, not one run-on sentence.
+- Stay within the platform's bio length (Instagram/TikTok aim for ~150 characters; LinkedIn/Facebook can be a bit longer).
+- Write the FULL bio and finish every line — do not get cut off.
+
+Example of the right SHAPE (do not copy the words):
+"☕ Small-batch coffee + cozy vibes\\n🍂 New fall menu out now\\n📍 Portland, OR\\n👇 Order online"
+
+Return JSON exactly in this shape: {"bio":"the full bio text with \\n line breaks"}`,
           },
         ],
       })

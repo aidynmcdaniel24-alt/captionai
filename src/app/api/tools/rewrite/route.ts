@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getGroqClient } from "@/lib/groq-client";
 import { extractJsonPayload } from "@/lib/groq-json";
 import { withGroqRetry } from "@/lib/groq-retry";
+import { sanitizeHashtagsInText } from "@/lib/hashtag-sanitize";
+import { HUMAN_VOICE_RULES, limitExclamations } from "@/lib/human-voice";
 import { isProPlan } from "@/lib/plan";
 import {
   RATE_LIMITS,
@@ -33,8 +35,13 @@ function parseRewrite(raw: string): string | null {
   const payload = extractJsonPayload(raw);
   try {
     const j = JSON.parse(payload) as { rewritten?: string };
-    const text = j.rewritten?.toString().trim();
-    return text && text.length <= 4000 ? text : null;
+    let text = j.rewritten?.toString().trim();
+    if (!text || text.length > 4000) return null;
+    // Enforce the human-voice rules deterministically: at most one "!" and no
+    // broken hashtags slipping through.
+    text = limitExclamations(text, 1);
+    text = sanitizeHashtagsInText(text).trim();
+    return text || null;
   } catch {
     return null;
   }
@@ -87,12 +94,13 @@ export async function POST(req: Request) {
         messages: [
           {
             role: "system",
-            content:
-              'You rewrite social media captions. Reply with strict JSON only: {"rewritten":"..."}. Keep platform voice and hashtags placement correct.',
+            content: `You rewrite social media captions. Reply with strict JSON only: {"rewritten":"..."}. Keep platform voice and hashtag placement correct.
+
+${HUMAN_VOICE_RULES}`,
           },
           {
             role: "user",
-            content: `Platform: ${platform}\nGoal: ${goal}\n\nOriginal caption:\n"""${caption}"""\n\nReturn JSON with key "rewritten" only.`,
+            content: `Platform: ${platform}\nGoal: ${goal}\n\nOriginal caption:\n"""${caption}"""\n\nRewrite it following the human-voice rules above — punchier and genuinely better, not just more enthusiastic. Return JSON with key "rewritten" only.`,
           },
         ],
       })

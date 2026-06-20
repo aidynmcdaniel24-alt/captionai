@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getGroqClient } from "@/lib/groq-client";
 import { parseLenientJson } from "@/lib/groq-json";
 import { withGroqRetry } from "@/lib/groq-retry";
+import { sanitizeHashtagsInText } from "@/lib/hashtag-sanitize";
+import { HUMAN_VOICE_RULES, limitExclamations } from "@/lib/human-voice";
 import { isAnnualPlan } from "@/lib/plan";
 import {
   RATE_LIMITS,
@@ -90,12 +92,18 @@ export async function POST(req: Request) {
 - originality (0-10): originality
 total = sum of the five.
 
+${HUMAN_VOICE_RULES}
+
+For the "improved" caption, apply the human-voice rules above. Make it genuinely sharper and more human — NOT just more enthusiastic or more exclamation marks.
+
+IMPORTANT: If the original caption is already strong (roughly 85+), do NOT force a worse rewrite. In that case return the original caption (or a tiny, clearly-better tweak) as "improved" and say so in the tips (e.g. "Already strong — only minor polish.").
+
 Return strict JSON:
 {
   "total": 0-100,
   "hook": 0-25, "emotion": 0-25, "cta": 0-20, "platformFit": 0-20, "originality": 0-10,
   "tips": {"hook":"specific tip","emotion":"...","cta":"...","platformFit":"...","originality":"..."},
-  "improved": "full rewritten caption with ALL improvements applied, ready to paste"
+  "improved": "the improved caption (or the original if it is already strong), ready to paste"
 }`,
           },
           {
@@ -112,6 +120,12 @@ Return strict JSON:
     if (!parsed?.improved || typeof parsed.total !== "number") {
       return NextResponse.json({ error: "Could not grade the caption." }, { status: 502 });
     }
+
+    // Enforce human-voice rules on the suggested rewrite: at most one "!" and no
+    // broken hashtags.
+    parsed.improved = sanitizeHashtagsInText(
+      limitExclamations(parsed.improved, 1)
+    ).trim();
 
     return NextResponse.json({ grade: parsed, tokens: tokenInfoPayload(spend) });
   } catch (e) {

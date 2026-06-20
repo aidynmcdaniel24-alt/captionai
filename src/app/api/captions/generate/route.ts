@@ -497,20 +497,13 @@ function stripLinkedInMarkdown(caption: string): string {
 }
 
 // LinkedIn captions must read as 3-5 short paragraphs of 1-2 sentences each,
-// separated by blank lines. If the model returns a wall of text or a couple of
-// long paragraphs, rebuild it from sentences so the rendered post breathes.
+// separated by blank lines. The model frequently returns either a wall of text
+// or one block with double-spaces between sentences instead of real paragraph
+// breaks, so we always rebuild from sentences. This guarantees short paragraphs
+// AND collapses any double-spacing between sentences.
 function splitLinkedInIntoParagraphs(caption: string): string {
   const trimmed = caption.trim();
   if (!trimmed) return caption;
-
-  // If it already has 3+ blank-line-separated paragraphs, just normalize spacing.
-  const existing = trimmed
-    .split(/\n\s*\n+/)
-    .map((p) => p.trim())
-    .filter(Boolean);
-  if (existing.length >= 3) {
-    return existing.join("\n\n");
-  }
 
   // Pull off any trailing hashtag block (LinkedIn allows up to 2) so we can
   // reattach it on its own final line after we rebuild the body.
@@ -525,6 +518,8 @@ function splitLinkedInIntoParagraphs(caption: string): string {
     body = body.slice(0, trailingHashtags.index).trim();
   }
 
+  // Flatten ALL whitespace (newlines, single AND double spaces) to a single
+  // space so we can re-segment into clean paragraphs from scratch.
   const flatBody = body.replace(/\s+/g, " ").trim();
   if (!flatBody) {
     return hashtagLine || caption;

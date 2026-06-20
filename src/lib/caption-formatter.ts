@@ -7,6 +7,8 @@
 // the model used for paragraphing, and any emoji that genuinely belong to the
 // caption. The goal is "ready to post with zero editing", not "rewritten".
 
+import { sanitizeHashtagsInText } from "@/lib/hashtag-sanitize";
+
 const SMART_QUOTE_MAP: Record<string, string> = {
   "\u2018": "'",
   "\u2019": "'",
@@ -391,6 +393,10 @@ export function polishCaption(raw: string): string {
   if (!raw) return raw;
 
   let text = normalizeWhitespaceAndUnicode(raw);
+
+  // Fix broken hashtags ("# tag" → "#tag", "#fall_events" → "#fallevents")
+  // before we detect the trailing hashtag block.
+  text = sanitizeHashtagsInText(text);
 
   // Protect trailing hashtag block from sentence-fix logic.
   const { body, tailHashtags } = splitTrailingHashtagBlock(text);

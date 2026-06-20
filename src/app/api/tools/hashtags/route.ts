@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { guardTopic } from "@/lib/content-moderation";
 import { getGroqClient } from "@/lib/groq-client";
+import { sanitizeHashtagList } from "@/lib/hashtag-sanitize";
 import { withGroqRetry } from "@/lib/groq-retry";
 import {
   RATE_LIMITS,
@@ -24,7 +25,10 @@ function parseHashtags(raw: string): string[] | null {
     if (!j.hashtags?.length) {
       return null;
     }
-    return j.hashtags.map((h) => String(h).trim()).filter(Boolean).slice(0, 30);
+    // Strip spaces ("#SmallTown Charm" → "#SmallTownCharm") and underscores
+    // ("#fall_events" → "#fallevents") from every tag, drop dupes/empties.
+    const cleaned = sanitizeHashtagList(j.hashtags).slice(0, 30);
+    return cleaned.length ? cleaned : null;
   } catch {
     return null;
   }
