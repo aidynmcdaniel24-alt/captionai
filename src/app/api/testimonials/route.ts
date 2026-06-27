@@ -64,10 +64,13 @@ export async function GET(req: Request) {
     .order("created_at", { ascending: false });
 
   if (error) {
-    return NextResponse.json(
-      { error: safeErrorMessage(error, "Could not load testimonials.") },
-      { status: 500 }
-    );
+    console.error("[GET /api/testimonials] Supabase error", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+    return NextResponse.json({ items: [] as PublicTestimonial[] });
   }
 
   return NextResponse.json({ items: (data ?? []) as PublicTestimonial[] });
