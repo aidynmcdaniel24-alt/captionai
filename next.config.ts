@@ -65,7 +65,33 @@ const CSP_DIRECTIVES: Record<string, string[]> = {
   "upgrade-insecure-requests": [],
 };
 
-const cspString = Object.entries(CSP_DIRECTIVES)
+/**
+ * Vercel's preview toolbar / comments load from vercel.live. Allowed on
+ * preview deployments ONLY (VERCEL_ENV === "preview"); production and local
+ * builds keep the strict policy above.
+ */
+const VERCEL_LIVE = "https://vercel.live";
+const PREVIEW_ONLY_SOURCES: Record<string, string[]> = {
+  "script-src": [VERCEL_LIVE],
+  "style-src": [VERCEL_LIVE],
+  "img-src": [VERCEL_LIVE],
+  "font-src": [VERCEL_LIVE],
+  "connect-src": [VERCEL_LIVE],
+  "frame-src": [VERCEL_LIVE],
+};
+
+const isPreviewDeploy = process.env.VERCEL_ENV === "preview";
+
+const effectiveDirectives: Record<string, string[]> = isPreviewDeploy
+  ? Object.fromEntries(
+      Object.entries(CSP_DIRECTIVES).map(([directive, sources]) => [
+        directive,
+        [...sources, ...(PREVIEW_ONLY_SOURCES[directive] ?? [])],
+      ])
+    )
+  : CSP_DIRECTIVES;
+
+const cspString = Object.entries(effectiveDirectives)
   .map(([directive, sources]) =>
     sources.length > 0 ? `${directive} ${sources.join(" ")}` : directive
   )
