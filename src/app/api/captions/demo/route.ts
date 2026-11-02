@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { guardTopic } from "@/lib/content-moderation";
 import { getGroqClient } from "@/lib/groq-client";
+import { groqChatParams } from "@/lib/groq-models";
 import { withGroqRetry } from "@/lib/groq-retry";
 import {
   RATE_LIMITS,
@@ -93,9 +94,9 @@ export async function POST(req: Request) {
   try {
     const completion = await withGroqRetry(() =>
       groq.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
+        ...groqChatParams(),
         temperature: 0.85,
-        max_tokens: 400,
+        max_tokens: 1200,
         messages: [
           {
             role: "system",

@@ -8,6 +8,7 @@ import {
   type CaptionScore,
 } from "@/lib/caption-score";
 import { getGroqClient } from "@/lib/groq-client";
+import { getGroqModel, groqChatParams } from "@/lib/groq-models";
 import { withGroqRetry } from "@/lib/groq-retry";
 import type { CaptionRatingKey } from "@/lib/caption-rating-styles";
 import {
@@ -632,7 +633,7 @@ async function fetchCaptionsFromGroq(
   const temperature = strict ? 0.5 : isElite ? 0.97 : isPro ? 0.95 : 0.85;
   const completion = await withGroqRetry(() =>
     groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      ...groqChatParams(),
       temperature,
       response_format: { type: "json_object" },
       messages: [
@@ -879,7 +880,11 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     const details = error instanceof Error ? error.message : "Unknown Groq API error.";
-    await logAdminEvent("error", "groq-generate failed", { userId, details });
+    await logAdminEvent("error", "groq-generate failed", {
+      userId,
+      model: getGroqModel(),
+      details,
+    });
     return NextResponse.json(
       {
         error: "Could not generate AI captions right now. Please try again in a moment.",
