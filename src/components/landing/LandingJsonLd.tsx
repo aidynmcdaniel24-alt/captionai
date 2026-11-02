@@ -1,4 +1,4 @@
-const siteUrl = (process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "https://captionai.app").trim();
+import { SITE_URL as siteUrl } from "@/lib/site-url";
 
 export function LandingJsonLd() {
   const jsonLd = {

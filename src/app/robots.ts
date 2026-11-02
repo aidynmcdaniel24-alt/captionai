@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
-
-const baseUrl = (process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "https://captionai.app").trim();
+import { SITE_URL as baseUrl } from "@/lib/site-url";
 
 export default function robots(): MetadataRoute.Robots {
   return {

@@ -24,14 +24,14 @@ export function LandingPage() {
       <LandingHeader />
       <main>
         <HeroSection />
+        <LiveDemoSection />
         <LiveCaptionsCounter />
-        <AuthContinueSection />
         <FeaturesSection />
         <WhyCaptionAiSection />
-        <LiveDemoSection />
         <StatsSection />
         <TestimonialsSection />
         <PricingSection />
+        <AuthContinueSection />
       </main>
       <FooterSection />
     </div>

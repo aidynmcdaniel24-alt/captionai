@@ -1,18 +1,16 @@
 import type { MetadataRoute } from "next";
-
-const baseUrl = (process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "https://captionai.app").trim();
+import { SITE_URL as baseUrl } from "@/lib/site-url";
 
 const publicPaths = [
   "/",
+  "/how-it-works",
   "/pricing",
+  "/faq",
   "/about",
   "/changelog",
-  "/faq",
   "/privacy",
   "/terms",
   "/support",
-  "/sign-in",
-  "/sign-up",
 ] as const;
 
 export default function sitemap(): MetadataRoute.Sitemap {

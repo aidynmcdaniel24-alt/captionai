@@ -79,24 +79,11 @@ export function LiveCaptionsCounter() {
   }, []);
 
   const animated = useAnimatedCount(count);
-  const showLowCountMessage = loaded && (count ?? 0) < 100;
+  const showCount = loaded && (count ?? 0) >= 100;
 
   const messages = useMemo<RotatingMessage[]>(() => {
     const list: RotatingMessage[] = [];
-    if (showLowCountMessage) {
-      list.push({
-        id: "hundreds",
-        emoji: "🚀",
-        content: (
-          <span>
-            <span className="font-semibold text-purple-700 dark:text-purple-300">
-              Hundreds of captions
-            </span>{" "}
-            generated daily
-          </span>
-        ),
-      });
-    } else if (loaded) {
+    if (showCount) {
       list.push({
         id: "count",
         emoji: "🚀",
@@ -127,11 +114,6 @@ export function LiveCaptionsCounter() {
         content: <span>Your next viral caption is one click away</span>,
       },
       {
-        id: "global",
-        emoji: "🌍",
-        content: <span>Used by creators in 20+ countries</span>,
-      },
-      {
         id: "platforms",
         emoji: "📱",
         content: <span>Works on Instagram, TikTok, LinkedIn and more</span>,
@@ -143,7 +125,7 @@ export function LiveCaptionsCounter() {
       },
     );
     return list;
-  }, [showLowCountMessage, loaded, animated]);
+  }, [showCount, animated]);
 
   useEffect(() => {
     if (!loaded || messages.length <= 1) return;

@@ -3,6 +3,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 import { ClientProviders } from "@/components/ClientProviders";
+import { SITE_URL } from "@/lib/site-url";
 import { parseTheme, THEME_STORAGE_KEY, type Theme } from "@/lib/theme-storage";
 import "./globals.css";
 
@@ -16,11 +17,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const rawSiteUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000";
-const siteUrl = rawSiteUrl.endsWith("/") ? rawSiteUrl.slice(0, -1) : rawSiteUrl;
-
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "CaptionAI",
     template: "%s | CaptionAI",

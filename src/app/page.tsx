@@ -3,10 +3,10 @@ import { LandingJsonLd } from "@/components/landing/LandingJsonLd";
 import { LandingPage } from "@/components/landing/LandingPage";
 import { SEO_KEYWORDS } from "@/lib/seo";
 
-const title = "CaptionAI — Free AI Caption Generator for Instagram, TikTok & LinkedIn";
+const title = "Free AI Caption Generator for Instagram & TikTok | CaptionAI";
 
 const description =
-  "Generate free AI captions for Instagram, TikTok, and LinkedIn in seconds. CaptionAI's AI caption generator writes engaging social media captions and hashtags instantly.";
+  "Free AI caption generator for Instagram, TikTok, LinkedIn and X. Describe your post, get a caption with hashtags in seconds. Try it now, no signup.";
 
 export const metadata: Metadata = {
   title: { absolute: title },

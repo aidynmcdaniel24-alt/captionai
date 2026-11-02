@@ -1,16 +1,23 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { useState } from "react";
 
 const platforms = ["Instagram", "TikTok", "LinkedIn", "Twitter/X"] as const;
 const tones = ["funny", "professional", "hype", "inspirational"] as const;
 
+const examples = [
+  "sunset hike with my dog in Colorado",
+  "launching my first online store",
+  "new gym PR after 6 months of training",
+] as const;
+
 type Platform = (typeof platforms)[number];
 type Tone = (typeof tones)[number];
 
 export function LiveDemoSection() {
-  const [topic, setTopic] = useState("");
+  const [topic, setTopic] = useState<string>(examples[0]);
   const [platform, setPlatform] = useState<Platform>("Instagram");
   const [tone, setTone] = useState<Tone>("inspirational");
   const [caption, setCaption] = useState("");
@@ -18,7 +25,11 @@ export function LiveDemoSection() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
 
-  async function runDemo() {
+  async function runDemo(topicOverride?: string) {
+    const topicToUse = topicOverride ?? topic;
+    if (!topicToUse.trim()) {
+      return;
+    }
     setError("");
     setCaption("");
     setLoading(true);
@@ -26,7 +37,7 @@ export function LiveDemoSection() {
       const res = await fetch("/api/captions/demo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic, platform, tone }),
+        body: JSON.stringify({ topic: topicToUse, platform, tone }),
       });
       const data = (await res.json()) as { caption?: string; error?: string };
       if (!res.ok) {
@@ -63,7 +74,7 @@ export function LiveDemoSection() {
           className="mx-auto max-w-2xl text-center"
         >
           <h2 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-4xl dark:text-white">
-            Try it live—no signup
+            Try it now, no signup
           </h2>
           <p className="mt-3 text-base text-zinc-600 sm:mt-4 sm:text-lg dark:text-zinc-400">
             One AI caption on us. Create a free account anytime for three options per run and saved workflow.
@@ -77,12 +88,38 @@ export function LiveDemoSection() {
           transition={{ duration: 0.55, delay: 0.05 }}
           className="mx-auto mt-10 max-w-3xl rounded-3xl border border-purple-300/40 bg-gradient-to-b from-white to-zinc-50 p-5 shadow-2xl shadow-purple-500/10 sm:mt-14 sm:p-8 dark:border-purple-500/20 dark:from-zinc-900/90 dark:to-zinc-950/90 dark:shadow-purple-950/30"
         >
-          <label className="mb-2 block text-left text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <label
+            htmlFor="demo-topic"
+            className="mb-2 block text-left text-sm font-medium text-zinc-700 dark:text-zinc-300"
+          >
             What are you posting about?
           </label>
+          <div className="mb-3 flex flex-wrap gap-2">
+            {examples.map((example) => (
+              <button
+                key={example}
+                type="button"
+                disabled={loading}
+                onClick={() => {
+                  setTopic(example);
+                  void runDemo(example);
+                }}
+                className="rounded-full border border-purple-300/60 bg-purple-50 px-3 py-1.5 text-sm text-purple-800 transition hover:bg-purple-100 disabled:opacity-50 dark:border-purple-500/30 dark:bg-purple-500/10 dark:text-purple-200 dark:hover:bg-purple-500/20"
+              >
+                {example}
+              </button>
+            ))}
+          </div>
           <textarea
+            id="demo-topic"
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey && !loading) {
+                e.preventDefault();
+                void runDemo();
+              }
+            }}
             placeholder="e.g. sunset hike with my dog in Colorado"
             rows={3}
             className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base text-zinc-900 placeholder:text-zinc-400 outline-none ring-purple-500/0 transition focus:border-purple-500 focus:ring-2 focus:ring-purple-500/25 dark:border-zinc-700 dark:bg-zinc-950/80 dark:text-white dark:placeholder:text-zinc-600 dark:focus:border-purple-500/50 dark:focus:ring-purple-500/30"
@@ -122,7 +159,7 @@ export function LiveDemoSection() {
           <button
             type="button"
             disabled={loading || !topic.trim()}
-            onClick={runDemo}
+            onClick={() => void runDemo()}
             className="mt-6 inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-purple-600 py-3.5 text-base font-semibold text-white shadow-lg shadow-purple-600/25 transition hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Generating…" : "Generate my caption"}
@@ -151,6 +188,15 @@ export function LiveDemoSection() {
               >
                 {copied ? "Copied!" : "Copy caption"}
               </button>
+              <p className="mt-5 text-sm text-zinc-600 dark:text-zinc-400">
+                Want 3 options per run, your brand voice, and saved history?{" "}
+                <Link
+                  href="/sign-up"
+                  className="font-semibold text-purple-600 underline-offset-4 hover:underline dark:text-purple-400"
+                >
+                  Create a free account
+                </Link>
+              </p>
             </motion.div>
           ) : null}
         </motion.div>

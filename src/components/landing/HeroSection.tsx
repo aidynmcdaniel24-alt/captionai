@@ -28,15 +28,10 @@ export function HeroSection() {
           transition={{ duration: 0.55, delay: 0.05 }}
           className="mx-auto max-w-4xl text-[2rem] font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl lg:leading-[1.08]"
         >
-          <span className="text-zinc-900 dark:text-white">Captions that sound </span>
+          <span className="text-zinc-900 dark:text-white">Free AI caption generator for </span>
           <span className="bg-gradient-to-r from-purple-600 via-fuchsia-600 to-violet-600 bg-clip-text text-transparent dark:from-purple-400 dark:via-fuchsia-400 dark:to-violet-400">
-            human
+            Instagram, TikTok &amp; LinkedIn
           </span>
-          <span className="text-zinc-900 dark:text-white">, scale like </span>
-          <span className="bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent dark:from-violet-400 dark:to-purple-500">
-            magic
-          </span>
-          <span className="text-zinc-900 dark:text-white">.</span>
         </motion.h1>
 
         <motion.p
@@ -45,8 +40,8 @@ export function HeroSection() {
           transition={{ duration: 0.5, delay: 0.12 }}
           className="mx-auto mt-5 max-w-2xl text-base text-zinc-600 sm:mt-6 sm:text-xl dark:text-zinc-400"
         >
-          Describe your photo or idea—get scroll-stopping captions for Instagram, TikTok, LinkedIn, and X in your
-          brand voice. Try a live demo below, no account required.
+          Describe your post in a few words and get a ready-to-copy caption with hashtags in seconds. No account, no
+          credit card.
         </motion.p>
 
         <motion.div
@@ -56,7 +51,12 @@ export function HeroSection() {
           className="mx-auto mt-8 flex w-full max-w-md flex-col items-stretch justify-center gap-3 sm:mt-10 sm:max-w-none sm:flex-row sm:flex-wrap sm:items-center sm:gap-4"
         >
           {!isLoaded ? (
-            <div className="h-12 w-full animate-pulse rounded-full bg-zinc-200 sm:w-56 dark:bg-zinc-800" aria-hidden />
+            <a
+              href="#demo"
+              className="inline-flex min-h-[52px] w-full items-center justify-center rounded-full bg-purple-600 px-8 py-3 text-base font-semibold text-white shadow-xl shadow-purple-600/30 transition hover:bg-purple-500 sm:w-auto sm:min-w-[240px]"
+            >
+              Try it free — no signup
+            </a>
           ) : isSignedIn ? (
             <>
               <Link
@@ -74,45 +74,22 @@ export function HeroSection() {
             </>
           ) : (
             <>
-              <Link
-                href="/sign-up"
-                className="inline-flex min-h-[52px] w-full items-center justify-center rounded-full bg-purple-600 px-8 py-3 text-base font-semibold text-white shadow-xl shadow-purple-600/30 transition hover:bg-purple-500 hover:shadow-purple-500/40 sm:w-auto sm:min-w-[200px]"
-              >
-                Create account
-              </Link>
-              <Link
-                href="/sign-in"
-                className="inline-flex min-h-[52px] w-full items-center justify-center rounded-full border border-purple-400/50 bg-purple-50 px-8 py-3 text-base font-semibold text-purple-900 transition hover:border-purple-500 hover:bg-purple-100 sm:w-auto sm:min-w-[200px] dark:border-purple-500/50 dark:bg-purple-500/5 dark:text-purple-100 dark:hover:border-purple-400 dark:hover:bg-purple-500/15"
-              >
-                Sign in
-              </Link>
               <a
                 href="#demo"
+                className="inline-flex min-h-[52px] w-full items-center justify-center rounded-full bg-purple-600 px-8 py-3 text-base font-semibold text-white shadow-xl shadow-purple-600/30 transition hover:bg-purple-500 hover:shadow-purple-500/40 sm:w-auto sm:min-w-[240px]"
+              >
+                Try it free — no signup
+              </a>
+              <Link
+                href="/sign-up"
                 className="inline-flex min-h-[52px] w-full items-center justify-center rounded-full border border-zinc-300 px-8 py-3 text-base font-medium text-zinc-800 transition hover:border-purple-400 hover:bg-zinc-100 sm:w-auto dark:border-zinc-600 dark:text-zinc-200 dark:hover:border-purple-500/50 dark:hover:bg-white/5"
               >
-                Try live demo
-              </a>
+                Create free account
+              </Link>
             </>
           )}
         </motion.div>
 
-        {isLoaded && !isSignedIn ? (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.28 }}
-            className="mx-auto mt-8 max-w-xl text-sm text-zinc-500 dark:text-zinc-500"
-          >
-            Need the full studio with saved usage and billing?{" "}
-            <Link
-              href="#account"
-              className="font-medium text-purple-600 underline-offset-4 hover:underline dark:text-purple-400"
-            >
-              Choose sign in or create account
-            </Link>{" "}
-            below.
-          </motion.p>
-        ) : null}
       </div>
     </section>
   );

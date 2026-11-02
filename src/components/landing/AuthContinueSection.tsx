@@ -56,13 +56,6 @@ export function AuthContinueSection() {
             Create account
           </Link>
         </div>
-
-        <p className="mx-auto mt-8 max-w-md text-xs leading-relaxed text-zinc-500">
-          For your security, you may need to sign in again after about{" "}
-          <span className="text-zinc-600 dark:text-zinc-400">three hours</span> without activity. Set{" "}
-          <span className="font-medium text-zinc-700 dark:text-zinc-400">maximum session lifetime</span> (e.g. 180
-          minutes) in the Clerk Dashboard → Sessions so this matches your app.
-        </p>
       </motion.div>
     </section>
   );
