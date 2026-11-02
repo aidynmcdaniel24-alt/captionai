@@ -29,7 +29,7 @@ import {
   REQUEST_SIZE_LIMITS,
 } from "@/lib/security/request-size";
 import { supabaseServer } from "@/lib/supabase/server";
-import { spendTokens, TOKEN_COSTS, tokenInfoPayload } from "@/lib/tokens";
+import { refundTokens, spendTokens, TOKEN_COSTS, tokenInfoPayload } from "@/lib/tokens";
 import { captionCountForPlan, isAnnualPlan } from "@/lib/plan";
 import {
   brandVoicePromptBlock,
@@ -775,6 +775,7 @@ export async function POST(req: Request) {
 
   const groq = getGroqClient();
   if (!groq) {
+    await refundTokens(userId, spend.cost, "captions:generate");
     await logAdminEvent("error", "groq key missing", { userId });
     return NextResponse.json(
       {
@@ -804,6 +805,7 @@ export async function POST(req: Request) {
     );
 
     if (!parsed) {
+      await refundTokens(userId, spend.cost, "captions:generate");
       await logAdminEvent("error", "groq parse captions failed after retries", { userId });
       return NextResponse.json(
         { error: "AI response format was invalid. Please try again." },
@@ -879,6 +881,7 @@ export async function POST(req: Request) {
       tokens: tokenInfoPayload(spend),
     });
   } catch (error) {
+    await refundTokens(userId, spend.cost, "captions:generate");
     const details = error instanceof Error ? error.message : "Unknown Groq API error.";
     await logAdminEvent("error", "groq-generate failed", {
       userId,

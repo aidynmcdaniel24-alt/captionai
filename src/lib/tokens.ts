@@ -236,6 +236,45 @@ export async function spendTokens(
 }
 
 /**
+ * Give tokens back after a charged action failed (AI error, bad AI output).
+ * Best-effort: a failure here is logged and never throws. No-op for free
+ * actions (cost 0), which includes admin accounts.
+ */
+export async function refundTokens(
+  userId: string,
+  cost: number,
+  scope: string
+): Promise<void> {
+  if (cost <= 0) return;
+  try {
+    const date = todayDateString();
+    const { data } = await supabaseServer
+      .from("usage")
+      .select("count")
+      .eq("user_id", userId)
+      .eq("date", date)
+      .maybeSingle();
+    const next = Math.max(0, (data?.count ?? 0) - cost);
+    const { error } = await supabaseServer
+      .from("usage")
+      .upsert({ user_id: userId, date, count: next }, { onConflict: "user_id,date" });
+    if (error) {
+      await logAdminEvent("error", "tokens refund failed", {
+        userId,
+        scope,
+        details: error.message,
+      });
+    }
+  } catch (e) {
+    await logAdminEvent("error", "tokens refund failed", {
+      userId,
+      scope,
+      details: e instanceof Error ? e.message : "unknown",
+    });
+  }
+}
+
+/**
  * Build the JSON shape that the dashboard expects whenever an AI route
  * returns a successful response. Keeps every call site consistent.
  */
