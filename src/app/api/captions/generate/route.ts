@@ -874,6 +874,7 @@ export async function POST(req: Request) {
       captionRatings,
       captionScores,
       historyId,
+      historySaved: Boolean(historyId),
       plan,
       proBoost,
       qualityTier,

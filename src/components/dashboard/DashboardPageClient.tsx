@@ -148,6 +148,7 @@ type ApiResult = {
   captionRatings?: CaptionRatingKey[];
   captionScores?: CaptionScore[];
   historyId?: string;
+  historySaved?: boolean;
   plan?: "free" | "pro" | "annual";
   proBoost?: boolean;
   qualityTier?: "standard" | "pro" | "elite";
@@ -428,6 +429,11 @@ export function DashboardPageClient() {
       setCaptionRatings(data.captionRatings ?? []);
       setCaptionScores(data.captionScores ?? []);
       setHistoryId(data.historyId ?? null);
+      if (data.historySaved === false) {
+        setError(
+          "Your captions are ready, but they could not be saved to History. Copy the ones you want to keep."
+        );
+      }
       setProBoost(Boolean(data.proBoost));
       setQualityTier(data.qualityTier ?? (data.plan === "annual" ? "elite" : data.plan === "pro" ? "pro" : "standard"));
       setBrandToneActive(Boolean(data.brandToneActive));
