@@ -24,6 +24,13 @@ const ALLOWED_ORIGINS = new Set<string>([
   "http://127.0.0.1:3000",
 ]);
 
+/** Preview deploys of this project only: captionai-<id>-aidyns-projects-767d66ab.vercel.app */
+const PREVIEW_ORIGIN = /^https:\/\/captionai-[a-z0-9-]+-aidyns-projects-767d66ab\.vercel\.app$/;
+
+function isAllowedOrigin(origin: string): boolean {
+  return ALLOWED_ORIGINS.has(origin) || PREVIEW_ORIGIN.test(origin);
+}
+
 function corsHeaders(origin: string): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": origin,
@@ -49,14 +56,14 @@ function handleCors(req: NextRequest): NextResponse | undefined {
   const origin = req.headers.get("origin");
 
   if (req.method === "OPTIONS") {
-    if (!origin || !ALLOWED_ORIGINS.has(origin)) {
+    if (!origin || !isAllowedOrigin(origin)) {
       return new NextResponse(null, { status: 403 });
     }
     return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
   }
 
   // Same-origin or no-origin requests don't trigger CORS at the browser; let them pass.
-  if (origin && !ALLOWED_ORIGINS.has(origin)) {
+  if (origin && !isAllowedOrigin(origin)) {
     return NextResponse.json(
       { error: "Origin not allowed." },
       { status: 403 }
