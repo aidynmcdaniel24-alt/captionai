@@ -1,7 +1,7 @@
 /**
  * Central plan-tier helpers. The app has three tiers:
  *   - free   : 200 daily tokens, 3 caption options, basic tools.
- *   - pro     ($9/mo)  : unlimited tokens, 5 caption options, Pro tools.
+ *   - pro     ($9/mo)  : 1,000 tokens/day (about 100 captions), 5 caption options, Pro tools.
  *   - annual  ($79/yr) : everything in Pro + Elite quality, 7 caption options,
  *                        and the Annual-only tools (Hashtag Analyzer, Grader,
  *                        Competitor Analyzer, Calendar, Brand Tone Profiles).
