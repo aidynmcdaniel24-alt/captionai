@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { getGroqClient } from "@/lib/groq-client";
+import {
+  getGroqVisionModel,
+  groqChatParams,
+  groqMaxTokens,
+} from "@/lib/groq-models";
 import { withGroqRetry } from "@/lib/groq-retry";
 import {
   RATE_LIMITS,
@@ -21,8 +26,6 @@ export const dynamic = "force-dynamic";
 // (base64 inflates the payload by ~33%).
 const MAX_IMAGE_BODY_BYTES = 8 * 1024 * 1024;
 const MAX_IMAGE_DECODED_BYTES = 5 * 1024 * 1024;
-
-const VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
 function estimateBase64Bytes(b64: string): number {
   const cleaned = b64.replace(/\s+/g, "");
@@ -101,11 +104,12 @@ export async function POST(req: Request) {
   }
 
   try {
+    const visionModel = getGroqVisionModel();
     const completion = await withGroqRetry(() =>
       groq.chat.completions.create({
-        model: VISION_MODEL,
+        ...groqChatParams(visionModel),
         temperature: 0.4,
-        max_tokens: 220,
+        max_tokens: groqMaxTokens(220, visionModel),
         messages: [
           {
             role: "system",
@@ -139,6 +143,8 @@ export async function POST(req: Request) {
     }
 
     const cleaned = description
+      .replace(/<think>[\s\S]*?<\/think>/gi, "")
+      .trim()
       .replace(/^["'`]+|["'`]+$/g, "")
       .replace(/\s+/g, " ")
       .slice(0, 500);

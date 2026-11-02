@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getGroqClient } from "@/lib/groq-client";
+import { getGroqFastModel, groqChatParams, groqMaxTokens } from "@/lib/groq-models";
 import { parseLenientJson } from "@/lib/groq-json";
 import { withGroqRetry } from "@/lib/groq-retry";
 
@@ -88,9 +89,9 @@ export async function moderateTestimonial(input: {
   try {
     const completion = await withGroqRetry(() =>
       groq.chat.completions.create({
-        model: "llama-3.1-8b-instant",
+        ...groqChatParams(getGroqFastModel()),
         temperature: 0,
-        max_tokens: 120,
+        max_tokens: groqMaxTokens(120, getGroqFastModel()),
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
