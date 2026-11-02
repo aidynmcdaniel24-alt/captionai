@@ -3,6 +3,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { ADMIN_EVENTS, logAdminEvent } from "@/lib/admin-log";
 import { getGroqClient } from "@/lib/groq-client";
+import { getGroqFastModel, groqChatParams } from "@/lib/groq-models";
 import { parseLenientJson } from "@/lib/groq-json";
 
 /**
@@ -106,7 +107,7 @@ function normaliseReason(raw: unknown, fallback: string): string {
   return trimmed.length > 200 ? `${trimmed.slice(0, 197)}…` : trimmed;
 }
 
-const AI_TIMEOUT_MS = 900;
+const AI_TIMEOUT_MS = 1500;
 
 /**
  * Run the AI classifier with a tight timeout so the moderation check
@@ -128,9 +129,9 @@ async function classifyWithAi(
   try {
     const completion = await groq.chat.completions.create(
       {
-        model: "llama-3.1-8b-instant",
+        ...groqChatParams(getGroqFastModel()),
         temperature: 0,
-        max_tokens: 100,
+        max_tokens: 300,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },

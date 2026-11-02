@@ -7,6 +7,7 @@ import { bestTimeResearchBlock } from "@/lib/best-time-data";
 import type { CaptionRatingKey } from "@/lib/caption-rating-styles";
 import { guardTopic } from "@/lib/content-moderation";
 import { getGroqClient } from "@/lib/groq-client";
+import { groqChatParams, groqMaxTokens } from "@/lib/groq-models";
 import { extractJsonPayload } from "@/lib/groq-json";
 import { withGroqRetry } from "@/lib/groq-retry";
 import {
@@ -162,9 +163,9 @@ export async function POST(req: Request) {
   try {
     const completion = await withGroqRetry(() =>
       groq.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
+        ...groqChatParams(),
         temperature: 0.4,
-        max_tokens: 900,
+        max_tokens: groqMaxTokens(900),
         messages: [
           {
             role: "system",

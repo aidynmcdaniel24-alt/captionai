@@ -240,8 +240,13 @@ export function DashboardPageClient() {
 
   const refreshPlan = useCallback(async () => {
     try {
-      const res = await fetch("/api/profile/stats");
+      const res = await fetch("/api/profile/stats", {
+        signal: AbortSignal.timeout(15000),
+      });
       if (!res.ok) {
+        // Don't leave the Studio on its loading skeleton forever.
+        setPlan((current) => current ?? "free");
+        setError(`Couldn't load your plan and usage (error ${res.status}). Try refreshing.`);
         return;
       }
       const data = (await res.json()) as {
@@ -266,7 +271,8 @@ export function DashboardPageClient() {
       }
       if (data.resetAt) setResetAt(data.resetAt);
     } catch {
-      /* ignore */
+      setPlan((current) => current ?? "free");
+      setError("Couldn't load your plan and usage. Try refreshing.");
     }
   }, []);
 

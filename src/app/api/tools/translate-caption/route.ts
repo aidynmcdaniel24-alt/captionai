@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getGroqClient } from "@/lib/groq-client";
+import { groqChatParams, groqMaxTokens } from "@/lib/groq-models";
 import { extractJsonPayload } from "@/lib/groq-json";
 import { withGroqRetry } from "@/lib/groq-retry";
 import { isProPlan } from "@/lib/plan";
@@ -74,9 +75,9 @@ export async function POST(req: Request) {
   try {
     const completion = await withGroqRetry(() =>
       groq.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
+        ...groqChatParams(),
         temperature: 0.8,
-        max_tokens: 900,
+        max_tokens: groqMaxTokens(900),
         messages: [
           {
             role: "system",
